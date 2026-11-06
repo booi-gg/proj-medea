@@ -10,10 +10,10 @@ const LIST_SHARE = 0.38;
 const MIN_LIST_WIDTH = 24;
 const MAX_LIST_WIDTH = 44;
 const MIN_PREVIEW_WIDTH = 24;
-// The logo, search bar, footer and spacing around the panes.
-const SCREEN_CHROME_ROWS = 12;
+// The search bar, footer and spacing around the panes. Split screens leave out the logo.
+const SCREEN_CHROME_ROWS = 7;
 const MIN_HEIGHT = 4;
-const MAX_HEIGHT = 16;
+const MAX_HEIGHT = 40;
 
 const graphemes = new Intl.Segmenter();
 

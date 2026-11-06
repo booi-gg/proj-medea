@@ -1,21 +1,22 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { readFileSync } from "node:fs";
 import { styleText } from "node:util";
 import { confirm, isCancel, select } from "@clack/prompts";
 import { promptForSelection } from "../../launcher/prompt.ts";
 import type { LauncherOption } from "../../launcher/prompt.ts";
-import { drawScreen } from "../../launcher/screen.ts";
+import { clearScreen, drawScreen } from "../../launcher/screen.ts";
 import { rankByText } from "../../launcher/search.ts";
 import { fitToWidth, padToWidth, toSplitLayout } from "../../launcher/split-view.ts";
 import { isMenuBarRunning } from "../../menubar/helper.ts";
 import { UTF8_ENVIRONMENT, runCommand } from "../../shell.ts";
 import type { LauncherItem, MedeaApp } from "../types.ts";
-import { formatAge, formatSize, toPreview, toPreviewLines } from "./format.ts";
-import { parseBmp, toBlockLines } from "./image-preview.ts";
-import type { Pixels } from "./image-preview.ts";
-import { clearEntries, getImagePath, getThumbnailPath, readEntries, removeEntry } from "./store.ts";
+import { formatAge, formatSize, toPreview, toPreviewLines, toSafeText } from "./format.ts";
+import { openImageWindow } from "./image-window.ts";
+import type { ImageWindow } from "./image-window.ts";
+import { clearEntries, getImagePath, readEntries, removeEntry, watchEntries } from "./store.ts";
 import type { ClipboardEntry, ImageEntry } from "./store.ts";
+import { createHighlighter } from "./syntax.ts";
+import type { Highlight } from "./syntax.ts";
 
 const APP_ID = "medea-clipboard-history";
 const OPEN_ID = "open";
@@ -69,48 +70,55 @@ const toOption = (entry: ClipboardEntry, labelWidth: number, now: number): Launc
   };
 };
 
-const readThumbnail = (hash: string): Pixels | undefined => {
-  try {
-    return parseBmp(readFileSync(getThumbnailPath(hash)));
-  } catch {
-    return undefined;
-  }
-};
+interface Screen {
+  highlight: Highlight;
+  imageWindow: ImageWindow;
+}
 
-const toImagePreviewLines = (entry: ImageEntry, width: number, height: number): string[] => {
-  const caption = styleText("dim", `${entry.width}×${entry.height}  ${formatSize(entry.bytes)}`);
-  const pixels = readThumbnail(entry.hash);
-  if (pixels === undefined) {
-    return [styleText("dim", "No preview"), caption];
-  }
-  return [...toBlockLines(pixels, width, height - 1), caption];
-};
+interface Round {
+  /** A line to show when finished, or undefined to show the list again. */
+  notice: string | undefined;
+  query: string;
+}
 
-const toEntryPreview = (entry: ClipboardEntry, width: number, height: number): string[] =>
+const toImagePreviewLines = ({ width, height, bytes }: ImageEntry): string[] => [
+  `${width}×${height}`,
+  styleText("dim", formatSize(bytes)),
+  "",
+  styleText("dim", "Shown in the image window"),
+];
+
+const toEntryPreview = (
+  entry: ClipboardEntry,
+  highlight: Highlight,
+  width: number,
+  height: number,
+): string[] =>
   entry.kind === "text"
-    ? toPreviewLines(entry.text, width, height)
-    : toImagePreviewLines(entry, width, height);
+    ? toPreviewLines(entry.text, width, height, highlight)
+    : toImagePreviewLines(entry);
 
 const copyEntry = async (entry: ClipboardEntry): Promise<string> => {
   await (entry.kind === "text" ? copyText(entry.text) : copyImage(entry));
   return `Copied ${describeEntry(entry, MENU_PREVIEW_LENGTH)}`;
 };
 
-// Less shows escape codes as visible text, so copied text can't run them here.
-const viewText = async (text: string): Promise<void> => {
-  const pager = spawn("less", ["-S", "-Ps(q to go back)"], {
+// Less needs -R to show colours, which would also run any escape codes in the copied text. So
+// those are removed first, and only the highlighter's colours reach it.
+const viewText = async (text: string, highlight: Highlight): Promise<void> => {
+  const pager = spawn("less", ["-RS", "-Ps(q to go back)"], {
     env: { ...UTF8_ENVIRONMENT, LESSCHARSET: "utf-8", LESSSECURE: "1" },
     stdio: ["pipe", "inherit", "inherit"],
   });
   // Quitting before less has read everything closes the pipe, which is fine.
   pager.stdin.on("error", () => {});
-  pager.stdin.end(text);
+  pager.stdin.end(highlight(toSafeText(text)));
   await once(pager, "close");
 };
 
-const viewEntry = async (entry: ClipboardEntry): Promise<void> => {
+const viewEntry = async (entry: ClipboardEntry, highlight: Highlight): Promise<void> => {
   if (entry.kind === "text") {
-    await viewText(entry.text);
+    await viewText(entry.text, highlight);
     return;
   }
   await runCommand("open", [getImagePath(entry.hash)]);
@@ -122,7 +130,10 @@ const confirmDeleteAll = async (): Promise<boolean> => {
 };
 
 /** Returns a line to show when finished, or undefined to go back to the list. */
-const runEntryActions = async (entry: ClipboardEntry): Promise<string | undefined> => {
+const runEntryActions = async (
+  entry: ClipboardEntry,
+  highlight: Highlight,
+): Promise<string | undefined> => {
   drawScreen();
   const choice = await select({
     message: describeEntry(entry, MENU_PREVIEW_LENGTH),
@@ -140,7 +151,7 @@ const runEntryActions = async (entry: ClipboardEntry): Promise<string | undefine
     return copyEntry(entry);
   }
   if (choice === VIEW) {
-    await viewEntry(entry);
+    await viewEntry(entry, highlight);
     return undefined;
   }
   if (choice === DELETE) {
@@ -159,13 +170,16 @@ const describeEmptyHistory = async (): Promise<string> =>
     ? "Nothing copied yet"
     : "Clipboard history needs the menu bar item, so add it first";
 
-/** Shows the list once. Returns a line to show when finished, or undefined to show it again. */
-const runHistoryRound = async (): Promise<string | undefined> => {
+/** Shows the list once. A new copy ends the round, so the next one shows it straight away. */
+const runHistoryRound = async (
+  { highlight, imageWindow }: Screen,
+  initialQuery: string,
+): Promise<Round> => {
   const entries = await readEntries();
   if (entries.length === 0) {
-    return describeEmptyHistory();
+    return { notice: await describeEmptyHistory(), query: "" };
   }
-  drawScreen();
+  clearScreen();
   const now = Date.now();
   const columns = process.stdout.columns ?? FALLBACK_COLUMNS;
   const layout = toSplitLayout(columns, process.stdout.rows);
@@ -180,12 +194,16 @@ const runHistoryRound = async (): Promise<string | undefined> => {
     if (known !== undefined || entry === undefined) {
       return known ?? [];
     }
-    const lines = toEntryPreview(entry, width, height);
+    const lines = toEntryPreview(entry, highlight, width, height);
     previews.set(entryId, lines);
     return lines;
   };
 
-  const { cancelled, value, wantsSettings } = await promptForSelection(
+  const historyChange = new AbortController();
+  const stopWatching = watchEntries(() => {
+    historyChange.abort();
+  });
+  const { cancelled, value, wantsSettings, query } = await promptForSelection(
     () => options,
     "Search clipboard",
     {
@@ -194,21 +212,42 @@ const runHistoryRound = async (): Promise<string | undefined> => {
       enterLabel: "copy",
       settingsLabel: "actions",
       renderPreview,
+      signal: historyChange.signal,
+      initialQuery,
+      onFocus: (entryId) => {
+        const focused = entries.find(({ id }) => id === entryId);
+        if (focused?.kind === "image") {
+          imageWindow.show(getImagePath(focused.hash));
+        } else {
+          imageWindow.hide();
+        }
+      },
     },
   );
+  stopWatching();
+  if (historyChange.signal.aborted) {
+    return { notice: undefined, query };
+  }
   const entry = entries.find(({ id }) => id === value);
   if (cancelled || entry === undefined) {
-    return "";
+    return { notice: "", query };
   }
-  return wantsSettings ? runEntryActions(entry) : copyEntry(entry);
+  const notice = await (wantsSettings ? runEntryActions(entry, highlight) : copyEntry(entry));
+  return { notice, query: "" };
 };
 
 const browseHistory = async (): Promise<string> => {
-  let notice = await runHistoryRound();
-  while (notice === undefined) {
-    notice = await runHistoryRound();
+  const [highlight, imageWindow] = await Promise.all([createHighlighter(), openImageWindow()]);
+  const screen = { highlight, imageWindow };
+  try {
+    let round = await runHistoryRound(screen, "");
+    while (round.notice === undefined) {
+      round = await runHistoryRound(screen, round.query);
+    }
+    return round.notice;
+  } finally {
+    imageWindow.close();
   }
-  return notice;
 };
 
 const openItem: LauncherItem = {

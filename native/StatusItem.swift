@@ -112,6 +112,49 @@ func openApp(at path: String) {
   }
 }
 
+/// Asks the open CLI to raise its window, so the shortcut doesn't wait for Node to start. Returns
+/// false when no CLI answers. It blocks for up to a second, so call it off the main thread.
+func focusRunningCli(socketPath: String) -> Bool {
+  let connection = socket(AF_UNIX, SOCK_STREAM, 0)
+  guard connection >= 0 else {
+    return false
+  }
+  defer { close(connection) }
+
+  var timeout = timeval(tv_sec: 1, tv_usec: 0)
+  let timeoutSize = socklen_t(MemoryLayout<timeval>.size)
+  setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, &timeout, timeoutSize)
+  setsockopt(connection, SOL_SOCKET, SO_SNDTIMEO, &timeout, timeoutSize)
+
+  var address = sockaddr_un()
+  address.sun_family = sa_family_t(AF_UNIX)
+  let pathBytes = Array(socketPath.utf8) + [0]
+  guard pathBytes.count <= MemoryLayout.size(ofValue: address.sun_path) else {
+    return false
+  }
+  withUnsafeMutableBytes(of: &address.sun_path) { $0.copyBytes(from: pathBytes) }
+  let connected = withUnsafePointer(to: &address) {
+    $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+      connect(connection, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
+    }
+  }
+  guard connected == 0 else {
+    return false
+  }
+
+  let request = Array("focus\n".utf8)
+  guard send(connection, request, request.count, 0) == request.count else {
+    return false
+  }
+  // The CLI closes the connection once it has the request. A CLI that hangs times out here.
+  var reply = [UInt8](repeating: 0, count: 256)
+  var received = recv(connection, &reply, reply.count, 0)
+  while received > 0 {
+    received = recv(connection, &reply, reply.count, 0)
+  }
+  return received == 0
+}
+
 struct ItemHotKey: Decodable {
   let keyCode: UInt32
   let modifiers: UInt32
@@ -145,6 +188,7 @@ final class ClipboardWatcher {
   ]
   private static let ignoredApps: Set<String> = ["com.apple.Passwords", "com.apple.keychainaccess"]
   private static let maxImageFileBytes = 30_000_000
+  private static let maxImageFiles = 10
   private static let pngSignature: [UInt8] = [0x89, 0x50, 0x4E, 0x47]
 
   private let pasteboard: NSPasteboard
@@ -177,27 +221,58 @@ final class ClipboardWatcher {
       types.contains { Self.ignoredTypes.contains($0.rawValue) }
       || Self.ignoredApps.contains(frontApp)
     guard !isIgnored else {
+      logSkip("ignored source", types)
       return
     }
     // A copied file carries its name as text and its icon as an image. Neither is what was copied.
     if types.contains(.fileURL) {
-      recordImage(readCopiedImageFile())
+      let images = readCopiedImageFiles()
+      if images.isEmpty {
+        logSkip("no image among the copied files", types)
+      }
+      images.forEach(recordImage)
       return
     }
-    // Text wins, because apps like Excel also add a picture of the cells you copied.
-    if let text = pasteboard.string(forType: .string) {
+    let text = pasteboard.string(forType: .string)
+    let image = readImageData()
+    // Text wins, because apps like Excel also add a picture of the cells you copied. A browser's
+    // image comes with its address as text, and there the image is what was copied.
+    if let text, image == nil || !Self.isOnlyAddress(text) {
       onCopy(.text(text))
+    } else if let image {
+      recordImage(image)
     } else {
-      recordImage(pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff))
+      logSkip("no text or image data", types)
     }
   }
 
-  /// Only one file, and only an image. Other files have nothing Medea can show yet.
-  private func readCopiedImageFile() -> Data? {
+  /// Type names only, so copied content never reaches the log.
+  private func logSkip(_ reason: String, _ types: [NSPasteboard.PasteboardType]) {
+    let names = types.map(\.rawValue).joined(separator: ", ")
+    NSLog("Medea skipped a copy, \(reason): \(names)")
+  }
+
+  private static func isOnlyAddress(_ text: String) -> Bool {
+    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    let isOneWord = !trimmed.isEmpty && !trimmed.contains { $0.isWhitespace }
+    return isOneWord && URL(string: trimmed)?.scheme != nil
+  }
+
+  /// PNG and TIFF are the common cases. NSImage reads the rest, like JPEG, GIF and PDF.
+  private func readImageData() -> Data? {
+    pasteboard.data(forType: .png)
+      ?? pasteboard.data(forType: .tiff)
+      ?? NSImage(pasteboard: pasteboard)?.tiffRepresentation
+  }
+
+  private func readCopiedImageFiles() -> [Data] {
     let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
     let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: options) as? [URL] ?? []
-    guard urls.count == 1, let url = urls.first,
-      let values = try? url.resourceValues(forKeys: [.contentTypeKey, .fileSizeKey]),
+    return urls.prefix(Self.maxImageFiles).compactMap(readImageFile)
+  }
+
+  private func readImageFile(_ url: URL) -> Data? {
+    guard let values = try? url.resourceValues(forKeys: [.contentTypeKey, .fileSizeKey]),
       values.contentType?.conforms(to: .image) == true,
       (values.fileSize ?? .max) <= Self.maxImageFileBytes
     else {
@@ -207,12 +282,10 @@ final class ClipboardWatcher {
   }
 
   /// Converting a large photo takes a moment, and this thread also answers hotkeys.
-  private func recordImage(_ image: Data?) {
-    guard let image else {
-      return
-    }
+  private func recordImage(_ image: Data) {
     DispatchQueue.global(qos: .utility).async { [onCopy] in
       guard let png = Self.toPng(image) else {
+        NSLog("Medea skipped a copy, could not read the image data")
         return
       }
       DispatchQueue.main.async { onCopy(.image(png)) }
@@ -223,7 +296,9 @@ final class ClipboardWatcher {
     if image.starts(with: pngSignature) {
       return image
     }
-    return NSBitmapImageRep(data: image)?.representation(using: .png, properties: [:])
+    // Bitmaps convert directly. Formats like SVG and PDF have to be drawn first.
+    let bitmap = NSBitmapImageRep(data: image) ?? NSImage(data: image)?.tiffRepresentation.flatMap(NSBitmapImageRep.init)
+    return bitmap?.representation(using: .png, properties: [:])
   }
 }
 
@@ -232,6 +307,11 @@ final class ClipboardWatcher {
 /// Owns the menu bar item and its menu. The CLI makes all the decisions.
 final class StatusItemController: NSObject, NSMenuDelegate {
   private let cliCommand: [String]
+  // The CLI's socket sits next to this binary in .build.
+  private let cliSocketPath = URL(fileURLWithPath: CommandLine.arguments[0])
+    .deletingLastPathComponent()
+    .appendingPathComponent("cli.sock")
+    .path
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let menu = NSMenu()
   private let terminalMenu = NSMenu()
@@ -291,7 +371,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   }
 
   func showCli() {
-    runCli(["show"])
+    let socketPath = cliSocketPath
+    DispatchQueue.global(qos: .userInteractive).async { [weak self] in
+      guard !focusRunningCli(socketPath: socketPath) else {
+        return
+      }
+      DispatchQueue.main.async { self?.runCli(["show"]) }
+    }
   }
 
   func reloadHotKeys(into hotKeys: HotKeyCenter) {

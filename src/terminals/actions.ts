@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
-import { findMedeaItem } from "../medea-apps/registry.ts";
+import type { LauncherItem } from "../medea-apps/types.ts";
 import { stopMenuBar } from "../menubar/helper.ts";
 import { buildDir, launcherPath } from "../paths.ts";
 import { writeLauncherScript } from "./launcher-script.ts";
@@ -9,13 +9,11 @@ import { getSelectedLauncher, saveTerminal } from "./terminals.ts";
 
 /** Reuses a running CLI window, or opens a new one in the chosen terminal. */
 export const showCli = async (): Promise<void> => {
-  const launcher = await getSelectedLauncher();
-  const runningTtyPath = await focusRunningCli();
-  if (runningTtyPath === undefined) {
-    await launcher.open(launcherPath);
+  if (await focusRunningCli()) {
     return;
   }
-  await launcher.focus(runningTtyPath);
+  const launcher = await getSelectedLauncher();
+  await launcher.open(launcherPath);
 };
 
 // The open CLI lives in the old terminal, so it quits and the next open uses the new one.
@@ -35,9 +33,15 @@ const openItemWindow = async (itemValue: string): Promise<void> => {
   await launcher.open(scriptPath);
 };
 
+// Loads every Medea app, so it stays out of commands that never run one.
+const findItem = async (itemValue: string | undefined): Promise<LauncherItem | undefined> => {
+  const { findMedeaItem } = await import("../medea-apps/registry.ts");
+  return findMedeaItem(itemValue);
+};
+
 /** Runs an item that a hotkey opened a window for. */
 export const runItemInWindow = async (itemValue: string | undefined): Promise<void> => {
-  const item = findMedeaItem(itemValue);
+  const item = await findItem(itemValue);
   if (item === undefined) {
     throw new Error(`Unknown item "${itemValue}".`);
   }
@@ -58,7 +62,7 @@ export const runCommandItem = async (itemValue: string | undefined): Promise<voi
     await showCli();
     return;
   }
-  const item = findMedeaItem(itemValue);
+  const item = await findItem(itemValue);
   if (item === undefined) {
     throw new Error(`Unknown command "${itemValue}".`);
   }

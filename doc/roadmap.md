@@ -32,7 +32,7 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 
 ## Later ideas
 
-- **Clipboard history:** files, pinned entries, syntax colours in the preview, sharper images in terminals with an image protocol, and choosing which apps to ignore.
+- **Clipboard history:** files, pinned entries, and choosing which apps to ignore.
 - **Alias plus search text:** typing an alias then a query, like `gh react`. Quicklinks now take input through a prompt after Enter, so this would fill their first argument straight from the search bar.
 
 ## Decisions

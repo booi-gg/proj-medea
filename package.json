@@ -3,15 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "bin": {
-    "medea": "./src/index.ts"
+    "medea": "./src/start.js"
   },
   "type": "module",
   "scripts": {
-    "start": "node src/index.ts",
+    "start": "node src/start.js",
     "test": "node --test",
-    "menubar:start": "node src/index.ts start",
-    "menubar:stop": "node src/index.ts stop",
-    "menubar:status": "node src/index.ts status",
+    "menubar:start": "node src/start.js start",
+    "menubar:stop": "node src/start.js stop",
+    "menubar:status": "node src/start.js status",
     "typecheck": "tsc",
     "check": "vp check",
     "format": "vp fmt",
@@ -20,8 +20,10 @@
   "dependencies": {
     "@clack/core": "1.5.1",
     "@clack/prompts": "^1.8.1",
+    "emphasize": "^7.0.0",
     "match-sorter": "8.3.0",
-    "string-width": "^8.3.0"
+    "string-width": "^8.3.0",
+    "wrap-ansi": "^10.0.2"
   },
   "devDependencies": {
     "@types/node": "^26.6.6",

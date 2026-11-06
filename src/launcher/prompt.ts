@@ -31,6 +31,7 @@ export interface Selection {
   cancelled: boolean;
   value: string | undefined;
   wantsSettings: boolean;
+  query: string;
 }
 
 type Rank = (query: string, options: readonly LauncherOption[]) => LauncherOption[];
@@ -44,6 +45,11 @@ export interface SelectionDisplay {
   settingsLabel?: string;
   /** Shows the focused result in a pane beside the list. */
   renderPreview?: RenderPreview;
+  /** Called with the focused result's value, and undefined when nothing is focused. */
+  onFocus?: (value: string | undefined) => void;
+  /** Ends the prompt early, so the caller can show it again with fresh options. */
+  signal?: AbortSignal;
+  initialQuery?: string;
 }
 
 const isEmptyQuery = (query: string): boolean => query.trim() === "";
@@ -138,16 +144,21 @@ export const promptForSelection = async (
     enterLabel = "open",
     settingsLabel = "settings",
     renderPreview,
+    onFocus,
+    signal,
+    initialQuery = "",
   }: SelectionDisplay = {},
 ): Promise<Selection> => {
   const footer = `↵ ${enterLabel}   ${SETTINGS_KEY_HINT} ${settingsLabel}`;
   const layout = toSplitLayout(process.stdout.columns, process.stdout.rows);
-  let lastQuery = "";
+  let lastQuery = initialQuery;
   let wantsSettings = false;
   const input = new PassThrough();
 
   const prompt = new AutocompletePrompt<LauncherOption>({
     input,
+    initialUserInput: initialQuery,
+    ...(signal === undefined ? {} : { signal }),
     // rankItems has already chosen the results, so clack's own filter must not remove any.
     filter: () => true,
     options() {
@@ -163,8 +174,10 @@ export const promptForSelection = async (
     },
     render() {
       if (this.state === "submit" || this.state === "cancel") {
+        onFocus?.(undefined);
         return BLANK_FRAME;
       }
+      onFocus?.(this.filteredOptions[this.cursor]?.value);
       const searchBar = renderSearchBar(this.userInput, this.userInputWithCursor, placeholder);
       if (isEmptyQuery(this.userInput) && !listWhenEmpty) {
         return searchBar;
@@ -184,12 +197,13 @@ export const promptForSelection = async (
   try {
     const result = await prompt.prompt();
     if (isCancel(result)) {
-      return { cancelled: true, value: undefined, wantsSettings: false };
+      return { cancelled: true, value: undefined, wantsSettings: false, query: lastQuery };
     }
     return {
       cancelled: false,
       value: typeof result === "string" ? result : undefined,
       wantsSettings,
+      query: lastQuery,
     };
   } finally {
     stopReadingKeys();

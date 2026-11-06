@@ -52,7 +52,8 @@ src/
 │   │   ├── index.ts      The history list and its actions
 │   │   ├── store.ts      Reads and saves history and image files
 │   │   ├── format.ts     Row text, previews, ages and sizes
-│   │   └── image-preview.ts Reads thumbnails and draws them as text
+│   │   ├── syntax.ts     Colours code, and leaves other text alone
+│   │   └── image-window.ts Runs the native window that shows images
 │   ├── medea-settings/
 │   │   └── index.ts      The Settings (Medea) screen
 │   └── medea-quicklinks/
@@ -73,7 +74,8 @@ src/
     └── actions.ts        Shows the CLI, changes terminal, opens item windows
 native/
 ├── StatusItem.swift      The helper: menu bar icon, menu and global shortcuts
-└── HotkeyRecorder.swift  The window that records a hotkey
+├── HotkeyRecorder.swift  The window that records a hotkey
+└── ImagePreview.swift    The floating window that shows clipboard images
 doc/                      These docs
 .build/                   Generated: helper binary, launcher script, logs, socket
 ```
@@ -302,8 +304,17 @@ Raycast pastes straight into the app you were using. Medea only copies, because 
 
 **Preview.** The focused entry shows in a pane beside the list, built by `toSplitLayout()` and `joinColumns()` in `src/launcher/split-view.ts`. A window under 56 columns has no room, so it shows only the list.
 
-- Text keeps its line breaks and indentation. Tabs show as four spaces, long lines are cut rather than wrapped, and a note says how many lines don't fit. View full text opens the whole entry in `less`, and `q` comes back.
-- Images are drawn as text. Each `▀` shows two pixels, using its 24-bit foreground and background colours, so the same code works in Terminal and Ghostty. Real image protocols aren't reliably available in Terminal. The result is blocky, so Open image shows the real thing.
+- Text keeps its line breaks and indentation. Tabs show as four spaces, long lines wrap with `wrap-ansi`, and a note says how many lines don't fit. View full text opens the whole entry in `less`, and `q` comes back.
+- Code gets syntax colours from `emphasize`, in the pane and in `less`. It guesses the language and gives a relevance score. Long code scores 5 or more. Short code scores as low as a sentence, so anything from 2 to 4 must also look like code: a line ending in `{`, `}` or `;`, a call like `foo(x)`, or an operator like `=>`. Colours go on after wrapping, so a break can't land inside a colour code.
+- Images show at full quality in a floating window beside the terminal, which follows the list as you arrow through it. The pane only shows the size. `native/ImagePreview.swift` is a borderless panel that never takes focus, so keys stay in the terminal. The CLI sends it `show <path>` or `hide` over stdin, and it exits when that pipe closes, so it can't outlive Medea. It finds the terminal's window through the window list, which needs no permission, and sits to the right, or the left if there's no room.
+
+Images aren't drawn in the terminal, because a terminal can only draw characters. Chafa, through `chafa-wasm` and `static-chafa`, and `terminal-image` were all tried on real images. Even the best of them was too rough to count as seeing the image, and Terminal has no image protocol: on macOS 26.6.2 it ignores a Kitty graphics query.
+
+`emphasize` loads when the screen opens, not at startup, because the CLI also starts on every copy.
+
+**Staying current.** The list watches the history file and redraws as soon as anything is recorded, keeping what you've typed. Without this, a screen left open would show an old list, because Medea's window stays alive between uses.
+
+This screen leaves out the logo, so images and the list get those rows. The panes grow with the window.
 
 `string-width` measures rows, because characters like 日本 take two columns and a row that runs too long would wrap and break the screen.
 
@@ -313,9 +324,11 @@ Raycast pastes straight into the app you were using. Medea only copies, because 
 2. The helper runs `node src/index.ts record-clipboard` and sends the text through stdin, because anyone can read a process's arguments with `ps`. An image goes the same way as a PNG to `record-clipboard-image`, converted from TIFF if needed.
 3. `addEntry()` in `store.ts` puts it first. Copying the same thing again moves the old entry to the top, and images count as the same when their hash matches.
 
-If the clipboard holds both text and an image, text wins, because apps like Excel also add a picture of the cells you copied.
+If the clipboard holds both text and an image, text wins, because apps like Excel also add a picture of the cells you copied. The exception is text that is only a web address, because a browser adds one to an image it copies.
 
-An image file copied in Finder counts as an image. The clipboard only holds its name and icon, so the watcher reads the file itself, up to 30 MB. Any format macOS can decode works, including JPEG, HEIC and GIF, and photos keep their rotation. Copying it back gives you the image, not the file. Conversion runs off the main thread, because that thread also answers hotkeys.
+Anything skipped is logged to `.build/helper.log` with its reason and clipboard type names, never its content, so a missing copy can be explained.
+
+An image file copied in Finder counts as an image, and selecting several records up to 10 of them. The clipboard only holds their names and icons, so the watcher reads each file itself, up to 30 MB. Any format macOS can decode works, including JPEG, HEIC and GIF, and photos keep their rotation. Copying it back gives you the image, not the file. Conversion runs off the main thread, because that thread also answers hotkeys.
 
 Copies are recorded one at a time, so two quick copies can't overwrite each other.
 
@@ -331,7 +344,7 @@ Copies are recorded one at a time, so two quick copies can't overwrite each othe
 
 A password manager has to mark its copies for this to work, and an app that doesn't will be recorded like any other.
 
-**Storage.** `~/.config/medea/medea-clipboard-history.json` keeps the newest 200 entries, of which at most 50 are images. Images live in `~/.config/medea/medea-clipboard-history/` as `<hash>.png`, with a small `<hash>.bmp` thumbnail from `sips` for the preview. Images over 30 MB are skipped. Each save removes any image no entry mentions, so deleting an entry frees its files.
+**Storage.** `~/.config/medea/medea-clipboard-history.json` keeps the newest 200 entries, of which at most 50 are images. Images live in `~/.config/medea/medea-clipboard-history/` as `<hash>.png`. Images over 30 MB are skipped. Each save removes any image no entry mentions, so deleting an entry frees its files.
 
 None of this is encrypted, and only your user can read it. Saving writes a temporary file and renames it, so a reader never sees half a file.
 

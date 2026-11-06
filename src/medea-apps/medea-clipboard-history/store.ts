@@ -1,9 +1,9 @@
 import { createHash, randomUUID } from "node:crypto";
-import { chmod, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, join, parse } from "node:path";
+import { watch } from "node:fs";
+import { mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join, parse } from "node:path";
 import { isObject } from "../../config.ts";
 import { clipboardHistoryPath, clipboardImagesDir } from "../../paths.ts";
-import { runCommand } from "../../shell.ts";
 
 const MAX_ENTRIES = 200;
 // Screenshots are far bigger than text, so fewer are kept.
@@ -15,8 +15,6 @@ const MAX_IMAGE_BYTES = 30_000_000;
 const OWNER_ONLY_FILE = 0o600;
 const OWNER_ONLY_FOLDER = 0o700;
 const HASH_LENGTH = 32;
-// Big enough for the largest preview pane, and small enough to read on every arrow key.
-const THUMBNAIL_SIZE = "96";
 const PNG_SIGNATURE = "89504e470d0a1a0a";
 const PNG_WIDTH_POSITION = 16;
 const PNG_HEIGHT_POSITION = 20;
@@ -78,8 +76,19 @@ export const readEntries = async (): Promise<ClipboardEntry[]> => {
   }
 };
 
+/** Calls back when history changes. It watches the folder, because saving replaces the file. */
+export const watchEntries = (onChange: () => void): (() => void) => {
+  const watcher = watch(dirname(clipboardHistoryPath), (_event, fileName) => {
+    if (fileName === basename(clipboardHistoryPath)) {
+      onChange();
+    }
+  });
+  return () => {
+    watcher.close();
+  };
+};
+
 export const getImagePath = (hash: string): string => join(clipboardImagesDir, `${hash}.png`);
-export const getThumbnailPath = (hash: string): string => join(clipboardImagesDir, `${hash}.bmp`);
 
 // Files are named after their image, so anything no entry mentions can go.
 const removeUnusedImages = async (entries: readonly ClipboardEntry[]): Promise<void> => {
@@ -147,27 +156,14 @@ export const readPngSize = (png: Buffer): { width: number; height: number } | un
   };
 };
 
-const saveImageFiles = async (png: Buffer, hash: string): Promise<void> => {
-  await mkdir(clipboardImagesDir, { recursive: true, mode: OWNER_ONLY_FOLDER });
-  const imagePath = getImagePath(hash);
-  const thumbnailPath = getThumbnailPath(hash);
-  await writeFile(imagePath, png, { mode: OWNER_ONLY_FILE });
-  try {
-    const resize = ["-s", "format", "bmp", "-Z", THUMBNAIL_SIZE, imagePath, "--out", thumbnailPath];
-    await runCommand("sips", resize);
-    await chmod(thumbnailPath, OWNER_ONLY_FILE);
-  } catch {
-    // The image still works without a preview.
-  }
-};
-
 export const recordImage = async (png: Buffer): Promise<void> => {
   const size = readPngSize(png);
   if (size === undefined || png.length > MAX_IMAGE_BYTES) {
     return;
   }
   const hash = createHash("sha256").update(png).digest("hex").slice(0, HASH_LENGTH);
-  await saveImageFiles(png, hash);
+  await mkdir(clipboardImagesDir, { recursive: true, mode: OWNER_ONLY_FOLDER });
+  await writeFile(getImagePath(hash), png, { mode: OWNER_ONLY_FILE });
   const entries = await readEntries();
   const entry: ImageEntry = {
     kind: "image",

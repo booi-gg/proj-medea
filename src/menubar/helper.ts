@@ -7,6 +7,8 @@ import {
   cliEntryPath,
   helperLogPath,
   helperPath,
+  imagePreviewPath,
+  imagePreviewSourcePath,
   launcherPath,
   recorderPath,
   recorderSourcePath,
@@ -50,6 +52,9 @@ const compileSwift = async (sourcePath: string, binaryPath: string): Promise<voi
 
 export const buildRecorder = (): Promise<void> => compileSwift(recorderSourcePath, recorderPath);
 
+export const buildImagePreview = (): Promise<void> =>
+  compileSwift(imagePreviewSourcePath, imagePreviewPath);
+
 export const isMenuBarRunning = async (): Promise<boolean> => {
   const pids = await findHelperPids();
   return pids.length > 0;
@@ -59,6 +64,7 @@ export const isMenuBarRunning = async (): Promise<boolean> => {
 export const prepareMenuBar = async (): Promise<void> => {
   await compileSwift(swiftSourcePath, helperPath);
   await buildRecorder();
+  await buildImagePreview();
   await writeLauncherScript(launcherPath);
 };
 

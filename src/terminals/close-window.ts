@@ -1,5 +1,4 @@
 import { spawn } from "node:child_process";
-import { isCancel, select } from "@clack/prompts";
 import { getOwnTtyPath, runCommand } from "../shell.ts";
 
 const TERMINAL_APP_PROGRAM = "Apple_Terminal";
@@ -55,6 +54,8 @@ export const offerToCloseWindow = async (): Promise<void> => {
   if (!canCloseOwnWindow()) {
     return;
   }
+  // Loaded here because the show command reaches this file and never prompts.
+  const { isCancel, select } = await import("@clack/prompts");
   const choice = await select({
     message: "Finished",
     options: [{ value: "close", label: "Close terminal" }],

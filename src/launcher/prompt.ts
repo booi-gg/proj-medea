@@ -8,7 +8,7 @@ const ENTER_KEY = "\r";
 const TAB_KEY = "\t";
 // Ghostty sends the first by default. The second is the kitty keyboard protocol's form.
 const SHIFT_ENTER_KEYS = ["\u001B[27;2;13~", "\u001B[13;2u"];
-const SETTINGS_KEYS = new Set([TAB_KEY, ...SHIFT_ENTER_KEYS]);
+const SETTINGS_KEYS = [TAB_KEY, ...SHIFT_ENTER_KEYS];
 // Terminal sends the same bytes for Shift+Enter and Enter, so Tab is the key that always works.
 const SETTINGS_KEY_HINT = process.env.TERM_PROGRAM === "ghostty" ? "⇧↵" : "tab";
 const SEARCH_ICON = styleText("cyan", "❯");
@@ -52,17 +52,27 @@ const renderResults = (results: readonly LauncherOption[], cursor: number): stri
 };
 
 /**
+ * Returns the text before a settings key, or undefined when there is no settings key. Keys pressed
+ * quickly can arrive in one read, so the key may not be alone.
+ */
+export const readTextBeforeSettingsKey = (keys: string): string | undefined => {
+  const positions = SETTINGS_KEYS.map((key) => keys.indexOf(key)).filter((index) => index >= 0);
+  return positions.length === 0 ? undefined : keys.slice(0, Math.min(...positions));
+};
+
+/**
  * Node can't parse the Shift+Enter sequences, so keys are read here first. A settings key becomes
  * a normal Enter for the prompt, with a note that settings were asked for.
  */
 const readKeysInto = (input: PassThrough, onSettingsKey: () => void): (() => void) => {
   const forwardKey = (chunk: Buffer): void => {
-    if (SETTINGS_KEYS.has(chunk.toString())) {
-      onSettingsKey();
-      input.write(ENTER_KEY);
+    const textBeforeKey = readTextBeforeSettingsKey(chunk.toString());
+    if (textBeforeKey === undefined) {
+      input.write(chunk);
       return;
     }
-    input.write(chunk);
+    onSettingsKey();
+    input.write(`${textBeforeKey}${ENTER_KEY}`);
   };
   process.stdin.setRawMode(true);
   process.stdin.on("data", forwardKey);

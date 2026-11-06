@@ -8,7 +8,7 @@ const toVisibleRows = (banner: string): string[] =>
 
 test("draws the logo when the window is wide enough", () => {
   const rows = toVisibleRows(renderBanner(80));
-  assert.equal(rows.length, 6);
+  assert.equal(rows.length, 3);
   assert.ok(rows.every((row) => row.length <= 80));
 });
 
@@ -18,9 +18,10 @@ test("every logo row has the same width", () => {
 });
 
 test("falls back to the plain name in a narrow window", () => {
-  assert.deepEqual(toVisibleRows(renderBanner(60)), ["  supercast"]);
+  assert.deepEqual(toVisibleRows(renderBanner(20)), ["  supercast"]);
 });
 
-test("uses teal", () => {
-  assert.ok(renderBanner(80).includes("\u001B[38;5;37m"));
+test("fades from teal to cyan", () => {
+  const banner = renderBanner(80);
+  assert.ok(banner.indexOf("\u001B[38;5;30m") < banner.indexOf("\u001B[38;5;51m"));
 });

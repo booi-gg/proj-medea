@@ -127,7 +127,7 @@ If you open a second CLI, such as `pnpm start` in another terminal, the newest o
 
 ## The search prompt
 
-The window starts with the screen cleared, the teal SUPERCAST logo from `src/launcher/banner.ts`, and a bare search bar. The logo is drawn once per round, outside the prompt, so typing never redraws it. In windows under 76 columns it falls back to the plain name. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
+The window starts with the screen cleared, the SUPERCAST logo from `src/launcher/banner.ts`, a slim wordmark that fades from teal to cyan, and a bare search bar. The logo is drawn once per round, outside the prompt, so typing never redraws it. In windows under 29 columns it falls back to the plain name. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
 
 `promptForSelection()` in `src/launcher/prompt.ts` uses `AutocompletePrompt` from `@clack/core`, not `autocomplete` from `@clack/prompts`, because the higher-level prompt always draws its header and footer. `@clack/core` is pinned to the version `@clack/prompts` uses.
 

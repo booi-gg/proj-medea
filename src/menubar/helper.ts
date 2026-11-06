@@ -55,13 +55,18 @@ export const isMenuBarRunning = async (): Promise<boolean> => {
   return pids.length > 0;
 };
 
+/** Builds everything the helper needs to run. */
+export const prepareMenuBar = async (): Promise<void> => {
+  await compileSwift(swiftSourcePath, helperPath);
+  await buildRecorder();
+  await writeLauncherScript(launcherPath);
+};
+
 export const startMenuBar = async (): Promise<void> => {
   if (await isMenuBarRunning()) {
     return;
   }
-  await compileSwift(swiftSourcePath, helperPath);
-  await buildRecorder();
-  await writeLauncherScript(launcherPath);
+  await prepareMenuBar();
 
   const helperLog = openSync(helperLogPath, "w");
   const helper = spawn(helperPath, [process.execPath, cliEntryPath], {

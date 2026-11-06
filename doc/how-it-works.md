@@ -51,6 +51,8 @@ src/
 │   │   ├── index.ts      The history list and its actions
 │   │   ├── store.ts      Reads and saves the history file
 │   │   └── format.ts     Row previews and ages
+│   ├── medea-settings/
+│   │   └── index.ts      The Medea Settings screen
 │   └── medea-quicklinks/
 │       ├── index.ts      Search items and settings actions
 │       ├── store.ts      Reads and saves quicklinks.json
@@ -59,6 +61,7 @@ src/
 │       └── form.ts       The create, edit and argument prompts
 ├── menubar/
 │   ├── helper.ts         Builds, starts and stops the Swift helper
+│   ├── login-item.ts     Turns Start at login on and off
 │   └── commands.ts       The start, stop and status commands
 └── terminals/
     ├── terminals.ts      Lists terminals, saves the choice, launches each one
@@ -321,6 +324,28 @@ A password manager has to mark its copies for this to work, and an app that does
 **Permissions.** macOS has a "Paste from Other Apps" privacy control that can ask before an app reads the clipboard. On macOS 26.6.2 `NSPasteboard.general.accessBehavior` reports `alwaysAllow` for the helper, so no prompt appears. A later macOS could change that.
 
 `pbcopy` and `pbpaste` garble non-English text when the locale is empty, as it can be for the helper, so both run with `LC_CTYPE=UTF-8`.
+
+## Medea Settings
+
+The third Medea app. Search `Medea Settings` for a list of toggles, where Enter flips the focused one. Esc or Done goes back to search.
+
+**Start at login** puts Medea in the menu bar when you log in, so the shortcut, hotkeys and clipboard recording survive a reboot.
+
+| Row shows | Meaning                                     | Enter does                    |
+| --------- | ------------------------------------------- | ----------------------------- |
+| Off       | No login item                               | Turns it on                   |
+| On        | The login item exists and macOS allows it   | Turns it off                  |
+| Blocked   | The item is switched off in System Settings | Opens System Settings for you |
+
+**How it works.** The setting is a file, `~/Library/LaunchAgents/medea.menu-bar.plist`, so no saved value can disagree with what macOS will do. It runs `.build/medea-status` directly, so macOS lists it as `medea-status`.
+
+- Apple's newer `SMAppService` needs a signed `.app`, so a LaunchAgent is the route for a bare binary.
+- Turning it on only writes the file, and macOS loads it at the next login. Loading it straight away would start a second helper.
+- Turning it off only deletes the file, so a running helper keeps running.
+- `RunAtLoad` is set and `KeepAlive` isn't, so Exit in the menu bar stays exited until the next login.
+- `pnpm menubar:start` rewrites the file if it exists, which keeps its paths right after Node or the project moves. If the project moves and that isn't run, the login item fails silently.
+
+**Permissions.** There's nothing to grant, but macOS shows a "Background Items Added" notice for a new item, and you can switch it off under System Settings > General > Login Items & Extensions. No command can flip that switch back, so the Blocked row opens the page. Medea spots the block two ways: `launchctl print-disabled`, and the `Disposition` in `sfltool dumpbtm`, which needs no `sudo` for your own items. `sfltool` isn't documented by Apple, so a failure there just means the block isn't seen. It takes about 4 seconds, so it only runs when a login item exists, behind a "Checking System Settings" line.
 
 ## Closing the window
 

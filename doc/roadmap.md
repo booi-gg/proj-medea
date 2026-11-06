@@ -13,6 +13,7 @@ The goal is a Raycast-style launcher for macOS that runs as a CLI.
 | Aliases and per-item settings     | Yes, built | Nothing special                                                                                                  |
 | Hotkeys for apps and commands     | Yes, built | Nothing special                                                                                                  |
 | Run your own scripts and commands | Yes        | Nothing special expected                                                                                         |
+| Start at login                    | Yes, built | Nothing to grant. macOS shows a notice, and the item can be switched off in System Settings                      |
 | Clipboard history                 | Yes, built | The helper watches the clipboard. Pasting into the previous app would need Accessibility permission              |
 | Switch windows, search menu items | Yes        | Accessibility permission                                                                                         |
 | Move and resize windows           | Yes        | Accessibility permission                                                                                         |
@@ -26,7 +27,7 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 2. **Search launcher:** done. Type to find apps and built-in commands, then press Enter.
 3. **Commands:** started. Medea apps live in `src/medea-apps/`, with Quicklinks and Clipboard History built. Loading scripts from a user folder is still to do.
 4. **Terminal choice:** done for Terminal and Ghostty, from the menu bar. Other terminals need a tested recipe in `src/terminals/terminals.ts`.
-5. **Background features:** clipboard history is built. Start at login is still to do, so the shortcut and clipboard recording survive a reboot.
+5. **Background features:** done. Clipboard history records in the background, and Start at login in Medea Settings brings the helper back after a reboot.
 6. **Permission features:** window management and snippets, packaged as a signed `.app`. A rebuilt bare binary may lose granted permissions, so a stable app identity will matter here.
 
 ## Later ideas

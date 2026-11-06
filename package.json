@@ -1,0 +1,26 @@
+{
+  "name": "supercast",
+  "version": "0.1.0",
+  "private": true,
+  "bin": {
+    "supercast": "./index.ts"
+  },
+  "type": "module",
+  "scripts": {
+    "start": "node index.ts",
+    "menubar:start": "node index.ts start",
+    "menubar:stop": "node index.ts stop",
+    "menubar:status": "node index.ts status",
+    "typecheck": "tsc",
+    "check": "vp check",
+    "format": "vp fmt",
+    "lint": "vp lint"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  }
+}

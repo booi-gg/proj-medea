@@ -18,3 +18,4 @@ export const configPath = join(configDir, "config.json");
 export const quicklinksPath = join(configDir, "medea-quicklinks.json");
 export const loginItemPath = join(homedir(), "Library", "LaunchAgents", "medea.menu-bar.plist");
 export const clipboardHistoryPath = join(configDir, "medea-clipboard-history.json");
+export const clipboardImagesDir = join(configDir, "medea-clipboard-history");

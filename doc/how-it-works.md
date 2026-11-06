@@ -37,6 +37,7 @@ src/
 │   ├── launcher.ts       The search loop and its list of items
 │   ├── prompt.ts         Draws the search bar and reads keys
 │   ├── screen.ts         Clears the window and draws the logo
+│   ├── split-view.ts     Lays out a list beside a preview
 │   ├── item-settings.ts  The settings screen for one app or command
 │   ├── aliases.ts        Parses, checks and saves aliases
 │   ├── hotkeys.ts        Parses, checks and saves hotkeys
@@ -49,8 +50,9 @@ src/
 │   ├── registry.ts       The list of installed apps
 │   ├── medea-clipboard-history/
 │   │   ├── index.ts      The history list and its actions
-│   │   ├── store.ts      Reads and saves the history file
-│   │   └── format.ts     Row previews and ages
+│   │   ├── store.ts      Reads and saves history and image files
+│   │   ├── format.ts     Row text, previews, ages and sizes
+│   │   └── image-preview.ts Reads thumbnails and draws them as text
 │   ├── medea-settings/
 │   │   └── index.ts      The Settings (Medea) screen
 │   └── medea-quicklinks/
@@ -294,15 +296,24 @@ A link can have up to 3 arguments. Values are percent-encoded when the link star
 
 ## Clipboard history
 
-The second Medea app. `Clipboard (Medea)` lists what you've copied, newest first, before you type anything. Typing filters by exact text, not loose letters, because loose matching on long text matches nearly everything. Enter copies the entry back and returns to search. Tab offers Copy, Delete and Delete all, and Delete all asks first.
+The second Medea app. `Clipboard (Medea)` lists what you've copied, newest first, before you type anything. Typing filters by exact text, not loose letters, because loose matching on long text matches nearly everything. Enter copies the entry back and returns to search. Tab offers Copy, View full text or Open image, Delete and Delete all, and Delete all asks first.
 
 Raycast pastes straight into the app you were using. Medea only copies, because sending Cmd+V to another app needs Accessibility permission. After choosing an entry, switch back and paste.
 
-**Recording.** The Swift helper checks the clipboard's change count every half second, which costs almost nothing, and only reads the text when it changes. So recording needs the helper running, and the CLI doesn't have to be open.
+**Preview.** The focused entry shows in a pane beside the list, built by `toSplitLayout()` and `joinColumns()` in `src/launcher/split-view.ts`. A window under 56 columns has no room, so it shows only the list.
+
+- Text keeps its line breaks and indentation. Tabs show as four spaces, long lines are cut rather than wrapped, and a note says how many lines don't fit. View full text opens the whole entry in `less`, and `q` comes back.
+- Images are drawn as text. Each `▀` shows two pixels, using its 24-bit foreground and background colours, so the same code works in Terminal and Ghostty. Real image protocols aren't reliably available in Terminal. The result is blocky, so Open image shows the real thing.
+
+`string-width` measures rows, because characters like 日本 take two columns and a row that runs too long would wrap and break the screen.
+
+**Recording.** The Swift helper checks the clipboard's change count every half second, which costs almost nothing, and only reads the content when it changes. So recording needs the helper running, and the CLI doesn't have to be open.
 
 1. `ClipboardWatcher` in `native/StatusItem.swift` applies the privacy rules below.
-2. The helper runs `node src/index.ts record-clipboard` and sends the text through stdin, because anyone can read a process's arguments with `ps`.
-3. `addEntry()` in `store.ts` puts it first. Copying the same text again moves the old entry to the top.
+2. The helper runs `node src/index.ts record-clipboard` and sends the text through stdin, because anyone can read a process's arguments with `ps`. An image goes the same way as a PNG to `record-clipboard-image`, converted from TIFF if needed.
+3. `addEntry()` in `store.ts` puts it first. Copying the same thing again moves the old entry to the top, and images count as the same when their hash matches.
+
+If the clipboard holds both text and an image, text wins, because apps like Excel also add a picture of the cells you copied.
 
 Copies are recorded one at a time, so two quick copies can't overwrite each other.
 
@@ -313,16 +324,20 @@ Copies are recorded one at a time, so two quick copies can't overwrite each othe
 | Content marked confidential, temporary or auto-generated | The `org.nspasteboard.*` types and the legacy types listed at nspasteboard.org |
 | Anything copied in Passwords or Keychain Access          | The frontmost app's bundle ID                                                  |
 | Files                                                    | A file URL on the clipboard, because the text would only be the file's name    |
-| Images and other non-text content                        | No plain text on the clipboard                                                 |
+| Content that is neither text nor an image                | No plain text or image data                                                    |
 | Blank text, or text over 100,000 characters              | Checked in `addEntry()`                                                        |
 
 A password manager has to mark its copies for this to work, and an app that doesn't will be recorded like any other.
 
-**Storage.** `~/.config/medea/medea-clipboard-history.json` keeps the newest 200 entries. It's plain text, not encrypted, and only your user can read it. Saving writes a temporary file and renames it, so a reader never sees half a file.
+**Storage.** `~/.config/medea/medea-clipboard-history.json` keeps the newest 200 entries, of which at most 50 are images. Images live in `~/.config/medea/medea-clipboard-history/` as `<hash>.png`, with a small `<hash>.bmp` thumbnail from `sips` for the preview. Images over 30 MB are skipped. Each save removes any image no entry mentions, so deleting an entry frees its files.
+
+None of this is encrypted, and only your user can read it. Saving writes a temporary file and renames it, so a reader never sees half a file.
 
 **Terminal safety.** Copied text can contain escape codes, so rows and menus strip control characters before showing it. The copy itself keeps the original text.
 
 **Permissions.** macOS has a "Paste from Other Apps" privacy control that can ask before an app reads the clipboard. On macOS 26.6.2 `NSPasteboard.general.accessBehavior` reports `alwaysAllow` for the helper, so no prompt appears. A later macOS could change that.
+
+Text is copied back with `pbcopy`. Images go through AppleScript's `set the clipboard`.
 
 `pbcopy` and `pbpaste` garble non-English text when the locale is empty, as it can be for the helper, so both run with `LC_CTYPE=UTF-8`.
 

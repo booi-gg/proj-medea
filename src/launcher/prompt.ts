@@ -2,6 +2,8 @@ import { PassThrough } from "node:stream";
 import { styleText } from "node:util";
 import { AutocompletePrompt, isCancel } from "@clack/core";
 import { rankItems } from "./search.ts";
+import { joinColumns, toSplitLayout } from "./split-view.ts";
+import type { SplitLayout } from "./split-view.ts";
 
 const MAX_VISIBLE_RESULTS = 8;
 const ENTER_KEY = "\r";
@@ -16,6 +18,7 @@ const FOCUS_ICON = styleText("cyan", "▸");
 const EMPTY_INPUT_CURSOR = "█";
 // Same line count as the search bar: clack crashes when a redraw has fewer lines than it expects.
 const BLANK_FRAME = "\n";
+const PREVIEW_DIVIDER = styleText("dim", "│");
 
 export interface LauncherOption {
   value: string;
@@ -31,6 +34,7 @@ export interface Selection {
 }
 
 type Rank = (query: string, options: readonly LauncherOption[]) => LauncherOption[];
+type RenderPreview = (value: string, width: number, height: number) => readonly string[];
 
 export interface SelectionDisplay {
   /** Lists results before anything is typed. */
@@ -38,6 +42,8 @@ export interface SelectionDisplay {
   rank?: Rank;
   enterLabel?: string;
   settingsLabel?: string;
+  /** Shows the focused result in a pane beside the list. */
+  renderPreview?: RenderPreview;
 }
 
 const isEmptyQuery = (query: string): boolean => query.trim() === "";
@@ -48,19 +54,42 @@ const renderSearchBar = (query: string, inputWithCursor: string, placeholder: st
   return `\n  ${SEARCH_ICON} ${content}`;
 };
 
+const renderRows = (
+  results: readonly LauncherOption[],
+  cursor: number,
+  maxRows: number,
+): string[] => {
+  const firstVisible = Math.max(0, cursor - maxRows + 1);
+  return results.slice(firstVisible, firstVisible + maxRows).map((item) => {
+    const isFocused = item === results[cursor];
+    return isFocused ? `  ${FOCUS_ICON} ${item.label}` : `    ${styleText("dim", item.label)}`;
+  });
+};
+
+interface ResultsDisplay {
+  footer: string;
+  layout: SplitLayout | undefined;
+  renderPreview: RenderPreview | undefined;
+}
+
 const renderResults = (
   results: readonly LauncherOption[],
   cursor: number,
-  footer: string,
+  { footer, layout, renderPreview }: ResultsDisplay,
 ): string => {
   if (results.length === 0) {
     return `\n\n    ${styleText("dim", "No results")}`;
   }
-  const firstVisible = Math.max(0, cursor - MAX_VISIBLE_RESULTS + 1);
-  const rows = results.slice(firstVisible, firstVisible + MAX_VISIBLE_RESULTS).map((item) => {
-    const isFocused = item === results[cursor];
-    return isFocused ? `  ${FOCUS_ICON} ${item.label}` : `    ${styleText("dim", item.label)}`;
-  });
+  const focused = results[cursor];
+  const canSplit = layout !== undefined && renderPreview !== undefined && focused !== undefined;
+  const rows = canSplit
+    ? joinColumns(
+        renderRows(results, cursor, layout.height),
+        renderPreview(focused.value, layout.previewWidth, layout.height),
+        layout,
+        PREVIEW_DIVIDER,
+      )
+    : renderRows(results, cursor, MAX_VISIBLE_RESULTS);
   return `\n\n${rows.join("\n")}\n\n    ${styleText("dim", footer)}`;
 };
 
@@ -108,9 +137,11 @@ export const promptForSelection = async (
     rank = rankItems,
     enterLabel = "open",
     settingsLabel = "settings",
+    renderPreview,
   }: SelectionDisplay = {},
 ): Promise<Selection> => {
   const footer = `↵ ${enterLabel}   ${SETTINGS_KEY_HINT} ${settingsLabel}`;
+  const layout = toSplitLayout(process.stdout.columns, process.stdout.rows);
   let lastQuery = "";
   let wantsSettings = false;
   const input = new PassThrough();
@@ -138,7 +169,12 @@ export const promptForSelection = async (
       if (isEmptyQuery(this.userInput) && !listWhenEmpty) {
         return searchBar;
       }
-      return `${searchBar}${renderResults(this.filteredOptions, this.cursor, footer)}`;
+      const results = renderResults(this.filteredOptions, this.cursor, {
+        footer,
+        layout,
+        renderPreview,
+      });
+      return `${searchBar}${results}`;
     },
   });
 

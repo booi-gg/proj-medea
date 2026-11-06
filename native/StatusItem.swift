@@ -124,7 +124,12 @@ struct TerminalChoice: Decodable {
 
 // MARK: - Clipboard watcher
 
-/// Watches for copied text. It runs only here, because the CLI isn't always open.
+enum Clip {
+  case text(String)
+  case image(Data)
+}
+
+/// Watches for copied text and images. It runs only here, because the CLI isn't always open.
 final class ClipboardWatcher {
   private static let checkInterval: TimeInterval = 0.5
   // From nspasteboard.org: confidential, temporary or generated content that must stay out.
@@ -140,11 +145,11 @@ final class ClipboardWatcher {
   private static let ignoredApps: Set<String> = ["com.apple.Passwords", "com.apple.keychainaccess"]
 
   private let pasteboard: NSPasteboard
-  private let onCopy: (String) -> Void
+  private let onCopy: (Clip) -> Void
   private var lastChangeCount: Int
   private var timer: Timer?
 
-  init(pasteboard: NSPasteboard, onCopy: @escaping (String) -> Void) {
+  init(pasteboard: NSPasteboard, onCopy: @escaping (Clip) -> Void) {
     self.pasteboard = pasteboard
     self.onCopy = onCopy
     // Starts from now, so whatever was already copied isn't recorded.
@@ -169,11 +174,25 @@ final class ClipboardWatcher {
       types.contains { Self.ignoredTypes.contains($0.rawValue) }
       || Self.ignoredApps.contains(frontApp)
     // A copied file also carries its name as text, which isn't what was copied.
-    guard !isIgnored, !types.contains(.fileURL), let text = pasteboard.string(forType: .string)
-    else {
+    guard !isIgnored, !types.contains(.fileURL) else {
       return
     }
-    onCopy(text)
+    // Text wins, because apps like Excel also add a picture of the cells you copied.
+    if let text = pasteboard.string(forType: .string) {
+      onCopy(.text(text))
+    } else if let png = readImageAsPng() {
+      onCopy(.image(png))
+    }
+  }
+
+  private func readImageAsPng() -> Data? {
+    if let png = pasteboard.data(forType: .png) {
+      return png
+    }
+    guard let tiff = pasteboard.data(forType: .tiff) else {
+      return nil
+    }
+    return NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:])
   }
 }
 
@@ -185,7 +204,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let menu = NSMenu()
   private let terminalMenu = NSMenu()
-  private var clipsToRecord: [String] = []
+  private var clipsToRecord: [Clip] = []
   private var isRecordingClip = false
 
   init(cliCommand: [String]) {
@@ -266,8 +285,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   }
 
   /// One at a time, so two quick copies can't overwrite each other in the history file.
-  func recordClip(_ text: String) {
-    clipsToRecord.append(text)
+  func recordClip(_ clip: Clip) {
+    clipsToRecord.append(clip)
     recordNextClip()
   }
 
@@ -276,7 +295,17 @@ final class StatusItemController: NSObject, NSMenuDelegate {
       return
     }
     isRecordingClip = true
-    runCli(["record-clipboard"], input: clipsToRecord.removeFirst()) { [weak self] _ in
+    let command: String
+    let input: Data
+    switch clipsToRecord.removeFirst() {
+    case .text(let text):
+      command = "record-clipboard"
+      input = Data(text.utf8)
+    case .image(let png):
+      command = "record-clipboard-image"
+      input = png
+    }
+    runCli([command], input: input) { [weak self] _ in
       self?.isRecordingClip = false
       self?.recordNextClip()
     }
@@ -307,7 +336,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
   private func runCli(
     _ arguments: [String],
-    input: String? = nil,
+    input: Data? = nil,
     onFinish: ((Data) -> Void)? = nil
   ) {
     let process = Process()
@@ -333,7 +362,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     if let input {
       // Off the main thread, because a large write waits for the CLI to read it.
       DispatchQueue.global().async {
-        try? inputPipe.fileHandleForWriting.write(contentsOf: Data(input.utf8))
+        try? inputPipe.fileHandleForWriting.write(contentsOf: input)
         try? inputPipe.fileHandleForWriting.close()
       }
     }
@@ -361,8 +390,8 @@ controller.reloadHotKeys(into: hotKeys)
 
 // The CLI can exit before reading all the copied text, which must not end the helper.
 signal(SIGPIPE, SIG_IGN)
-let clipboardWatcher = ClipboardWatcher(pasteboard: .general) { text in
-  controller.recordClip(text)
+let clipboardWatcher = ClipboardWatcher(pasteboard: .general) { clip in
+  controller.recordClip(clip)
 }
 clipboardWatcher.start()
 

@@ -156,7 +156,7 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
       {
         value: LOG_SIZE,
         label: `Log size  ${logMaxSizeMb} MB`,
-        hint: "Oldest logs are removed when the limit is reached",
+        hint: "Oldest logs removed at limit",
       },
       {
         value: WINDOW_ACCESS,

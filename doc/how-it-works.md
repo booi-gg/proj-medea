@@ -127,7 +127,7 @@ The menu and the shortcut both run `node src/index.ts show`. `showCli()` in `src
 1. Reads the chosen terminal.
 2. `focusRunningCli()` connects to `.build/cli.sock`. A running CLI answers on this socket with its tty path. A dead CLI refuses the connection, even if the socket file was left behind, so there is no stale state to clean up. It gives up after one second.
 3. **If a CLI answers,** the terminal's recipe brings it back.
-4. **If nothing answers,** the recipe opens `.build/open-medea.command`. The launcher uses an absolute Node path because a terminal's `PATH` can differ from your shell's.
+4. **If nothing answers,** the recipe opens `.build/open-medea.command`. The launcher uses an absolute Node path because a terminal's `PATH` can differ from your shell's. It clears the window first, because terminals type the launch command into a shell and that line would otherwise stay above Medea.
 
 The CLI has to stay open for this to work, so `runLauncher()` loops: after an action it clears the screen and shows search again. Exit and Esc end the loop.
 

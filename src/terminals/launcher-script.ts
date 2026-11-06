@@ -2,6 +2,10 @@ import { chmod, writeFile } from "node:fs/promises";
 import { cliEntryPath, projectDir } from "../paths.ts";
 import { quoteForShell } from "../shell.ts";
 
+// Terminals type the launch command into a shell, so it is on screen before the CLI starts.
+// Clears the screen, then the scrollback, so it can't be scrolled back to either.
+const CLEAR_WINDOW = String.raw`printf '\033[H\033[2J\033[3J'`;
+
 /** Writes a script a terminal can open to run the CLI with these arguments. */
 export const writeLauncherScript = async (
   scriptPath: string,
@@ -11,6 +15,7 @@ export const writeLauncherScript = async (
   const command = [process.execPath, cliEntryPath, ...cliArguments].map(quoteForShell).join(" ");
   const script = [
     "#!/bin/zsh",
+    CLEAR_WINDOW,
     // Marks the window as Medea's, so Medea may close it.
     "export MEDEA_WINDOW=1",
     `cd ${quoteForShell(projectDir)}`,

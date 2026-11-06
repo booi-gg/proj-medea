@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
+import { findMedeaItem } from "../medea-apps/registry.ts";
 import { stopMenuBar } from "../menubar/helper.ts";
 import { buildDir, launcherPath } from "../paths.ts";
 import { writeLauncherScript } from "./launcher-script.ts";
@@ -25,21 +26,33 @@ export const setTerminal = async (name: string | undefined): Promise<void> => {
   }
 };
 
-// One script per item, so two quick requests can't open the wrong item's settings.
-const getSettingsScriptPath = (itemValue: string): string => {
+// One script per item, so two quick requests can't open the wrong item.
+const openItemWindow = async (
+  scriptPrefix: string,
+  itemValue: string,
+  cliArguments: readonly string[],
+): Promise<void> => {
   const itemHash = createHash("sha1").update(itemValue).digest("hex").slice(0, 12);
-  return join(buildDir, `settings-${itemHash}.command`);
-};
-
-/** Opens an item's settings in a new window, leaving the search window where it is. */
-export const openItemSettings = async (itemValue: string, itemName: string): Promise<void> => {
-  const scriptPath = getSettingsScriptPath(itemValue);
-  await writeLauncherScript(scriptPath, ["settings", itemValue, itemName]);
+  const scriptPath = join(buildDir, `${scriptPrefix}-${itemHash}.command`);
+  await writeLauncherScript(scriptPath, cliArguments);
   const launcher = await getSelectedLauncher();
   await launcher.open(scriptPath);
 };
 
-/** Runs a command from its hotkey, with no search window involved. */
+/** Opens an item's settings in a new window, leaving the search window where it is. */
+export const openItemSettings = (itemValue: string, itemName: string): Promise<void> =>
+  openItemWindow("settings", itemValue, ["settings", itemValue, itemName]);
+
+/** Runs an item that a hotkey opened a window for. */
+export const runItemInWindow = async (itemValue: string | undefined): Promise<void> => {
+  const item = findMedeaItem(itemValue);
+  if (item === undefined) {
+    throw new Error(`Unknown item "${itemValue}".`);
+  }
+  await item.run();
+};
+
+/** Runs an item from its hotkey, with no search window involved. */
 export const runCommandItem = async (itemValue: string | undefined): Promise<void> => {
   if (itemValue === "command:exit") {
     await quitRunningCli();
@@ -53,5 +66,13 @@ export const runCommandItem = async (itemValue: string | undefined): Promise<voi
     await showCli();
     return;
   }
-  throw new Error(`Unknown command "${itemValue}".`);
+  const item = findMedeaItem(itemValue);
+  if (item === undefined) {
+    throw new Error(`Unknown command "${itemValue}".`);
+  }
+  if (item.needsWindow === true) {
+    await openItemWindow("run", item.value, ["run-in-window", item.value]);
+    return;
+  }
+  await item.run();
 };

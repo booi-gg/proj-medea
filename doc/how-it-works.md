@@ -43,6 +43,15 @@ src/
 │   ├── banner.ts         The MEDEA logo
 │   ├── search.ts         Ranks results with match-sorter
 │   └── apps.ts           Finds installed apps and opens them
+├── medea-apps/
+│   ├── types.ts          What an app gives the launcher
+│   ├── registry.ts       The list of installed apps
+│   └── quicklinks/
+│       ├── index.ts      Search items and settings actions
+│       ├── store.ts      Reads and saves quicklinks.json
+│       ├── placeholders.ts Finds and fills {argument} and {clipboard}
+│       ├── open-link.ts  Checks links and opens them
+│       └── form.ts       The create, edit and argument prompts
 ├── menubar/
 │   ├── helper.ts         Builds, starts and stops the Swift helper
 │   └── commands.ts       The start, stop and status commands
@@ -51,7 +60,7 @@ src/
     ├── running-cli.ts    Talks to a running CLI over its socket
     ├── launcher-script.ts Writes the scripts terminals open
     ├── close-window.ts   Closes a finished Terminal window
-    └── actions.ts        Shows the CLI, changes terminal, opens item settings
+    └── actions.ts        Shows the CLI, changes terminal, opens item windows
 native/
 ├── StatusItem.swift      The helper: menu bar icon, menu and global shortcuts
 └── HotkeyRecorder.swift  The window that records a hotkey
@@ -202,13 +211,15 @@ The settings window is a menu: **Add alias**, **Create hotkey**, **Remove hotkey
 2. The CLI sends the running helper `SIGUSR1`, so the hotkey works with no restart.
 3. The helper runs `node src/index.ts hotkeys`, which turns saved hotkeys into Carbon key codes and flags, and registers them. `helper.log` records each result, where status `0` means success.
 
-**Pressing a hotkey.** An app opens directly through `open <path>`, without starting Node. A command runs `node src/index.ts run <value>`:
+**Pressing a hotkey.** An item saved as a path is an app, and opens directly through `open <path>` without starting Node. Anything else runs `node src/index.ts run <value>`:
 
-| Command              | Hotkey does                                   |
-| -------------------- | --------------------------------------------- |
-| Exit                 | Quits the open search window                  |
-| Set Alias            | Opens Medea                                   |
-| Remove Menu Bar Item | Stops the helper, which also ends all hotkeys |
+| Command              | Hotkey does                                           |
+| -------------------- | ----------------------------------------------------- |
+| Exit                 | Quits the open search window                          |
+| Set Alias            | Opens Medea                                           |
+| Remove Menu Bar Item | Stops the helper, which also ends all hotkeys         |
+| Create Quicklink     | Opens a new window with the form                      |
+| A quicklink          | Opens it, through a new window if it has `{argument}` |
 
 `src/launcher/hotkeys.ts` holds the key table, checked against `HIToolbox/Events.h`. It uses US keyboard positions.
 
@@ -222,6 +233,51 @@ A hotkey needs at least two modifiers, including `cmd` or `ctrl`, so it can't ta
 | The key arrives and matches an enabled macOS shortcut from `CopySymbolicHotKeys` | The terminal asks "Use it anyway?"       |
 
 A shortcut used by an app that only reacts while it's frontmost can't be seen, and it isn't a conflict either, because a global hotkey wins.
+
+## Medea apps
+
+A Medea app is a feature that adds its own items to search. It lives in `src/medea-apps/<name>/` and is listed in `registry.ts`. Apps are built in for now, and loading them from a user folder could come later.
+
+An app gives the launcher two things, defined in `types.ts`:
+
+- `listItems()` returns its search items. It runs on every keystroke, so anything saved in another window shows straight away.
+- `listSettingsActions(value)` returns extra rows for an item's settings menu.
+
+An item with `needsWindow: true` asks for input, so its hotkey opens a new window running `node src/index.ts run-in-window <value>`. That window closes when the item finishes.
+
+## Quicklinks
+
+The first Medea app, modelled on Raycast's. `Create Quicklink` asks for a name, a link and an optional app to open it with. Links appear in search with a `↗` icon, and aliases and hotkeys work as they do for apps. Tab opens settings, which add `Edit link` and `Delete link`.
+
+Links are stored in `~/.config/medea/quicklinks.json`:
+
+```json
+[
+  {
+    "id": "github-search",
+    "name": "GitHub Search",
+    "link": "https://github.com/search?q={argument name=\"query\"}",
+    "openWith": "/Applications/Safari.app"
+  }
+]
+```
+
+The item value is `quicklink:<id>`. The ID comes from the name when the link is created and never changes, so a rename keeps its alias and hotkey. Warnings like "already used by" show this ID, so they can show an old name after a rename. Deleting a link also removes its alias and hotkey.
+
+**Links.** A web URL, a deeplink like `spotify://...`, or a path starting with `/` or `~`. `github.com` is saved as `https://github.com`, and `localhost:3000` as `http://localhost:3000`.
+
+**Placeholders.** These use Raycast's syntax:
+
+| Placeholder                           | Result                                                           |
+| ------------------------------------- | ---------------------------------------------------------------- |
+| `{argument}`                          | Asks when the link opens. Each unnamed one is its own question   |
+| `{argument name="query" default="x"}` | The same, and arguments with one name share one value            |
+| `{query}`                             | Short for `{argument name="query"}`                              |
+| `{clipboard}`                         | The clipboard text, trimmed. Empty if nothing text-like is there |
+
+A link can have up to 3 arguments. Values are percent-encoded when the link starts with a URL scheme, and left alone in paths and in a link that starts with a placeholder. Anything else in braces, like `{date}`, stays in the link as written.
+
+**Failures.** A link that can't open shows a red line above the search bar, and the window stays open. From a hotkey with no window, the failure is silent. If `quicklinks.json` is broken, search shows no links and saving refuses to run, so a save can't overwrite links you could still fix.
 
 ## Closing the window
 

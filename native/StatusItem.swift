@@ -197,12 +197,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
   }
 
-  /// Apps open directly, which is fastest. Commands need the CLI.
+  /// Apps are saved by path and open directly, which is fastest. Everything else needs the CLI.
   private func runItem(_ value: String) {
-    if value.hasPrefix("command:") {
-      runCli(["run", value])
-    } else {
+    if value.hasPrefix("/") {
       openApp(at: value)
+    } else {
+      runCli(["run", value])
     }
   }
 

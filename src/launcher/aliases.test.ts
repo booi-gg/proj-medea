@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { findAliasProblem, parseAliasInput } from "./aliases.ts";
+import { findAliasProblem, parseAliasInput, toDisplayName } from "./aliases.ts";
 
 test("splits, trims and lowercases aliases", () => {
   assert.deepEqual(parseAliasInput(" Code, IDE ,"), ["code", "ide"]);
@@ -50,4 +50,10 @@ test("names a command without its prefix", () => {
 
 test("an item can keep its own aliases", () => {
   assert.equal(findAliasProblem(["code"], "/a.app", { "/a.app": ["code"] }), undefined);
+});
+
+test("names an app, a command and a quicklink", () => {
+  assert.equal(toDisplayName("/Applications/Visual Studio Code.app"), "Visual Studio Code");
+  assert.equal(toDisplayName("command:exit"), "exit");
+  assert.equal(toDisplayName("quicklink:github-search"), "github-search");
 });

@@ -1,6 +1,8 @@
 import { styleText } from "node:util";
 import { readConfigSync } from "../config.ts";
 import { start, stop } from "../menubar/commands.ts";
+import { listMedeaItems } from "../medea-apps/registry.ts";
+import type { LauncherItem } from "../medea-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
 import { openItemSettings } from "../terminals/actions.ts";
 import { listenForRequests } from "../terminals/running-cli.ts";
@@ -20,13 +22,14 @@ const CLEAR_SCREEN_SEQUENCE = "\u001B[2J\u001B[H";
 const APP_ICON = styleText("cyan", "◆");
 const COMMAND_ICON = styleText("magenta", "⌘");
 
-interface LauncherItem {
-  value: string;
-  name: string;
-  icon: string;
-  kind: string;
-  run: () => Promise<void>;
+type GetItems = () => LauncherItem[];
+
+interface RoundResult {
+  keepRunning: boolean;
+  notice: string;
 }
+
+const NO_NOTICE = "";
 
 const formatRow = (
   { icon, name, kind }: LauncherItem,
@@ -45,12 +48,17 @@ const formatRow = (
   return `${icon} ${styledParts.join(" ")}${padding}${styleText("gray", kind)}`;
 };
 
+const withoutNotice = (run: () => Promise<void>) => async (): Promise<string> => {
+  await run();
+  return NO_NOTICE;
+};
+
 const toAppItem = ({ name, path }: App): LauncherItem => ({
   value: path,
   name,
   icon: APP_ICON,
   kind: "Application",
-  run: () => openApp(path),
+  run: withoutNotice(() => openApp(path)),
 });
 
 const toCommandItem = (value: string, name: string, run: () => Promise<void>): LauncherItem => ({
@@ -58,7 +66,7 @@ const toCommandItem = (value: string, name: string, run: () => Promise<void>): L
   name,
   icon: COMMAND_ICON,
   kind: "Command",
-  run,
+  run: withoutNotice(run),
 });
 
 const doNothing = async (): Promise<void> => {};
@@ -72,8 +80,11 @@ const buildCommandItems = (menuBarRunning: boolean): LauncherItem[] => [
   toCommandItem(EXIT_VALUE, "Exit", doNothing),
 ];
 
-const drawScreen = (): void => {
-  process.stdout.write(`${CLEAR_SCREEN_SEQUENCE}${renderBanner(process.stdout.columns)}`);
+const drawScreen = (notice = NO_NOTICE): void => {
+  const noticeLine = notice === NO_NOTICE ? "" : `\n  ${notice}\n`;
+  process.stdout.write(
+    `${CLEAR_SCREEN_SEQUENCE}${renderBanner(process.stdout.columns)}${noticeLine}`,
+  );
 };
 
 // Settings are read on every call, so one saved in a settings window shows here straight away.
@@ -93,47 +104,55 @@ const openSettingsFor = async (items: readonly LauncherItem[], value?: string): 
   }
 };
 
-const pickItemForAlias = async (items: readonly LauncherItem[]): Promise<void> => {
+const pickItemForAlias = async (getItems: GetItems): Promise<void> => {
   drawScreen();
-  const { value } = await promptForSelection(() => toOptions(items), PICK_ITEM_PLACEHOLDER);
-  await openSettingsFor(items, value);
+  const { value } = await promptForSelection(() => toOptions(getItems()), PICK_ITEM_PLACEHOLDER);
+  await openSettingsFor(getItems(), value);
 };
 
-/** Shows the search bar once. Returns false when the CLI should exit. */
-const runSearchRound = async (): Promise<boolean> => {
-  drawScreen();
+// A link that fails to open shouldn't take the search window down with it.
+const runItem = async (item: LauncherItem | undefined): Promise<string> => {
+  try {
+    return (await item?.run()) ?? NO_NOTICE;
+  } catch (error) {
+    return styleText("red", error instanceof Error ? error.message : String(error));
+  }
+};
+
+/** Shows the search bar once. */
+const runSearchRound = async (notice: string): Promise<RoundResult> => {
+  drawScreen(notice);
   const [menuBarRunning, apps] = await Promise.all([isMenuBarRunning(), listApps()]);
-  const items = [...buildCommandItems(menuBarRunning), ...apps.map(toAppItem)];
+  const fixedItems = buildCommandItems(menuBarRunning);
+  const appItems = apps.map(toAppItem);
+  const getItems: GetItems = () => [...fixedItems, ...listMedeaItems(), ...appItems];
 
   const { cancelled, value, wantsSettings } = await promptForSelection(
-    () => toOptions(items),
+    () => toOptions(getItems()),
     SEARCH_PLACEHOLDER,
   );
-  if (cancelled) {
-    return false;
+  if (cancelled || (value === EXIT_VALUE && !wantsSettings)) {
+    return { keepRunning: false, notice: NO_NOTICE };
   }
   if (wantsSettings) {
-    await openSettingsFor(items, value);
-    return true;
-  }
-  if (value === EXIT_VALUE) {
-    return false;
+    await openSettingsFor(getItems(), value);
+    return { keepRunning: true, notice: NO_NOTICE };
   }
   if (value === SET_ALIAS_VALUE) {
-    await pickItemForAlias(items);
-    return true;
+    await pickItemForAlias(getItems);
+    return { keepRunning: true, notice: NO_NOTICE };
   }
-  await items.find((item) => item.value === value)?.run();
-  return true;
+  const nextNotice = await runItem(getItems().find((item) => item.value === value));
+  return { keepRunning: true, notice: nextNotice };
 };
 
 // Stays open after each action so the shortcut can bring this same window back.
 export const runLauncher = async (): Promise<void> => {
   const stopListening = await listenForRequests();
   try {
-    let keepRunning = true;
-    while (keepRunning) {
-      keepRunning = await runSearchRound();
+    let round: RoundResult = { keepRunning: true, notice: NO_NOTICE };
+    while (round.keepRunning) {
+      round = await runSearchRound(round.notice);
     }
   } finally {
     stopListening();

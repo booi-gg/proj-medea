@@ -9,6 +9,7 @@ The goal is a Raycast-style launcher for macOS that runs as a CLI.
 | Global shortcut                   | Yes, built | Reportedly no permission, but Raycast's manual lists Accessibility for hotkeys, so confirm with a real key press |
 | Search and open apps              | Yes, built | Nothing special                                                                                                  |
 | Search files and URLs             | Yes        | Nothing special expected                                                                                         |
+| Quicklinks                        | Yes, built | Nothing special                                                                                                  |
 | Aliases and per-item settings     | Yes, built | Nothing special                                                                                                  |
 | Hotkeys for apps and commands     | Yes, built | Nothing special                                                                                                  |
 | Run your own scripts and commands | Yes        | Nothing special expected                                                                                         |
@@ -23,14 +24,14 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 
 1. **Shortcut:** done. The helper listens for `Cmd+Shift+Space` and opens the CLI.
 2. **Search launcher:** done. Type to find apps and built-in commands, then press Enter.
-3. **Commands:** each command is a small TypeScript file or script in a folder, so adding one doesn't change the core.
+3. **Commands:** started. Medea apps live in `src/medea-apps/`, and Quicklinks is the first. Loading scripts from a user folder is still to do.
 4. **Terminal choice:** done for Terminal and Ghostty, from the menu bar. Other terminals need a tested recipe in `src/terminals/terminals.ts`.
 5. **Background features:** clipboard history, plus start at login so the shortcut survives a reboot.
 6. **Permission features:** window management and snippets, packaged as a signed `.app`. A rebuilt bare binary may lose granted permissions, so a stable app identity will matter here.
 
 ## Later ideas
 
-- **Alias plus search text:** typing an alias then a query, like `f report`. This needs commands that take input, so it belongs with step 3.
+- **Alias plus search text:** typing an alias then a query, like `gh react`. Quicklinks now take input through a prompt after Enter, so this would fill their first argument straight from the search bar.
 
 ## Decisions
 

@@ -13,4 +13,6 @@ export const helperLogPath = join(buildDir, "helper.log");
 export const launcherPath = join(buildDir, "open-medea.command");
 export const socketPath = join(buildDir, "cli.sock");
 
-export const configPath = join(homedir(), ".config", "medea", "config.json");
+const configDir = join(homedir(), ".config", "medea");
+export const configPath = join(configDir, "config.json");
+export const quicklinksPath = join(configDir, "quicklinks.json");

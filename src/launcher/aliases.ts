@@ -5,7 +5,7 @@ import type { AliasMap } from "../config.ts";
 export const MAX_ALIASES = 2;
 // Two aliases this long still fit beside a long app name in the launcher's title column.
 const MAX_ALIAS_LENGTH = 8;
-const COMMAND_PREFIX = "command:";
+const APP_PATH_START = "/";
 const WHITESPACE = /\s/;
 
 /** Turns "Code, IDE" into ["code", "ide"]. */
@@ -17,10 +17,11 @@ export const parseAliasInput = (input: string): string[] => {
   return [...new Set(aliases)];
 };
 
+/** Apps are saved by path, everything else as "kind:id". */
 export const toDisplayName = (itemValue: string): string =>
-  itemValue.startsWith(COMMAND_PREFIX)
-    ? itemValue.slice(COMMAND_PREFIX.length)
-    : basename(itemValue, ".app");
+  itemValue.startsWith(APP_PATH_START)
+    ? basename(itemValue, ".app")
+    : itemValue.slice(itemValue.indexOf(":") + 1);
 
 /** Returns what is wrong with these aliases, or undefined when they can be saved. */
 export const findAliasProblem = (

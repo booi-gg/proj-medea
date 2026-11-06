@@ -5,8 +5,8 @@ import { toHelperHotkeys } from "./launcher/hotkeys.ts";
 import { runItemSettings } from "./launcher/item-settings.ts";
 import { runLauncher } from "./launcher/launcher.ts";
 import { showStatus, start, stop } from "./menubar/commands.ts";
-import { runCommandItem, setTerminal, showCli } from "./terminals/actions.ts";
-import { offerToCloseWindow } from "./terminals/close-window.ts";
+import { runCommandItem, runItemInWindow, setTerminal, showCli } from "./terminals/actions.ts";
+import { closeOwnWindow, offerToCloseWindow } from "./terminals/close-window.ts";
 import { listTerminals } from "./terminals/terminals.ts";
 
 const main = async (): Promise<void> => {
@@ -32,6 +32,11 @@ const main = async (): Promise<void> => {
   }
   if (command === "run") {
     await runCommandItem(argument);
+    return;
+  }
+  if (command === "run-in-window") {
+    await runItemInWindow(argument);
+    await closeOwnWindow();
     return;
   }
   if (command === "set-terminal") {

@@ -14,7 +14,7 @@ export interface Config {
 
 const EMPTY_CONFIG: Config = { aliases: {}, hotkeys: {} };
 
-const isObject = (value: unknown): value is Record<string, unknown> =>
+export const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 const isStringList = (value: unknown): value is string[] =>

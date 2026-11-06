@@ -1,6 +1,7 @@
 import { styleText } from "node:util";
 import { confirm, intro, isCancel, log, outro, select, text } from "@clack/prompts";
 import { readConfig } from "../config.ts";
+import { listSettingsActions } from "../medea-apps/registry.ts";
 import { reloadHotkeys } from "../menubar/helper.ts";
 import { MAX_ALIASES, findAliasProblem, parseAliasInput, saveAliases } from "./aliases.ts";
 import { recordKeys } from "./hotkey-recorder.ts";
@@ -76,6 +77,7 @@ const runSettingsRound = async (itemValue: string): Promise<boolean> => {
   const { aliases, hotkeys } = await readConfig();
   const hotkey = hotkeys[itemValue] ?? "";
   const aliasTags = (aliases[itemValue] ?? []).map((alias) => `[${alias}]`).join(" ");
+  const appActions = listSettingsActions(itemValue);
 
   const choice = await select({
     message: "What do you want to change?",
@@ -83,12 +85,17 @@ const runSettingsRound = async (itemValue: string): Promise<boolean> => {
       { value: ADD_ALIAS, label: withCurrentValue("Add alias", aliasTags) },
       { value: CREATE_HOTKEY, label: withCurrentValue("Create hotkey", formatHotkey(hotkey)) },
       ...(hotkey === "" ? [] : [{ value: REMOVE_HOTKEY, label: "Remove hotkey" }]),
+      ...appActions.map(({ label }) => ({ value: label, label })),
       { value: DONE, label: "Done" },
     ],
   });
 
   if (isCancel(choice) || choice === DONE) {
     return false;
+  }
+  const appAction = appActions.find(({ label }) => label === choice);
+  if (appAction !== undefined) {
+    return appAction.run();
   }
   if (choice === ADD_ALIAS) {
     await editAliases(itemValue);

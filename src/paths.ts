@@ -15,4 +15,5 @@ export const socketPath = join(buildDir, "cli.sock");
 
 const configDir = join(homedir(), ".config", "medea");
 export const configPath = join(configDir, "config.json");
-export const quicklinksPath = join(configDir, "quicklinks.json");
+export const quicklinksPath = join(configDir, "medea-quicklinks.json");
+export const clipboardHistoryPath = join(configDir, "medea-clipboard-history.json");

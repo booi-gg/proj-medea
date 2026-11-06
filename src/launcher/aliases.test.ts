@@ -55,5 +55,5 @@ test("an item can keep its own aliases", () => {
 test("names an app, a command and a quicklink", () => {
   assert.equal(toDisplayName("/Applications/Visual Studio Code.app"), "Visual Studio Code");
   assert.equal(toDisplayName("command:exit"), "exit");
-  assert.equal(toDisplayName("quicklink:github-search"), "github-search");
+  assert.equal(toDisplayName("medea-quicklinks:github-search"), "github-search");
 });

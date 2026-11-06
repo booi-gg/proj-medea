@@ -7,18 +7,17 @@ import { isMenuBarRunning } from "../menubar/helper.ts";
 import { listenForRequests } from "../terminals/running-cli.ts";
 import { listApps, openApp } from "./apps.ts";
 import type { App } from "./apps.ts";
-import { renderBanner } from "./banner.ts";
 import { formatHotkey } from "./hotkeys.ts";
 import { runItemSettings } from "./item-settings.ts";
 import { promptForSelection } from "./prompt.ts";
 import type { LauncherOption } from "./prompt.ts";
+import { drawScreen } from "./screen.ts";
 
 const TITLE_COLUMN_WIDTH = 40;
 const EXIT_VALUE = "command:exit";
 const SET_ALIAS_VALUE = "command:set-alias";
 const SEARCH_PLACEHOLDER = "Cast actions";
 const PICK_ITEM_PLACEHOLDER = "Choose an app or command";
-const CLEAR_SCREEN_SEQUENCE = "\u001B[2J\u001B[H";
 const APP_ICON = styleText("cyan", "◆");
 const COMMAND_ICON = styleText("magenta", "⌘");
 
@@ -79,13 +78,6 @@ const buildCommandItems = (menuBarRunning: boolean): LauncherItem[] => [
   toCommandItem(SET_ALIAS_VALUE, "Set Alias", doNothing),
   toCommandItem(EXIT_VALUE, "Exit", doNothing),
 ];
-
-const drawScreen = (notice = NO_NOTICE): void => {
-  const noticeLine = notice === NO_NOTICE ? "" : `\n  ${notice}\n`;
-  process.stdout.write(
-    `${CLEAR_SCREEN_SEQUENCE}${renderBanner(process.stdout.columns)}${noticeLine}`,
-  );
-};
 
 // Settings are read on every call, so one saved by a hotkey's window shows here straight away.
 const toOptions = (items: readonly LauncherItem[]): LauncherOption[] => {

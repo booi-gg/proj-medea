@@ -1,8 +1,10 @@
 #!/usr/bin/env node
+import { text } from "node:stream/consumers";
 import { intro, log } from "@clack/prompts";
 import { readConfig } from "./config.ts";
 import { toHelperHotkeys } from "./launcher/hotkeys.ts";
 import { runLauncher } from "./launcher/launcher.ts";
+import { recordText } from "./medea-apps/medea-clipboard-history/store.ts";
 import { showStatus, start, stop } from "./menubar/commands.ts";
 import { runCommandItem, runItemInWindow, setTerminal, showCli } from "./terminals/actions.ts";
 import { closeOwnWindow, offerToCloseWindow } from "./terminals/close-window.ts";
@@ -36,6 +38,11 @@ const main = async (): Promise<void> => {
   if (command === "run-in-window") {
     await runItemInWindow(argument);
     await closeOwnWindow();
+    return;
+  }
+  // Text comes through stdin because arguments can be read by anyone running "ps".
+  if (command === "record-clipboard") {
+    await recordText(await text(process.stdin));
     return;
   }
   if (command === "set-terminal") {

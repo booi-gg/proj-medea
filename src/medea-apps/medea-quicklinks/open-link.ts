@@ -1,6 +1,6 @@
 import { homedir } from "node:os";
 import { join } from "node:path";
-import { runCommand } from "../../shell.ts";
+import { UTF8_ENVIRONMENT, runCommand } from "../../shell.ts";
 import { MAX_ARGUMENTS, findArguments, hasUrlScheme } from "./placeholders.ts";
 
 const LOCAL_HOST = /^(localhost|127\.0\.0\.1)(:\d+)?([/?#]|$)/;
@@ -42,7 +42,7 @@ export const toOpenArguments = (target: string, openWith: string | undefined): s
   openWith === undefined ? [target] : ["-a", openWith, target];
 
 export const readClipboard = async (): Promise<string> => {
-  const { stdout } = await runCommand("pbpaste");
+  const { stdout } = await runCommand("pbpaste", { env: UTF8_ENVIRONMENT });
   return stdout.trim();
 };
 

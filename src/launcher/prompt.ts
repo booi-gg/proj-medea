@@ -30,6 +30,16 @@ export interface Selection {
   wantsSettings: boolean;
 }
 
+type Rank = (query: string, options: readonly LauncherOption[]) => LauncherOption[];
+
+export interface SelectionDisplay {
+  /** Lists results before anything is typed. */
+  listWhenEmpty?: boolean;
+  rank?: Rank;
+  enterLabel?: string;
+  settingsLabel?: string;
+}
+
 const isEmptyQuery = (query: string): boolean => query.trim() === "";
 
 const renderSearchBar = (query: string, inputWithCursor: string, placeholder: string): string => {
@@ -38,7 +48,11 @@ const renderSearchBar = (query: string, inputWithCursor: string, placeholder: st
   return `\n  ${SEARCH_ICON} ${content}`;
 };
 
-const renderResults = (results: readonly LauncherOption[], cursor: number): string => {
+const renderResults = (
+  results: readonly LauncherOption[],
+  cursor: number,
+  footer: string,
+): string => {
   if (results.length === 0) {
     return `\n\n    ${styleText("dim", "No results")}`;
   }
@@ -47,8 +61,7 @@ const renderResults = (results: readonly LauncherOption[], cursor: number): stri
     const isFocused = item === results[cursor];
     return isFocused ? `  ${FOCUS_ICON} ${item.label}` : `    ${styleText("dim", item.label)}`;
   });
-  const hint = styleText("dim", `↵ open   ${SETTINGS_KEY_HINT} settings`);
-  return `\n\n${rows.join("\n")}\n\n    ${hint}`;
+  return `\n\n${rows.join("\n")}\n\n    ${styleText("dim", footer)}`;
 };
 
 /**
@@ -90,7 +103,14 @@ const readKeysInto = (input: PassThrough, onSettingsKey: () => void): (() => voi
 export const promptForSelection = async (
   getOptions: () => readonly LauncherOption[],
   placeholder: string,
+  {
+    listWhenEmpty = false,
+    rank = rankItems,
+    enterLabel = "open",
+    settingsLabel = "settings",
+  }: SelectionDisplay = {},
 ): Promise<Selection> => {
+  const footer = `↵ ${enterLabel}   ${SETTINGS_KEY_HINT} ${settingsLabel}`;
   let lastQuery = "";
   let wantsSettings = false;
   const input = new PassThrough();
@@ -105,17 +125,20 @@ export const promptForSelection = async (
         lastQuery = this.userInput;
         this.focusedValue = undefined;
       }
-      return isEmptyQuery(this.userInput) ? [] : rankItems(this.userInput, getOptions());
+      if (isEmptyQuery(this.userInput)) {
+        return listWhenEmpty ? [...getOptions()] : [];
+      }
+      return rank(this.userInput, getOptions());
     },
     render() {
       if (this.state === "submit" || this.state === "cancel") {
         return BLANK_FRAME;
       }
       const searchBar = renderSearchBar(this.userInput, this.userInputWithCursor, placeholder);
-      if (isEmptyQuery(this.userInput)) {
+      if (isEmptyQuery(this.userInput) && !listWhenEmpty) {
         return searchBar;
       }
-      return `${searchBar}${renderResults(this.filteredOptions, this.cursor)}`;
+      return `${searchBar}${renderResults(this.filteredOptions, this.cursor, footer)}`;
     },
   });
 

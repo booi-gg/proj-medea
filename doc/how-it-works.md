@@ -36,6 +36,7 @@ src/
 ├── launcher/
 │   ├── launcher.ts       The search loop and its list of items
 │   ├── prompt.ts         Draws the search bar and reads keys
+│   ├── screen.ts         Clears the window and draws the logo
 │   ├── item-settings.ts  The settings screen for one app or command
 │   ├── aliases.ts        Parses, checks and saves aliases
 │   ├── hotkeys.ts        Parses, checks and saves hotkeys
@@ -46,7 +47,11 @@ src/
 ├── medea-apps/
 │   ├── types.ts          What an app gives the launcher
 │   ├── registry.ts       The list of installed apps
-│   └── quicklinks/
+│   ├── medea-clipboard-history/
+│   │   ├── index.ts      The history list and its actions
+│   │   ├── store.ts      Reads and saves the history file
+│   │   └── format.ts     Row previews and ages
+│   └── medea-quicklinks/
 │       ├── index.ts      Search items and settings actions
 │       ├── store.ts      Reads and saves quicklinks.json
 │       ├── placeholders.ts Finds and fills {argument} and {clipboard}
@@ -219,6 +224,7 @@ Settings is a menu: **Add alias**, **Create hotkey**, **Remove hotkey** (when on
 | Set Alias            | Opens Medea                                           |
 | Remove Menu Bar Item | Stops the helper, which also ends all hotkeys         |
 | Create Quicklink     | Opens a new window with the form                      |
+| Clipboard History    | Opens a new window with the list                      |
 | A quicklink          | Opens it, through a new window if it has `{argument}` |
 
 `src/launcher/hotkeys.ts` holds the key table, checked against `HIToolbox/Events.h`. It uses US keyboard positions.
@@ -236,7 +242,9 @@ A shortcut used by an app that only reacts while it's frontmost can't be seen, a
 
 ## Medea apps
 
-A Medea app is a feature that adds its own items to search. It lives in `src/medea-apps/<name>/` and is listed in `registry.ts`. Apps are built in for now, and loading them from a user folder could come later.
+A Medea app is a feature that adds its own items to search. It lives in `src/medea-apps/<id>/` and is listed in `registry.ts`. Apps are built in for now, and loading them from a user folder could come later.
+
+**Names.** Every built-in app has an ID starting with `medea-`, like `medea-quicklinks`. The ID is used for its folder, its storage file (`~/.config/medea/<id>.json`) and its item values (`<id>:<item>`), so a third-party app can use any other name without clashing. `registry.test.ts` enforces this. Item values are saved in aliases and hotkeys, so changing an ID means migrating saved settings.
 
 An app gives the launcher two things, defined in `types.ts`:
 
@@ -249,7 +257,7 @@ An item with `needsWindow: true` asks for input, so its hotkey opens a new windo
 
 The first Medea app, modelled on Raycast's. `Create Quicklink` asks for a name, a link and an optional app to open it with. Links appear in search with a `↗` icon, and aliases and hotkeys work as they do for apps. Tab opens settings, which add `Edit link` and `Delete link`.
 
-Links are stored in `~/.config/medea/quicklinks.json`:
+Links are stored in `~/.config/medea/medea-quicklinks.json`:
 
 ```json
 [
@@ -262,7 +270,7 @@ Links are stored in `~/.config/medea/quicklinks.json`:
 ]
 ```
 
-The item value is `quicklink:<id>`. The ID comes from the name when the link is created and never changes, so a rename keeps its alias and hotkey. Warnings like "already used by" show this ID, so they can show an old name after a rename. Deleting a link also removes its alias and hotkey.
+The item value is `medea-quicklinks:<id>`. The ID comes from the name when the link is created and never changes, so a rename keeps its alias and hotkey. Warnings like "already used by" show this ID, so they can show an old name after a rename. Deleting a link also removes its alias and hotkey.
 
 **Links.** A web URL, a deeplink like `spotify://...`, or a path starting with `/` or `~`. `github.com` is saved as `https://github.com`, and `localhost:3000` as `http://localhost:3000`.
 
@@ -278,7 +286,41 @@ The item value is `quicklink:<id>`. The ID comes from the name when the link is 
 
 A link can have up to 3 arguments. Values are percent-encoded when the link starts with a URL scheme, and left alone in paths and in a link that starts with a placeholder. Braces that hold anything else, like `{"a":1}`, stay in the link as written.
 
-**Failures.** A link that can't open shows a red line above the search bar, and the window stays open. From a hotkey with no window, the failure is silent. If `quicklinks.json` is broken, search shows no links and saving refuses to run, so a save can't overwrite links you could still fix.
+**Failures.** A link that can't open shows a red line above the search bar, and the window stays open. From a hotkey with no window, the failure is silent. If `medea-quicklinks.json` is broken, search shows no links and saving refuses to run, so a save can't overwrite links you could still fix.
+
+## Clipboard history
+
+The second Medea app. `Clipboard History` lists what you've copied, newest first, before you type anything. Typing filters by exact text, not loose letters, because loose matching on long text matches nearly everything. Enter copies the entry back and returns to search. Tab offers Copy, Delete and Delete all, and Delete all asks first.
+
+Raycast pastes straight into the app you were using. Medea only copies, because sending Cmd+V to another app needs Accessibility permission. After choosing an entry, switch back and paste.
+
+**Recording.** The Swift helper checks the clipboard's change count every half second, which costs almost nothing, and only reads the text when it changes. So recording needs the helper running, and the CLI doesn't have to be open.
+
+1. `ClipboardWatcher` in `native/StatusItem.swift` applies the privacy rules below.
+2. The helper runs `node src/index.ts record-clipboard` and sends the text through stdin, because anyone can read a process's arguments with `ps`.
+3. `addEntry()` in `store.ts` puts it first. Copying the same text again moves the old entry to the top.
+
+Copies are recorded one at a time, so two quick copies can't overwrite each other.
+
+**What is never recorded.**
+
+| Copied content                                           | How it's spotted                                                               |
+| -------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Content marked confidential, temporary or auto-generated | The `org.nspasteboard.*` types and the legacy types listed at nspasteboard.org |
+| Anything copied in Passwords or Keychain Access          | The frontmost app's bundle ID                                                  |
+| Files                                                    | A file URL on the clipboard, because the text would only be the file's name    |
+| Images and other non-text content                        | No plain text on the clipboard                                                 |
+| Blank text, or text over 100,000 characters              | Checked in `addEntry()`                                                        |
+
+A password manager has to mark its copies for this to work, and an app that doesn't will be recorded like any other.
+
+**Storage.** `~/.config/medea/medea-clipboard-history.json` keeps the newest 200 entries. It's plain text, not encrypted, and only your user can read it. Saving writes a temporary file and renames it, so a reader never sees half a file.
+
+**Terminal safety.** Copied text can contain escape codes, so rows and menus strip control characters before showing it. The copy itself keeps the original text.
+
+**Permissions.** macOS has a "Paste from Other Apps" privacy control that can ask before an app reads the clipboard. On macOS 26.6.2 `NSPasteboard.general.accessBehavior` reports `alwaysAllow` for the helper, so no prompt appears. A later macOS could change that.
+
+`pbcopy` and `pbpaste` garble non-English text when the locale is empty, as it can be for the helper, so both run with `LC_CTYPE=UTF-8`.
 
 ## Closing the window
 

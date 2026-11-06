@@ -10,12 +10,12 @@ import { fillLink, findArguments, usesClipboard } from "./placeholders.ts";
 import { addQuicklink, readQuicklinksSync, removeQuicklink, updateQuicklink } from "./store.ts";
 import type { Quicklink } from "./store.ts";
 
-const VALUE_PREFIX = "quicklink:";
+const APP_ID = "medea-quicklinks";
 // Reserved, so no saved link can end up with the same value as the Create Quicklink command.
 const CREATE_ID = "create";
 const LINK_ICON = styleText("blue", "↗");
 
-const toValue = (id: string): string => `${VALUE_PREFIX}${id}`;
+const toValue = (id: string): string => `${APP_ID}:${id}`;
 
 const openQuicklink = async ({ name, link, openWith }: Quicklink): Promise<string> => {
   const answers = await askForAnswers(name, findArguments(link));
@@ -86,6 +86,7 @@ const listSettingsActions = (itemValue: string): SettingsAction[] => {
 };
 
 export const quicklinks: MedeaApp = {
+  id: APP_ID,
   listItems: () => [createItem, ...readQuicklinksSync().map(toItem)],
   listSettingsActions,
 };

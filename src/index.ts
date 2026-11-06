@@ -52,7 +52,7 @@ const main = async (): Promise<void> => {
   }
   if (command === "record-clipboard-image") {
     const { recordImage } = await import("./medea-apps/medea-clipboard-history/store.ts");
-    await recordImage(await buffer(process.stdin));
+    await recordImage(await buffer(process.stdin), process.env.MEDEA_IMAGE_NAME);
     return;
   }
   if (command === "set-terminal") {

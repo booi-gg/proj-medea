@@ -13,7 +13,14 @@ import type { LauncherItem, MedeaApp } from "../types.ts";
 import { formatAge, formatSize, toPreview, toPreviewLines, toSafeText } from "./format.ts";
 import { openImageWindow } from "./image-window.ts";
 import type { ImageWindow } from "./image-window.ts";
-import { clearEntries, getImagePath, readEntries, removeEntry, watchEntries } from "./store.ts";
+import {
+  clearEntries,
+  getImagePath,
+  readEntries,
+  removeEntry,
+  removeExpiredEntries,
+  watchEntries,
+} from "./store.ts";
 import type { ClipboardEntry, ImageEntry } from "./store.ts";
 import { createHighlighter } from "./syntax.ts";
 import type { Highlight } from "./syntax.ts";
@@ -50,10 +57,18 @@ const copyImage = async ({ hash }: ImageEntry): Promise<void> => {
   await runCommand("osascript", ["-e", COPY_IMAGE_SCRIPT, getImagePath(hash)]);
 };
 
+const toImageSizeLabel = ({ width, height }: ImageEntry): string => `Image ${width}×${height}`;
+
 const describeEntry = (entry: ClipboardEntry, width: number): string =>
   entry.kind === "text"
     ? toPreview(entry.text, width)
-    : fitToWidth(`Image ${entry.width}×${entry.height}`, width);
+    : fitToWidth(entry.name ?? toImageSizeLabel(entry), width);
+
+// Named images can still be found by typing "image" or their size.
+const toSearchText = (entry: ClipboardEntry): string =>
+  entry.kind === "text"
+    ? entry.text.slice(0, MAX_SEARCH_LENGTH)
+    : `${entry.name ?? ""} ${toImageSizeLabel(entry)}`.trim();
 
 const toOption = (entry: ClipboardEntry, labelWidth: number, now: number): LauncherOption => {
   const descriptionWidth = labelWidth - AGE_WIDTH;
@@ -61,10 +76,7 @@ const toOption = (entry: ClipboardEntry, labelWidth: number, now: number): Launc
   const age = padToWidth(formatAge(entry.copiedAt, now), AGE_WIDTH - 1);
   return {
     value: entry.id,
-    name:
-      entry.kind === "text"
-        ? entry.text.slice(0, MAX_SEARCH_LENGTH)
-        : describeEntry(entry, MAX_SEARCH_LENGTH),
+    name: toSearchText(entry),
     aliases: [],
     label: `${description} ${styleText("gray", age)}`,
   };
@@ -81,12 +93,24 @@ interface Round {
   query: string;
 }
 
-const toImagePreviewLines = ({ width, height, bytes }: ImageEntry): string[] => [
-  `${width}×${height}`,
-  styleText("dim", formatSize(bytes)),
-  "",
-  styleText("dim", "Shown in the image window"),
-];
+// The list cuts a long name short, so the pane shows all of it above these.
+const toImagePreviewLines = (
+  { name, width, height, bytes }: ImageEntry,
+  paneWidth: number,
+  paneHeight: number,
+): string[] => {
+  const details = [
+    `${width}×${height}`,
+    styleText("dim", formatSize(bytes)),
+    "",
+    styleText("dim", "Shown in the image window"),
+  ];
+  if (name === undefined) {
+    return details;
+  }
+  const nameHeight = Math.max(paneHeight - details.length, 1);
+  return [...toPreviewLines(name, paneWidth, nameHeight), ...details];
+};
 
 const toEntryPreview = (
   entry: ClipboardEntry,
@@ -96,7 +120,7 @@ const toEntryPreview = (
 ): string[] =>
   entry.kind === "text"
     ? toPreviewLines(entry.text, width, height, highlight)
-    : toImagePreviewLines(entry);
+    : toImagePreviewLines(entry, width, height);
 
 const copyEntry = async (entry: ClipboardEntry): Promise<string> => {
   await (entry.kind === "text" ? copyText(entry.text) : copyImage(entry));
@@ -237,6 +261,7 @@ const runHistoryRound = async (
 };
 
 const browseHistory = async (): Promise<string> => {
+  await removeExpiredEntries();
   const [highlight, imageWindow] = await Promise.all([createHighlighter(), openImageWindow()]);
   const screen = { highlight, imageWindow };
   try {

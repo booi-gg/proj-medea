@@ -6,10 +6,15 @@ import { configPath } from "./paths.ts";
 export type AliasMap = Record<string, string[]>;
 export type HotkeyMap = Record<string, string>;
 
+export const HISTORY_MONTH_CHOICES = [1, 3, 6, 12] as const;
+export type HistoryMonths = (typeof HISTORY_MONTH_CHOICES)[number];
+export const DEFAULT_HISTORY_MONTHS: HistoryMonths = 3;
+
 export interface Config {
   terminal?: string;
   aliases: AliasMap;
   hotkeys: HotkeyMap;
+  clipboardHistoryMonths?: HistoryMonths;
 }
 
 const EMPTY_CONFIG: Config = { aliases: {}, hotkeys: {} };
@@ -46,6 +51,9 @@ const parseHotkeyMap = (value: unknown): HotkeyMap => {
   return hotkeys;
 };
 
+const toHistoryMonths = (value: unknown): HistoryMonths | undefined =>
+  HISTORY_MONTH_CHOICES.find((months) => months === value);
+
 /** Broken or missing settings read as empty, so a bad file can't stop the app. */
 export const parseConfig = (configText: string): Config => {
   try {
@@ -54,10 +62,12 @@ export const parseConfig = (configText: string): Config => {
       return EMPTY_CONFIG;
     }
     const terminal = typeof parsed.terminal === "string" ? parsed.terminal : undefined;
+    const clipboardHistoryMonths = toHistoryMonths(parsed.clipboardHistoryMonths);
     return {
       terminal,
       aliases: parseAliasMap(parsed.aliases),
       hotkeys: parseHotkeyMap(parsed.hotkeys),
+      ...(clipboardHistoryMonths === undefined ? {} : { clipboardHistoryMonths }),
     };
   } catch {
     return EMPTY_CONFIG;

@@ -36,3 +36,14 @@ test("a config from before aliases still works", () => {
     hotkeys: {},
   });
 });
+
+test("reads a clipboard history length from the choices", () => {
+  assert.equal(parseConfig('{ "clipboardHistoryMonths": 6 }').clipboardHistoryMonths, 6);
+});
+
+test("ignores a clipboard history length that isn't a choice", () => {
+  for (const value of ["2", '"3"', "null", "-1"]) {
+    const config = parseConfig(`{ "clipboardHistoryMonths": ${value} }`);
+    assert.equal(config.clipboardHistoryMonths, undefined);
+  }
+});

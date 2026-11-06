@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { addEntry, parseEntries, readPngSize } from "./store.ts";
+import { addEntry, keepRecentEntries, parseEntries, readPngSize, toImageName } from "./store.ts";
 import type { ImageEntry, TextEntry } from "./store.ts";
 
 const toText = (text: string, copiedAt = 1): TextEntry => ({
@@ -21,6 +21,44 @@ const toImage = (hash: string, copiedAt = 1): ImageEntry => ({
 });
 
 const first = toText("first");
+
+test("keeps an image's name when the same image is copied again without one", () => {
+  const named = { ...toImage("same", 1), name: "cat.png" };
+  const again = toImage("same", 2);
+  assert.deepEqual(addEntry([named], again), [{ ...again, name: "cat.png" }]);
+});
+
+test("a new name replaces the one an image had", () => {
+  const named = { ...toImage("same", 1), name: "cat.png" };
+  const renamed = { ...toImage("same", 2), name: "dog.png" };
+  assert.deepEqual(addEntry([named], renamed), [renamed]);
+});
+
+test("an image doesn't take the name of a different image", () => {
+  const named = { ...toImage("one", 1), name: "cat.png" };
+  const other = toImage("two", 2);
+  assert.deepEqual(addEntry([named], other), [other, named]);
+});
+
+test("reads an image's name, and images saved before names existed", () => {
+  const named = { ...toImage("one"), name: "cat.png" };
+  const unnamed = toImage("two");
+  assert.deepEqual(parseEntries(JSON.stringify([named, unnamed])), [named, unnamed]);
+});
+
+test("ignores an image name that isn't text", () => {
+  const image = toImage("one");
+  assert.deepEqual(parseEntries(JSON.stringify([{ ...image, name: 42 }])), [image]);
+});
+
+test("removes escape codes and line breaks from an image's name", () => {
+  assert.equal(toImageName("cat\u001b[31m\n.png"), "cat[31m .png");
+});
+
+test("treats a blank image name as no name", () => {
+  assert.equal(toImageName("  \n "), undefined);
+  assert.equal(toImageName(undefined), undefined);
+});
 
 test("puts the newest entry first", () => {
   const second = toText("second", 2);
@@ -53,25 +91,47 @@ test("skips very large text", () => {
   assert.deepEqual(addEntry([first], toText("x".repeat(100_001))), [first]);
 });
 
-test("keeps at most 200 entries, dropping the oldest", () => {
-  let entries: ReturnType<typeof addEntry> = [first];
-  for (let index = 0; index < 250; index += 1) {
-    entries = addEntry(entries, toText(`text ${index}`, index));
-  }
-  assert.equal(entries.length, 200);
-  assert.deepEqual(entries[0], toText("text 249", 249));
-  assert.deepEqual(entries.at(-1), toText("text 50", 50));
+test("keeps at most 5,000 entries, dropping the oldest", () => {
+  const entries = Array.from({ length: 5000 }, (_, index) => toText(`text ${index}`, index));
+  const newest = toText("newest", 6000);
+  const kept = addEntry(entries, newest);
+  assert.equal(kept.length, 5000);
+  assert.equal(kept[0], newest);
+  assert.equal(kept.at(-1), entries.at(-2));
 });
 
-test("keeps at most 50 images, and text isn't pushed out by them", () => {
-  let entries: ReturnType<typeof addEntry> = [first];
-  for (let index = 0; index < 60; index += 1) {
-    entries = addEntry(entries, toImage(`hash-${index}`, index));
-  }
-  const images = entries.filter((entry) => entry.kind === "image");
-  assert.equal(images.length, 50);
-  assert.deepEqual(images[0], toImage("hash-59", 59));
-  assert.deepEqual(entries.at(-1), first);
+test("drops the oldest images past 2 GB, and text isn't pushed out by them", () => {
+  const big = (hash: string, copiedAt: number): ImageEntry => ({
+    ...toImage(hash, copiedAt),
+    bytes: 900_000_000,
+  });
+  const entries = [big("second", 3), first, big("first", 2), big("oldest", 1)];
+  const newest = toText("newest", 4);
+  assert.deepEqual(addEntry(entries, newest), [newest, big("second", 3), first, big("first", 2)]);
+});
+
+test("drops the oldest text past 20 million characters", () => {
+  const toLongText = (index: number): TextEntry => toText(`${index}`.padEnd(100_000), index);
+  const entries = Array.from({ length: 200 }, (_, index) => toLongText(200 - index));
+  const newest = toLongText(201);
+  assert.deepEqual(addEntry(entries, newest), [newest, ...entries.slice(0, -1)]);
+});
+
+const NOW = new Date(2026, 5, 15, 12).getTime();
+const monthsBefore = (months: number, extraMs = 0): number =>
+  new Date(2026, 5 - months, 15, 12).getTime() + extraMs;
+
+test("keeps entries from the chosen number of months, and drops older ones", () => {
+  const onTheLimit = toText("on the limit", monthsBefore(3));
+  const tooOld = toText("too old", monthsBefore(3, -1));
+  const recent = toImage("recent", monthsBefore(1));
+  assert.deepEqual(keepRecentEntries([recent, onTheLimit, tooOld], 3, NOW), [recent, onTheLimit]);
+});
+
+test("a longer history keeps what a shorter one drops", () => {
+  const entry = toText("old", monthsBefore(5));
+  assert.deepEqual(keepRecentEntries([entry], 3, NOW), []);
+  assert.deepEqual(keepRecentEntries([entry], 6, NOW), [entry]);
 });
 
 test("broken history reads as empty", () => {

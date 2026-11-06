@@ -1,5 +1,12 @@
 import { styleText } from "node:util";
-import { isCancel, select, spinner } from "@clack/prompts";
+import { confirm, isCancel, select, spinner } from "@clack/prompts";
+import {
+  DEFAULT_HISTORY_MONTHS,
+  HISTORY_MONTH_CHOICES,
+  readConfig,
+  updateConfig,
+} from "../../config.ts";
+import type { HistoryMonths } from "../../config.ts";
 import { drawScreen } from "../../launcher/screen.ts";
 import {
   disableLoginItem,
@@ -9,6 +16,7 @@ import {
   readLoginItemState,
 } from "../../menubar/login-item.ts";
 import type { LoginItemState } from "../../menubar/login-item.ts";
+import { countEntriesToRemove, removeExpiredEntries } from "../medea-clipboard-history/store.ts";
 import type { LauncherItem, MedeaApp } from "../types.ts";
 
 const APP_ID = "medea-settings";
@@ -16,6 +24,7 @@ const OPEN_ID = "open";
 const NAME = "Settings (Medea)";
 const ICON = styleText("magenta", "⚙");
 const START_AT_LOGIN = "start-at-login";
+const CLIPBOARD_HISTORY = "clipboard-history";
 const DONE = "done";
 
 const STATE_LABELS: Record<LoginItemState, string> = {
@@ -50,10 +59,46 @@ const checkLoginItem = async (): Promise<LoginItemState> => {
   }
 };
 
+const toMonthsLabel = (months: HistoryMonths): string =>
+  months === 1 ? "1 month" : `${months} months`;
+
+const confirmRemoval = async (count: number, months: HistoryMonths): Promise<boolean> => {
+  if (count === 0) {
+    return true;
+  }
+  const entries = count === 1 ? "1 entry" : `${count} entries`;
+  const answer = await confirm({
+    message: `Delete ${entries} older than ${toMonthsLabel(months)}?`,
+    initialValue: false,
+  });
+  return answer === true;
+};
+
+/** Returns the line to show next, which is blank if nothing changed. */
+const chooseHistoryMonths = async (current: HistoryMonths): Promise<string> => {
+  const months = await select({
+    message: "Keep clipboard history for",
+    initialValue: current,
+    options: HISTORY_MONTH_CHOICES.map((value) => ({ value, label: toMonthsLabel(value) })),
+  });
+  if (isCancel(months) || months === current) {
+    return "";
+  }
+  if (!(await confirmRemoval(await countEntriesToRemove(months), months))) {
+    return "";
+  }
+  await updateConfig({ clipboardHistoryMonths: months });
+  await removeExpiredEntries();
+  return `Clipboard history is kept for ${toMonthsLabel(months)}`;
+};
+
 /** Shows the menu once. Returns the line to show next, or undefined when finished. */
 const runSettingsRound = async (notice: string): Promise<string | undefined> => {
   drawScreen(notice);
-  const state = await checkLoginItem();
+  const [state, { clipboardHistoryMonths = DEFAULT_HISTORY_MONTHS }] = await Promise.all([
+    checkLoginItem(),
+    readConfig(),
+  ]);
   const choice = await select({
     message: NAME,
     options: [
@@ -62,13 +107,20 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
         label: `Start at login  ${STATE_LABELS[state]}`,
         hint: "Keeps Medea in the menu bar",
       },
+      {
+        value: CLIPBOARD_HISTORY,
+        label: `Keep clipboard history  ${toMonthsLabel(clipboardHistoryMonths)}`,
+        hint: "Older entries are deleted",
+      },
       { value: DONE, label: "Done" },
     ],
   });
   if (isCancel(choice) || choice === DONE) {
     return undefined;
   }
-  return toggleStartAtLogin(state);
+  return choice === CLIPBOARD_HISTORY
+    ? chooseHistoryMonths(clipboardHistoryMonths)
+    : toggleStartAtLogin(state);
 };
 
 const openSettings = async (): Promise<string> => {

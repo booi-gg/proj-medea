@@ -329,12 +329,14 @@ This screen leaves out the logo, so images and the list get those rows. The pane
 **Recording.** The Swift helper checks the clipboard's change count every half second, which costs almost nothing, and only reads the content when it changes. So recording needs the helper running, and the CLI doesn't have to be open.
 
 1. `ClipboardWatcher` in `native/StatusItem.swift` applies the privacy rules below.
-2. The helper runs `node src/start.js record-clipboard` and sends the text through stdin, because anyone can read a process's arguments with `ps`. An image goes the same way as a PNG to `record-clipboard-image`, converted from TIFF if needed.
+2. The helper runs `node src/start.js record-clipboard` and sends the text through stdin, because anyone can read a process's arguments with `ps`. An image goes the same way as a PNG to `record-clipboard-image`, converted from TIFF if needed, with its name in the `MEDEA_IMAGE_NAME` environment variable.
 3. `addEntry()` in `store.ts` puts it first. Copying the same thing again moves the old entry to the top, and images count as the same when their hash matches.
 
 If the clipboard holds both text and an image, text wins, because apps like Excel also add a picture of the cells you copied. The exception is text that is only a web address, because a browser adds one to an image it copies.
 
 Anything skipped is logged to `.build/helper.log` with its reason and clipboard type names, never its content, so a missing copy can be explained.
+
+The list shows an image's file name when there is one, or `Image 293×409` when there isn't, and the pane shows the whole name. A file gives its own name. A browser's image takes the last part of its web address, from the HTML `<img src>`, then the copied URL or address text. A screenshot is only pixels, so it has no name. Names have control characters removed, because they end up on screen. Copying an image back out of Medea leaves only pixels, so an entry keeps the name it already had.
 
 An image file copied in Finder counts as an image, and selecting several records up to 10 of them. The clipboard only holds their names and icons, so the watcher reads each file itself, up to 30 MB. Any format macOS can decode works, including JPEG, HEIC and GIF, and photos keep their rotation. Copying it back gives you the image, not the file. Conversion runs off the main thread, because that thread also answers hotkeys.
 
@@ -352,7 +354,7 @@ Copies are recorded one at a time, so two quick copies can't overwrite each othe
 
 A password manager has to mark its copies for this to work, and an app that doesn't will be recorded like any other.
 
-**Storage.** `~/.config/medea/medea-clipboard-history.json` keeps the newest 200 entries, of which at most 50 are images. Images live in `~/.config/medea/medea-clipboard-history/` as `<hash>.png`. Images over 30 MB are skipped. Each save removes any image no entry mentions, so deleting an entry frees its files.
+**Storage.** `~/.config/medea/medea-clipboard-history.json` keeps entries for 3 months by default. Settings (Medea) offers 1, 3, 6 or 12 months, saved as `clipboardHistoryMonths` in `config.json`, and asks first if a shorter choice would delete anything. Old entries go on each copy and when the history opens. So heavy use can't fill the disk or slow every copy, history also stops at 5,000 entries, 20 million characters of text and 2 GB of images, dropping the oldest first. Images live in `~/.config/medea/medea-clipboard-history/` as `<hash>.png`. Images over 30 MB are skipped. Each save removes any image no entry mentions, so deleting an entry frees its files.
 
 None of this is encrypted, and only your user can read it. Saving writes a temporary file and renames it, so a reader never sees half a file.
 

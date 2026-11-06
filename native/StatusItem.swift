@@ -170,7 +170,7 @@ struct TerminalChoice: Decodable {
 
 enum Clip {
   case text(String)
-  case image(Data)
+  case image(Data, name: String?)
 }
 
 /// Watches for copied text and images. It runs only here, because the CLI isn't always open.
@@ -190,6 +190,11 @@ final class ClipboardWatcher {
   private static let maxImageFileBytes = 30_000_000
   private static let maxImageFiles = 10
   private static let pngSignature: [UInt8] = [0x89, 0x50, 0x4E, 0x47]
+  private static let webSchemes: Set<String> = ["http", "https"]
+  private static let imageSourcePattern = try? NSRegularExpression(
+    pattern: "<img[^>]+src=[\"']([^\"']+)",
+    options: .caseInsensitive
+  )
 
   private let pasteboard: NSPasteboard
   private let onCopy: (Clip) -> Void
@@ -230,7 +235,9 @@ final class ClipboardWatcher {
       if images.isEmpty {
         logSkip("no image among the copied files", types)
       }
-      images.forEach(recordImage)
+      for (image, name) in images {
+        recordImage(image, name: name)
+      }
       return
     }
     let text = pasteboard.string(forType: .string)
@@ -240,7 +247,7 @@ final class ClipboardWatcher {
     if let text, image == nil || !Self.isOnlyAddress(text) {
       onCopy(.text(text))
     } else if let image {
-      recordImage(image)
+      recordImage(image, name: readImageName(copiedText: text))
     } else {
       logSkip("no text or image data", types)
     }
@@ -265,30 +272,63 @@ final class ClipboardWatcher {
       ?? NSImage(pasteboard: pasteboard)?.tiffRepresentation
   }
 
-  private func readCopiedImageFiles() -> [Data] {
+  /// Only a file has a name of its own. A browser's image has one inside its web address, and a
+  /// screenshot has neither.
+  private func readImageName(copiedText: String?) -> String? {
+    let addresses = [
+      pasteboard.string(forType: .html).flatMap(Self.findImageSource),
+      pasteboard.string(forType: .URL),
+      copiedText,
+    ]
+    return addresses.compactMap { $0 }.lazy.compactMap(Self.toFileName).first
+  }
+
+  private static func findImageSource(html: String) -> String? {
+    let wholeText = NSRange(html.startIndex..., in: html)
+    guard let match = imageSourcePattern?.firstMatch(in: html, range: wholeText),
+      let source = Range(match.range(at: 1), in: html)
+    else {
+      return nil
+    }
+    return String(html[source])
+  }
+
+  /// Addresses like data: and blob: hold no name.
+  private static func toFileName(address: String) -> String? {
+    let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard let url = URL(string: trimmed), let scheme = url.scheme?.lowercased(),
+      webSchemes.contains(scheme)
+    else {
+      return nil
+    }
+    let name = url.lastPathComponent
+    return name.isEmpty || name == "/" ? nil : name
+  }
+
+  private func readCopiedImageFiles() -> [(Data, String)] {
     let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
     let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: options) as? [URL] ?? []
     return urls.prefix(Self.maxImageFiles).compactMap(readImageFile)
   }
 
-  private func readImageFile(_ url: URL) -> Data? {
+  private func readImageFile(_ url: URL) -> (Data, String)? {
     guard let values = try? url.resourceValues(forKeys: [.contentTypeKey, .fileSizeKey]),
       values.contentType?.conforms(to: .image) == true,
       (values.fileSize ?? .max) <= Self.maxImageFileBytes
     else {
       return nil
     }
-    return try? Data(contentsOf: url)
+    return (try? Data(contentsOf: url)).map { ($0, url.lastPathComponent) }
   }
 
   /// Converting a large photo takes a moment, and this thread also answers hotkeys.
-  private func recordImage(_ image: Data) {
+  private func recordImage(_ image: Data, name: String?) {
     DispatchQueue.global(qos: .utility).async { [onCopy] in
       guard let png = Self.toPng(image) else {
         NSLog("Medea skipped a copy, could not read the image data")
         return
       }
-      DispatchQueue.main.async { onCopy(.image(png)) }
+      DispatchQueue.main.async { onCopy(.image(png, name: name)) }
     }
   }
 
@@ -414,15 +454,18 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     isRecordingClip = true
     let command: String
     let input: Data
+    var environment: [String: String] = [:]
     switch clipsToRecord.removeFirst() {
     case .text(let text):
       command = "record-clipboard"
       input = Data(text.utf8)
-    case .image(let png):
+    case .image(let png, let name):
       command = "record-clipboard-image"
       input = png
+      // Stdin holds the image, and arguments can be read by anyone running "ps".
+      environment["MEDEA_IMAGE_NAME"] = name
     }
-    runCli([command], input: input) { [weak self] _ in
+    runCli([command], input: input, environment: environment) { [weak self] _ in
       self?.isRecordingClip = false
       self?.recordNextClip()
     }
@@ -454,6 +497,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private func runCli(
     _ arguments: [String],
     input: Data? = nil,
+    environment: [String: String] = [:],
     onFinish: ((Data) -> Void)? = nil
   ) {
     let process = Process()
@@ -462,6 +506,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     process.executableURL = URL(fileURLWithPath: cliCommand[0])
     process.arguments = Array(cliCommand.dropFirst()) + arguments
     process.standardOutput = output
+    process.environment = ProcessInfo.processInfo.environment.merging(environment) { $1 }
     if input != nil {
       process.standardInput = inputPipe
     }

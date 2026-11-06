@@ -14,6 +14,7 @@ The goal is a Raycast-style launcher for macOS that runs as a CLI.
 | Hotkeys for apps and commands     | Yes, built | Nothing special                                                                                                  |
 | Run your own scripts and commands | Yes        | Nothing special expected                                                                                         |
 | Start at login                    | Yes, built | Nothing to grant. macOS shows a notice, and the item can be switched off in System Settings                      |
+| Calculator                        | Yes, built | Nothing special                                                                                                  |
 | Clipboard history                 | Yes, built | The helper watches the clipboard. Pasting into the previous app would need Accessibility permission              |
 | Switch windows, search menu items | Yes        | Accessibility permission                                                                                         |
 | Move and resize windows           | Yes, built | Accessibility permission. `pnpm menubar:sign` keeps it across rebuilds                                           |

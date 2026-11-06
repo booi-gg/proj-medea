@@ -3,6 +3,7 @@ import { select } from "@clack/prompts";
 import { readConfigSync } from "../config.ts";
 import { start, stop } from "../menubar/commands.ts";
 import { toMedeaIcon } from "../medea-apps/icon.ts";
+import { toCalculationItem } from "../medea-apps/medea-calculator/index.ts";
 import { findMedeaItem, listMedeaItems } from "../medea-apps/registry.ts";
 import type { LauncherItem } from "../medea-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
@@ -14,6 +15,7 @@ import { ADD_ALIAS_LABEL, CREATE_HOTKEY_LABEL, runItemSettings } from "./item-se
 import { closeReplaceableList, promptForSelection } from "./prompt.ts";
 import type { LauncherOption } from "./prompt.ts";
 import { drawScreen } from "./screen.ts";
+import { rankItems } from "./search.ts";
 
 const TITLE_COLUMN_WIDTH = 40;
 const EXIT_VALUE = "command:exit";
@@ -105,6 +107,19 @@ const toOptions = (items: readonly LauncherItem[]): LauncherOption[] => {
   });
 };
 
+// A sum matches no item by name, so its answer goes above whatever the text did match.
+const rankWithCalculation = (
+  query: string,
+  options: readonly LauncherOption[],
+): LauncherOption[] => {
+  const results = rankItems(query, options);
+  const calculation = toCalculationItem(query);
+  if (calculation === undefined) {
+    return results;
+  }
+  return [{ ...calculation, aliases: [], label: formatRow(calculation, [], "") }, ...results];
+};
+
 // A link that fails to open shouldn't take the search window down with it.
 const showErrorsAsNotice = async (run: () => Promise<string>): Promise<string> => {
   try {
@@ -163,16 +178,21 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
   const appItems = apps.map(toAppItem);
   const getItems: GetItems = () => [...fixedItems, ...listMedeaItems(), ...appItems];
 
-  const { cancelled, value, wantsSettings } = await promptForSelection(
+  const { cancelled, value, wantsSettings, query } = await promptForSelection(
     () => toOptions(getItems()),
     SEARCH_PLACEHOLDER,
-    { replaceable: true },
+    { rank: rankWithCalculation, replaceable: true },
   );
   if (session.nextItem !== undefined) {
     return { keepRunning: true, notice: NO_NOTICE };
   }
   if (cancelled) {
     return { keepRunning: !(await confirmEndProgram()), notice: NO_NOTICE };
+  }
+  // An answer has no settings to open, so Tab copies it like Enter does.
+  const calculation = toCalculationItem(query);
+  if (calculation !== undefined && value === calculation.value) {
+    return { keepRunning: true, notice: await showErrorsAsNotice(calculation.run) };
   }
   if (value === EXIT_VALUE && !wantsSettings) {
     return { keepRunning: false, notice: NO_NOTICE };

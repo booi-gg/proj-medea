@@ -52,6 +52,9 @@ src/
 │   ├── types.ts          What an app gives the launcher
 │   ├── icon.ts           Gives Medea's own items their reserved icon colour
 │   ├── registry.ts       The list of installed apps
+│   ├── medea-calculator/
+│   │   ├── index.ts      The answer row shown in search
+│   │   └── calculate.ts  Parses and works out a sum
 │   ├── medea-clipboard-history/
 │   │   ├── index.ts      The history list and its actions
 │   │   ├── store.ts      Reads and saves history and image files
@@ -191,10 +194,13 @@ The window starts with the screen cleared, the MEDEA logo from `src/launcher/ban
 
 **Rows.** Each row shows an icon, the name and a faded kind: `◆` Application or `⌘` Command. The label contains colour codes, so search uses the plain `name` field instead. Magenta icons are reserved for Medea's own apps and commands, and `toMedeaIcon()` is the only place that sets it.
 
-**Three clack details matter here. Recheck them when upgrading clack:**
+**Calculator.** Typing a sum like `2 * 4` puts `2 * 4 = 8` at the top of the results, and Enter or Tab copies the `8`. It takes `+ - * / % ^`, brackets and decimals, with `%` as the remainder. A bracket touching a value multiplies it, so `4(4)` is `16`, at the same level as `*` and `/`, which makes `8 / 2(2)` come to `8`. `calculate()` parses the text by hand, so search text never runs as code. A lone number isn't a sum, and neither is an unfinished one like `2 *`, so these stay ordinary searches. Neither is an answer that isn't a number, like `1 / 0`. The row comes from the search text, so it has no aliases, hotkey or settings.
+
+**Four clack details matter here. Recheck them when upgrading clack:**
 
 - Clack runs its own filter even on dynamic options, and that filter would hide matches like `vsc`. The prompt passes a filter that lets everything through, so `rankItems()` alone decides.
 - Clack keeps focus on an item for as long as it stays in the results. The `options()` getter clears focus whenever the typed text changes, so Enter always picks the top result. This sets clack's `focusedValue` field directly.
+- Clack draws the text cursor at the focused result's index, not at its place in the text, so the arrow keys seem to do nothing. `SearchPrompt` overrides `userInputWithCursor` to read the real position from clack's protected `_cursor` field.
 - Clack crashes if a redraw has fewer lines than it expects. `BLANK_FRAME` keeps the same line count as the search bar when the prompt finishes.
 
 ## Aliases and item settings

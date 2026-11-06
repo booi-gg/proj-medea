@@ -15,7 +15,7 @@ const SETTINGS_KEYS = [TAB_KEY, ...SHIFT_ENTER_KEYS];
 const SETTINGS_KEY_HINT = process.env.TERM_PROGRAM === "ghostty" ? "⇧↵" : "tab";
 const SEARCH_ICON = styleText("cyan", "❯");
 const FOCUS_ICON = styleText("cyan", "▸");
-const EMPTY_INPUT_CURSOR = "█";
+const END_OF_TEXT_CURSOR = "█";
 // Same line count as the search bar: clack crashes when a redraw has fewer lines than it expects.
 const BLANK_FRAME = "\n";
 const PREVIEW_DIVIDER = styleText("dim", "│");
@@ -27,6 +27,8 @@ export interface LauncherOption {
   name: string;
   aliases: readonly string[];
   label: string;
+  /** Replaces the list's key hints while this result is focused. */
+  footer?: string;
 }
 
 export interface Selection {
@@ -78,9 +80,28 @@ export const closeReplaceableList = (): boolean => {
 
 const isEmptyQuery = (query: string): boolean => query.trim() === "";
 
+/** Shows the cursor on the character at this position, or after the last one. */
+export const drawTextCursor = (text: string, position: number): string => {
+  // Destructuring takes a whole character, where slicing one unit would split an emoji in two.
+  const [character] = text.slice(position);
+  if (character === undefined) {
+    return `${text}${END_OF_TEXT_CURSOR}`;
+  }
+  const before = text.slice(0, position);
+  const after = text.slice(position + character.length);
+  return `${before}${styleText("inverse", character)}${after}`;
+};
+
+// Clack draws the cursor at the focused result's index, so the arrow keys seemed to do nothing.
+class SearchPrompt extends AutocompletePrompt<LauncherOption> {
+  override get userInputWithCursor(): string {
+    return drawTextCursor(this.userInput, this._cursor);
+  }
+}
+
 const renderSearchBar = (query: string, inputWithCursor: string, placeholder: string): string => {
   const content =
-    query === "" ? `${EMPTY_INPUT_CURSOR}${styleText("dim", placeholder)}` : inputWithCursor;
+    query === "" ? `${END_OF_TEXT_CURSOR}${styleText("dim", placeholder)}` : inputWithCursor;
   return `\n  ${SEARCH_ICON} ${content}`;
 };
 
@@ -212,7 +233,7 @@ export const promptForSelection = async (
     };
   }
 
-  const prompt = new AutocompletePrompt<LauncherOption>({
+  const prompt = new SearchPrompt({
     input,
     initialUserInput: initialQuery,
     signal:
@@ -235,14 +256,15 @@ export const promptForSelection = async (
         onFocus?.(undefined);
         return BLANK_FRAME;
       }
-      focusedValue = this.filteredOptions[this.cursor]?.value;
+      const focused = this.filteredOptions[this.cursor];
+      focusedValue = focused?.value;
       onFocus?.(focusedValue);
       const searchBar = renderSearchBar(this.userInput, this.userInputWithCursor, placeholder);
       if (isEmptyQuery(this.userInput) && !listWhenEmpty) {
         return searchBar;
       }
       const results = renderResults(this.filteredOptions, this.cursor, {
-        footer: toFooter(baseFooter, extraKey, focusedValue),
+        footer: focused?.footer ?? toFooter(baseFooter, extraKey, focusedValue),
         maxRows: maxVisibleResults,
         layout,
         renderPreview,

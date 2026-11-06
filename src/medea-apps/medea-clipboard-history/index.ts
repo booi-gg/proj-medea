@@ -8,7 +8,7 @@ import { drawScreen } from "../../launcher/screen.ts";
 import { rankByText } from "../../launcher/search.ts";
 import { fitToWidth, padToWidth, toSplitLayout } from "../../launcher/split-view.ts";
 import { isMenuBarRunning } from "../../menubar/helper.ts";
-import { UTF8_ENVIRONMENT, runCommand } from "../../shell.ts";
+import { UTF8_ENVIRONMENT, copyText, runCommand } from "../../shell.ts";
 import { toMedeaIcon } from "../icon.ts";
 import type { LauncherItem, MedeaApp } from "../types.ts";
 import { formatAge, formatSize, toPreview, toPreviewLines, toSafeText } from "./format.ts";
@@ -47,15 +47,6 @@ const COPY = "copy";
 const VIEW = "view";
 const DELETE = "delete";
 const DELETE_ALL = "delete-all";
-
-const copyText = async (text: string): Promise<void> => {
-  const copier = spawn("pbcopy", { env: UTF8_ENVIRONMENT, stdio: ["pipe", "ignore", "ignore"] });
-  copier.stdin.end(text);
-  const [exitCode] = await once(copier, "close");
-  if (exitCode !== 0) {
-    throw new Error("Could not copy that entry");
-  }
-};
 
 const copyImage = async ({ hash }: ImageEntry): Promise<void> => {
   await runCommand("osascript", ["-e", COPY_IMAGE_SCRIPT, getImagePath(hash)]);

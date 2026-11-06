@@ -1,6 +1,20 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { readTextBeforeSettingsKey } from "./prompt.ts";
+import { styleText } from "node:util";
+import { drawTextCursor, readTextBeforeSettingsKey } from "./prompt.ts";
+
+test("the cursor sits after the text when it's at the end", () => {
+  assert.equal(drawTextCursor("2 * 4", 5), "2 * 4█");
+});
+
+test("the cursor marks the character at its position", () => {
+  assert.equal(drawTextCursor("2 * 4", 0), `${styleText("inverse", "2")} * 4`);
+  assert.equal(drawTextCursor("2 * 4", 2), `2 ${styleText("inverse", "*")} 4`);
+});
+
+test("the cursor marks a whole emoji", () => {
+  assert.equal(drawTextCursor("a😀b", 1), `a${styleText("inverse", "😀")}b`);
+});
 
 test("typing with no settings key is left alone", () => {
   assert.equal(readTextBeforeSettingsKey("youtube"), undefined);

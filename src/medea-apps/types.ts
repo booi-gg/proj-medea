@@ -10,6 +10,8 @@ export interface LauncherItem {
   hint?: string;
   /** True when the item asks for input, so a hotkey has to open a window for it first. */
   needsWindow?: boolean;
+  /** Replaces the list's key hints while this item is focused. */
+  footer?: string;
   /** Resolves to a line to show above the search bar, or "" for none. */
   run: () => Promise<string>;
 }

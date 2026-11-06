@@ -19,6 +19,8 @@ const EMPTY_INPUT_CURSOR = "█";
 // Same line count as the search bar: clack crashes when a redraw has fewer lines than it expects.
 const BLANK_FRAME = "\n";
 const PREVIEW_DIVIDER = styleText("dim", "│");
+// The prompt only redraws on a key. This one types nothing and moves nothing.
+const REDRAW_KEY = "\u0018";
 
 export interface LauncherOption {
   value: string;
@@ -39,10 +41,10 @@ type RenderPreview = (value: string, width: number, height: number) => readonly 
 
 /** A key that acts on the focused result without leaving the list. */
 export interface ExtraKey {
-  /** A control character, because anything printable is search text. */
-  key: string;
+  /** What terminals send for this key. Never a printable one, because those are search text. */
+  keys: readonly string[];
   hint: string;
-  /** The footer's label for a result, or undefined when the key does nothing there. */
+  /** The footer's label for a result, or undefined to leave the key to the search bar. */
   getLabel: (value: string | undefined) => string | undefined;
   run: () => void;
 }
@@ -136,12 +138,12 @@ export const readTextBeforeSettingsKey = (keys: string): string | undefined => {
 const readKeysInto = (
   input: PassThrough,
   onSettingsKey: () => void,
-  extraKey: ExtraKey | undefined,
+  runExtraKey: (keys: string) => boolean,
 ): (() => void) => {
   const forwardKey = (chunk: Buffer): void => {
-    // Still forwarded: a control character types nothing, and the prompt redraws on every key.
-    if (extraKey !== undefined && chunk.includes(extraKey.key)) {
-      extraKey.run();
+    if (runExtraKey(chunk.toString())) {
+      input.write(REDRAW_KEY);
+      return;
     }
     const textBeforeKey = readTextBeforeSettingsKey(chunk.toString());
     if (textBeforeKey === undefined) {
@@ -189,7 +191,17 @@ export const promptForSelection = async (
   const layout = toSplitLayout(process.stdout.columns, process.stdout.rows);
   let lastQuery = initialQuery;
   let wantsSettings = false;
+  let focusedValue: string | undefined;
   const input = new PassThrough();
+
+  const runExtraKey = (keys: string): boolean => {
+    const isAvailable = extraKey?.getLabel(focusedValue) !== undefined;
+    if (!isAvailable || !extraKey?.keys.includes(keys)) {
+      return false;
+    }
+    extraKey.run();
+    return true;
+  };
   const replacement = new AbortController();
   if (replaceable) {
     closeOpenList = () => {
@@ -220,7 +232,7 @@ export const promptForSelection = async (
         onFocus?.(undefined);
         return BLANK_FRAME;
       }
-      const focusedValue = this.filteredOptions[this.cursor]?.value;
+      focusedValue = this.filteredOptions[this.cursor]?.value;
       onFocus?.(focusedValue);
       const searchBar = renderSearchBar(this.userInput, this.userInputWithCursor, placeholder);
       if (isEmptyQuery(this.userInput) && !listWhenEmpty) {
@@ -240,7 +252,7 @@ export const promptForSelection = async (
     () => {
       wantsSettings = true;
     },
-    extraKey,
+    runExtraKey,
   );
   try {
     const result = await prompt.prompt();

@@ -39,7 +39,8 @@ const MAX_SEARCH_LENGTH = 2000;
 const COPY_IMAGE_SCRIPT = `on run argv
   set the clipboard to (read (POSIX file (item 1 of argv)) as «class PNGf»)
 end run`;
-const CLOSE_IMAGE_KEY = "\u0018";
+// Terminals send the first, or the second when an app has asked for application cursor keys.
+const LEFT_ARROW_KEYS = ["\u001B[D", "\u001BOD"];
 const SCREEN_TITLE = { title: "Clipboard", icon: ICON };
 const COPY = "copy";
 const VIEW = "view";
@@ -261,8 +262,8 @@ const runHistoryRound = async (
         }
       },
       extraKey: {
-        key: CLOSE_IMAGE_KEY,
-        hint: "⌃X",
+        keys: LEFT_ARROW_KEYS,
+        hint: "←",
         getLabel: (entryId) =>
           isImage(entryId) && entryId !== closedId ? "close image" : undefined,
         run: () => {

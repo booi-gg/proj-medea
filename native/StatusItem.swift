@@ -48,14 +48,14 @@ final class GlobalHotKey {
   }
 }
 
-/// Owns the menu bar item. Left click opens the CLI in Terminal, right click shows Quit.
+/// Owns the menu bar item. Left click shows the CLI, right click shows Quit.
 final class StatusItemController: NSObject {
-  private let launcherPath: String
+  private let showCommand: [String]
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let contextMenu = NSMenu()
 
-  init(launcherPath: String) {
-    self.launcherPath = launcherPath
+  init(showCommand: [String]) {
+    self.showCommand = showCommand
     super.init()
 
     let quitItem = NSMenuItem(
@@ -81,7 +81,7 @@ final class StatusItemController: NSObject {
       showContextMenu()
       return
     }
-    openCliInTerminal()
+    showCli()
   }
 
   private func showContextMenu() {
@@ -90,27 +90,29 @@ final class StatusItemController: NSObject {
     statusItem.menu = nil
   }
 
-  func openCliInTerminal() {
+  /// The CLI decides whether to reuse a running window or open a new one.
+  func showCli() {
     let process = Process()
-    process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
-    process.arguments = ["-a", "Terminal", launcherPath]
+    process.executableURL = URL(fileURLWithPath: showCommand[0])
+    process.arguments = Array(showCommand.dropFirst())
     do {
       try process.run()
     } catch {
-      NSLog("Supercast could not open Terminal: \(error.localizedDescription)")
+      NSLog("Supercast could not show the CLI: \(error.localizedDescription)")
     }
   }
 }
 
-guard CommandLine.arguments.count == 2 else {
-  FileHandle.standardError.write(Data("usage: supercast-status <launcher.command>\n".utf8))
+let showCommand = Array(CommandLine.arguments.dropFirst())
+guard !showCommand.isEmpty else {
+  FileHandle.standardError.write(Data("usage: supercast-status <command> [arguments]\n".utf8))
   exit(64)
 }
 
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
-let controller = StatusItemController(launcherPath: CommandLine.arguments[1])
-let hotKey = GlobalHotKey { controller.openCliInTerminal() }
+let controller = StatusItemController(showCommand: showCommand)
+let hotKey = GlobalHotKey { controller.showCli() }
 let hotKeyStatus = hotKey.register(keyCode: hotKeyKeyCode, modifiers: hotKeyModifiers)
 NSLog("Supercast hotkey registration status: \(hotKeyStatus)")
 app.run()

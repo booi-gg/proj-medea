@@ -22,7 +22,7 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 1. **Shortcut:** done. The helper listens for `Cmd+Shift+Space` and opens the CLI.
 2. **Search launcher:** done. Type to find apps and built-in commands, then press Enter.
 3. **Commands:** each command is a small TypeScript file or script in a folder, so adding one doesn't change the core.
-4. **Terminal choice and speed:** let the user pick a terminal, such as Ghostty, and reuse one window instead of opening a new one on every press.
+4. **Terminal choice:** let the user pick a terminal, such as Ghostty. Reusing one window is done for Terminal.
 5. **Background features:** clipboard history, plus start at login so the shortcut survives a reboot.
 6. **Permission features:** window management and snippets, packaged as a signed `.app`. A rebuilt bare binary may lose granted permissions, so a stable app identity will matter here.
 
@@ -33,7 +33,8 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 
 ## Notes for the terminal chooser
 
-- The terminal is chosen in one place: `openCliInTerminal()` in `native/StatusItem.swift`.
+- The terminal is chosen in one place: `showCli()` in `menubar.ts`.
+- Raising the window uses an escape sequence in `instance.ts`. Check that Ghostty honours it, because window reuse depends on it.
 - Ghostty 1.4.0 is installed and registers for `public.unix-executable`.
 - Try `open -a Ghostty <launcher>` first. Launching with `-e` [reportedly shows a confirmation dialog](https://github.com/ghostty-org/ghostty/discussions/10203). Neither route has been tested yet.
 
@@ -44,3 +45,5 @@ These need a person, because macOS blocks synthetic input from the development s
 - A physical click on the menu bar icon. The button's action was tested from inside the process.
 - A physical `Cmd+Shift+Space` press. Registration succeeded with status `0`.
 - The right-click Quit menu.
+
+Also untested: raising a minimized window. In one early test run, a CLI window went away for an unknown reason. It did not happen again in later runs, including through the real launcher, so watch for it.

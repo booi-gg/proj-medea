@@ -3,11 +3,14 @@ import { styleText } from "node:util";
 import { autocomplete, cancel, intro, isCancel, log, outro, spinner } from "@clack/prompts";
 import { listApps, openApp } from "./apps.ts";
 import type { App } from "./apps.ts";
-import { isMenuBarRunning, startMenuBar, stopMenuBar } from "./menubar.ts";
+import { listenForFocusRequests } from "./instance.ts";
+import { isMenuBarRunning, showCli, startMenuBar, stopMenuBar } from "./menubar.ts";
 import { rankItems } from "./search.ts";
 
 const MAX_VISIBLE_RESULTS = 8;
 const NAME_COLUMN_WIDTH = 30;
+const EXIT_VALUE = "command:exit";
+const CLEAR_SCREEN_SEQUENCE = "\u001B[2J\u001B[H";
 const APP_ICON = styleText("cyan", "◆");
 const COMMAND_ICON = styleText("magenta", "⌘");
 
@@ -50,10 +53,7 @@ const toAppItem = ({ name, path }: App): LauncherItem => ({
   value: path,
   name,
   label: formatRow(APP_ICON, name, "Application"),
-  run: async () => {
-    await openApp(path);
-    outro(`Opened ${name}`);
-  },
+  run: () => openApp(path),
 });
 
 const toCommandItem = (value: string, name: string, run: () => Promise<void>): LauncherItem => ({
@@ -67,10 +67,12 @@ const buildCommandItems = (menuBarRunning: boolean): LauncherItem[] => [
   menuBarRunning
     ? toCommandItem("command:stop", "Remove Menu Bar Item", stop)
     : toCommandItem("command:start", "Add Menu Bar Item", start),
-  toCommandItem("command:exit", "Exit", async () => {}),
+  toCommandItem(EXIT_VALUE, "Exit", async () => {}),
 ];
 
-const runInteractive = async (): Promise<void> => {
+/** Shows the search prompt once. Returns false when the CLI should exit. */
+const runSearchRound = async (): Promise<boolean> => {
+  intro("supercast");
   const [menuBarRunning, apps] = await Promise.all([isMenuBarRunning(), listApps()]);
   const items = [...buildCommandItems(menuBarRunning), ...apps.map(toAppItem)];
 
@@ -92,19 +94,41 @@ const runInteractive = async (): Promise<void> => {
 
   if (isCancel(selectedValue)) {
     cancel("Cancelled");
-    return;
+    return false;
+  }
+  if (selectedValue === EXIT_VALUE) {
+    outro("Bye");
+    return false;
   }
   await items.find(({ value }) => value === selectedValue)?.run();
+  return true;
+};
+
+// Stays open after each action so the shortcut can bring this same window back.
+const runInteractive = async (): Promise<void> => {
+  const stopListening = await listenForFocusRequests();
+  try {
+    while (await runSearchRound()) {
+      process.stdout.write(CLEAR_SCREEN_SEQUENCE);
+    }
+  } finally {
+    stopListening();
+  }
 };
 
 const main = async (): Promise<void> => {
   const [command] = process.argv.slice(2);
-  intro("supercast");
 
   if (command === undefined) {
     await runInteractive();
     return;
   }
+  if (command === "show") {
+    await showCli();
+    return;
+  }
+
+  intro("supercast");
   if (command === "start") {
     await start();
     return;

@@ -4,6 +4,7 @@ import { existsSync, openSync } from "node:fs";
 import { chmod, mkdir, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
+import { focusRunningCli } from "./instance.ts";
 
 const runCommand = promisify(execFile);
 
@@ -75,7 +76,7 @@ export const startMenuBar = async (): Promise<void> => {
   await writeLauncher();
 
   const helperLog = openSync(helperLogPath, "w");
-  const helper = spawn(helperPath, [launcherPath], {
+  const helper = spawn(helperPath, [process.execPath, cliEntryPath, "show"], {
     detached: true,
     stdio: ["ignore", helperLog, helperLog],
   });
@@ -88,4 +89,11 @@ export const stopMenuBar = async (): Promise<void> => {
   for (const pid of pids) {
     process.kill(pid);
   }
+};
+
+/** Reuses a running CLI window, or opens a new one when none is running. */
+export const showCli = async (): Promise<void> => {
+  const reusedRunningCli = await focusRunningCli();
+  const openArguments = reusedRunningCli ? ["-a", "Terminal"] : ["-a", "Terminal", launcherPath];
+  await runCommand("open", openArguments);
 };

@@ -2,7 +2,7 @@
 
 Supercast is a command-line launcher for macOS. It is made of two programs:
 
-- **The CLI** (TypeScript and clack) shows the search prompt, then exits.
+- **The CLI** (TypeScript and clack) shows the search prompt, and stays open until you exit it.
 - **The helper** (a small Swift program) stays running. It owns the menu bar icon and the global shortcut.
 
 TypeScript can't call macOS AppKit directly, so anything that must stay alive in the background lives in the helper.
@@ -15,10 +15,12 @@ supercast-status (keeps running)
    └─ owns the icon and the shortcut, waits for input
 
 left click or Cmd+Shift+Space
-   └─ open -a Terminal open-supercast.command
-        └─ node index.ts
-             └─ search prompt
-                  └─ Enter opens the app or runs the command
+   └─ node index.ts show
+        ├─ CLI already open: raise that window
+        └─ no CLI open: open -a Terminal open-supercast.command
+             └─ node index.ts
+                  └─ search prompt
+                       └─ Enter opens the app, then search returns
 ```
 
 ## Files
@@ -28,7 +30,8 @@ left click or Cmd+Shift+Space
 | `index.ts`                | CLI entry point: subcommands and the search prompt      |
 | `search.ts`               | Ranks results for what you typed                        |
 | `apps.ts`                 | Finds installed apps and opens them                     |
-| `menubar.ts`              | Builds, starts and stops the helper                     |
+| `menubar.ts`              | Builds, starts and stops the helper, and shows the CLI  |
+| `instance.ts`             | Detects a running CLI and raises its window             |
 | `native/StatusItem.swift` | The helper: menu bar icon and global shortcut           |
 | `.build/`                 | Generated: helper binary, launcher script, `helper.log` |
 
@@ -64,9 +67,17 @@ If the helper is already running, `start` does nothing, even if the Swift file c
 
 No `.app` bundle or `Info.plist` is needed. The helper runs as a bare, ad-hoc signed binary.
 
-## Opening the CLI
+## Showing the CLI
 
-A left click or the shortcut calls `openCliInTerminal()`, which runs `open -a Terminal .build/open-supercast.command`. macOS treats `.command` files as scripts for Terminal, so this needs no Automation permission. The launcher uses an absolute Node path because Terminal's `PATH` can differ from your shell's.
+A left click or the shortcut makes the helper run `node index.ts show`. All the decisions live in `showCli()` in `menubar.ts`, so the helper stays simple.
+
+1. `focusRunningCli()` connects to `.build/cli.sock`. A running CLI answers on this socket. A dead CLI refuses the connection, even if the socket file was left behind, so there is no stale state to clean up. It gives up after one second.
+2. **If a CLI answers,** it writes an escape sequence to its own terminal that un-minimizes and raises its window. Then `open -a Terminal` brings Terminal to the front. This raises that exact window with no Automation permission.
+3. **If nothing answers,** `open -a Terminal .build/open-supercast.command` opens a new window. macOS treats `.command` files as scripts for Terminal, so this needs no Automation permission either. The launcher uses an absolute Node path because Terminal's `PATH` can differ from your shell's.
+
+The CLI has to stay open for this to work, so `runInteractive()` loops: after an action it clears the screen and shows search again. Exit and Esc end the loop.
+
+If you open a second CLI, such as `pnpm start` in another terminal, the newest one takes over the socket.
 
 A right click shows the Quit menu. The menu is attached only for that click, otherwise left clicks would open it too.
 
@@ -93,4 +104,6 @@ A right click shows the Quit menu. The menu is attached only for that click, oth
 
 - The helper doesn't restart after a reboot. Run `pnpm menubar:start` again.
 - The launcher contains the current Node path. If that path changes, run `pnpm menubar:stop`, then `pnpm menubar:start`.
-- Each click or shortcut press opens a new Terminal window, and it may stay open after the CLI exits, depending on your Terminal profile.
+- After Exit or Esc, the next press opens a new window, and the finished one may stay open depending on your Terminal profile.
+- Raising a window relies on Terminal honouring the escape sequence. Other terminals need testing.
+- Raising a minimized window is untested.

@@ -15,10 +15,10 @@ medea-status (keeps running)
    └─ owns the icon and the shortcut, waits for input
 
 Open Medea in the menu, or Cmd+Shift+Space
-   └─ node src/index.ts show
-        ├─ CLI already open: raise that window
-        └─ no CLI open: start open-medea.command in the chosen terminal
-             └─ node src/index.ts
+   ├─ CLI already open: the helper asks it over its socket, and it raises its own window
+   └─ no CLI open: node src/start.js show
+        └─ start open-medea.command in the chosen terminal
+             └─ node src/start.js
                   └─ search prompt
                        └─ Enter opens the app, then search returns
 ```
@@ -29,6 +29,7 @@ Code is grouped by feature, and tests sit next to the file they cover.
 
 ```text
 src/
+├── start.js              Turns on Node's compile cache, then loads index.ts
 ├── index.ts              Routes commands. Nothing else.
 ├── paths.ts              Every project path, in one place
 ├── config.ts             Reads and merges saved settings
@@ -77,7 +78,7 @@ native/
 ├── HotkeyRecorder.swift  The window that records a hotkey
 └── ImagePreview.swift    The floating window that shows clipboard images
 doc/                      These docs
-.build/                   Generated: helper binary, launcher script, logs, socket
+.build/                   Generated: helper binary, launcher script, logs, socket, compile cache
 ```
 
 ## Commands
@@ -98,7 +99,7 @@ pnpm check            # format and lint
 
 1. `pgrep` looks for a running helper. If there is one, nothing else happens, so you never get two icons.
 2. `swiftc` compiles `native/StatusItem.swift` to `.build/medea-status`. This is skipped if the binary is newer than the source.
-3. It writes `.build/open-medea.command`, a script that goes to the project folder and runs `node src/index.ts`.
+3. It writes `.build/open-medea.command`, a script that goes to the project folder and runs `node src/start.js`.
 4. It starts the helper with `detached: true`, then `unref()`, so the CLI can exit while the helper keeps running. Helper output goes to `.build/helper.log`.
 
 If the helper is already running, `start` does nothing, even if the Swift file changed. After editing Swift, run `pnpm menubar:stop` first.
@@ -118,8 +119,8 @@ Left or right clicking the icon opens a menu. The helper holds no logic of its o
 
 | Item         | What it runs                                                                                               |
 | ------------ | ---------------------------------------------------------------------------------------------------------- |
-| Open Medea   | `node src/index.ts show`                                                                                   |
-| Set Terminal | `node src/index.ts terminals` fills the list, and picking one runs `node src/index.ts set-terminal <name>` |
+| Open Medea   | Asks the open CLI over `.build/cli.sock`, or runs `node src/start.js show` if none answers                 |
+| Set Terminal | `node src/start.js terminals` fills the list, and picking one runs `node src/start.js set-terminal <name>` |
 | Exit         | Quits the helper, which removes the icon and the shortcut                                                  |
 
 ## Choosing a terminal
@@ -143,16 +144,23 @@ To add a terminal, add a recipe to `launchers` and test both open and bring back
 
 ## Showing the CLI
 
-The menu and the shortcut both run `node src/index.ts show`. `showCli()` in `src/terminals/actions.ts` then:
+The menu and the shortcut both start in the helper, so bringing back an open CLI doesn't wait for Node to start:
 
-1. Reads the chosen terminal.
-2. `focusRunningCli()` connects to `.build/cli.sock`. A running CLI answers on this socket with its tty path. A dead CLI refuses the connection, even if the socket file was left behind, so there is no stale state to clean up. It gives up after one second.
-3. **If a CLI answers,** the terminal's recipe brings it back.
-4. **If nothing answers,** the recipe opens `.build/open-medea.command`. The launcher uses an absolute Node path because a terminal's `PATH` can differ from your shell's. It clears the window first, because terminals type the launch command into a shell and that line would otherwise stay above Medea.
+1. `focusRunningCli()` in `native/StatusItem.swift` connects to `.build/cli.sock` and sends `focus`. A dead CLI refuses the connection, even if the socket file was left behind, so there is no stale state to clean up. It gives up after one second.
+2. **If a CLI answers,** it raises its own window and runs the terminal's recipe to bring it back. The recipes stay in TypeScript, so the helper never needs to know which terminal is chosen.
+3. **If nothing answers,** the helper runs `node src/start.js show`. `showCli()` in `src/terminals/actions.ts` tries the socket once more, then the recipe opens `.build/open-medea.command`. The launcher uses an absolute Node path because a terminal's `PATH` can differ from your shell's. It clears the window first, because terminals type the launch command into a shell and that line would otherwise stay above Medea.
 
 The CLI has to stay open for this to work, so `runLauncher()` loops: after an action it clears the screen and shows search again. Exit and Esc end the loop.
 
 If you open a second CLI, such as `pnpm start` in another terminal, the newest one takes over the socket.
+
+## Starting quickly
+
+The helper starts the CLI on every copy and on most hotkeys, so start time matters. A bare Node process takes about 20 ms, and three things keep the CLI close to that:
+
+- **Per-command imports.** `src/index.ts` imports what each command needs inside that command. A static import at the top would load every Medea app for every copy. `src/terminals/actions.ts` and `src/terminals/close-window.ts` load the registry and clack late for the same reason.
+- **The compile cache.** `src/start.js` turns on Node's compile cache in `.build/compile-cache`, which keeps the stripped TypeScript and compiled code. Editing a file updates its entry, so there is nothing to clear. `start.js` stays plain JavaScript because the first `.ts` file makes Node set up type stripping, which costs about 20 ms, and a cached start skips that.
+- **An early cache save.** Node saves the cache on a clean exit, and closing a window isn't one. So the search window calls `flushCompileCache()` once its code has loaded.
 
 ## The search prompt
 
@@ -221,9 +229,9 @@ Settings is a menu: **Alias, Add (Medea)**, **Hotkey, Create (Medea)**, **Remove
 
 1. Saving writes `hotkeys` to `~/.config/medea/config.json`, keyed by item, in a fixed form such as `shift+cmd+k`.
 2. The CLI sends the running helper `SIGUSR1`, so the hotkey works with no restart.
-3. The helper runs `node src/index.ts hotkeys`, which turns saved hotkeys into Carbon key codes and flags, and registers them. `helper.log` records each result, where status `0` means success.
+3. The helper runs `node src/start.js hotkeys`, which turns saved hotkeys into Carbon key codes and flags, and registers them. `helper.log` records each result, where status `0` means success.
 
-**Pressing a hotkey.** An item saved as a path is an app, and opens directly through `open <path>` without starting Node. Anything else runs `node src/index.ts run <value>`:
+**Pressing a hotkey.** An item saved as a path is an app, and opens directly through `open <path>` without starting Node. Anything else runs `node src/start.js run <value>`:
 
 | Command                | Hotkey does                                           |
 | ---------------------- | ----------------------------------------------------- |
@@ -259,7 +267,7 @@ An app gives the launcher two things, defined in `types.ts`:
 - `listItems()` returns its search items. It runs on every keystroke, so anything saved in another window shows straight away.
 - `listSettingsActions(value)` returns extra rows for an item's settings menu.
 
-An item with `needsWindow: true` asks for input, so its hotkey opens a new window running `node src/index.ts run-in-window <value>`. That window closes when the item finishes.
+An item with `needsWindow: true` asks for input, so its hotkey opens a new window running `node src/start.js run-in-window <value>`. That window closes when the item finishes.
 
 ## Quicklinks
 
@@ -306,7 +314,7 @@ Raycast pastes straight into the app you were using. Medea only copies, because 
 
 - Text keeps its line breaks and indentation. Tabs show as four spaces, long lines wrap with `wrap-ansi`, and a note says how many lines don't fit. View full text opens the whole entry in `less`, and `q` comes back.
 - Code gets syntax colours from `emphasize`, in the pane and in `less`. It guesses the language and gives a relevance score. Long code scores 5 or more. Short code scores as low as a sentence, so anything from 2 to 4 must also look like code: a line ending in `{`, `}` or `;`, a call like `foo(x)`, or an operator like `=>`. Colours go on after wrapping, so a break can't land inside a colour code.
-- Images show at full quality in a floating window beside the terminal, which follows the list as you arrow through it. The pane only shows the size. `native/ImagePreview.swift` is a borderless panel that never takes focus, so keys stay in the terminal. The CLI sends it `show <path>` or `hide` over stdin, and it exits when that pipe closes, so it can't outlive Medea. It finds the terminal's window through the window list, which needs no permission, and sits to the right, or the left if there's no room.
+- Images show at full quality in a floating window beside the terminal, which follows the list as you arrow through it. The pane only shows the size. `native/ImagePreview.swift` is a borderless panel that can't become the key or main window and ignores the mouse, so keys stay in the terminal even as new images appear. The CLI sends it `show <path>` or `hide` over stdin, and it exits when that pipe closes, so it can't outlive Medea. It finds the terminal app through its parent processes, so it's right even if another app is in front by then, and it's only on screen while that app is in front. Switch to a browser and the image goes; switch back and it returns with whatever is selected. It finds the terminal's window through the window list, which needs no permission, and sits to the right, or the left if there's no room.
 
 Images aren't drawn in the terminal, because a terminal can only draw characters. Chafa, through `chafa-wasm` and `static-chafa`, and `terminal-image` were all tried on real images. Even the best of them was too rough to count as seeing the image, and Terminal has no image protocol: on macOS 26.6.2 it ignores a Kitty graphics query.
 
@@ -321,7 +329,7 @@ This screen leaves out the logo, so images and the list get those rows. The pane
 **Recording.** The Swift helper checks the clipboard's change count every half second, which costs almost nothing, and only reads the content when it changes. So recording needs the helper running, and the CLI doesn't have to be open.
 
 1. `ClipboardWatcher` in `native/StatusItem.swift` applies the privacy rules below.
-2. The helper runs `node src/index.ts record-clipboard` and sends the text through stdin, because anyone can read a process's arguments with `ps`. An image goes the same way as a PNG to `record-clipboard-image`, converted from TIFF if needed.
+2. The helper runs `node src/start.js record-clipboard` and sends the text through stdin, because anyone can read a process's arguments with `ps`. An image goes the same way as a PNG to `record-clipboard-image`, converted from TIFF if needed.
 3. `addEntry()` in `store.ts` puts it first. Copying the same thing again moves the old entry to the top, and images count as the same when their hash matches.
 
 If the clipboard holds both text and an image, text wins, because apps like Excel also add a picture of the cells you copied. The exception is text that is only a web address, because a browser adds one to an image it copies.

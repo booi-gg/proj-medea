@@ -3,6 +3,7 @@ import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { isObject } from "../../config.ts";
 import { quicklinksPath } from "../../paths.ts";
+import { withAction, writeLog } from "../../log.ts";
 
 const FALLBACK_ID = "link";
 const NOT_SLUG_CHARACTERS = /[^a-z0-9]+/g;
@@ -45,7 +46,10 @@ export const parseQuicklinks = (fileText: string): Quicklink[] => {
 export const readQuicklinksSync = (): Quicklink[] => {
   try {
     return parseQuicklinks(readFileSync(quicklinksPath, "utf8"));
-  } catch {
+  } catch (error) {
+    if (!isMissingFileError(error)) {
+      writeLog("quicklinks.read-failed", { error }, { level: "warn" });
+    }
     return [];
   }
 };
@@ -100,17 +104,23 @@ export const addQuicklink = async (
   draft: QuicklinkDraft,
   reservedIds: readonly string[],
 ): Promise<void> => {
-  const links = await readForSaving();
-  const id = toQuicklinkId(draft.name, [...reservedIds, ...links.map((link) => link.id)]);
-  await writeQuicklinks([...links, { id, ...draft }]);
+  await withAction("quicklinks.add", {}, async () => {
+    const links = await readForSaving();
+    const id = toQuicklinkId(draft.name, [...reservedIds, ...links.map((link) => link.id)]);
+    await writeQuicklinks([...links, { id, ...draft }]);
+  });
 };
 
 export const updateQuicklink = async (id: string, draft: QuicklinkDraft): Promise<void> => {
-  const links = await readForSaving();
-  await writeQuicklinks(links.map((link) => (link.id === id ? { id, ...draft } : link)));
+  await withAction("quicklinks.update", { item: `medea-quicklinks:${id}` }, async () => {
+    const links = await readForSaving();
+    await writeQuicklinks(links.map((link) => (link.id === id ? { id, ...draft } : link)));
+  });
 };
 
 export const removeQuicklink = async (id: string): Promise<void> => {
-  const links = await readForSaving();
-  await writeQuicklinks(links.filter((link) => link.id !== id));
+  await withAction("quicklinks.remove", { item: `medea-quicklinks:${id}` }, async () => {
+    const links = await readForSaving();
+    await writeQuicklinks(links.filter((link) => link.id !== id));
+  });
 };

@@ -10,6 +10,7 @@ export const helperSourcePaths = [
   "HelperSocket.swift",
   "WindowGeometry.swift",
   "WindowManager.swift",
+  "Log.swift",
 ].map((name) => join(projectDir, "native", name));
 export const recorderSourcePath = join(projectDir, "native", "HotkeyRecorder.swift");
 export const imagePreviewSourcePath = join(projectDir, "native", "ImagePreview.swift");
@@ -30,3 +31,5 @@ export const loginItemPath = join(homedir(), "Library", "LaunchAgents", "medea.m
 export const clipboardHistoryPath = join(configDir, "medea-clipboard-history.json");
 export const clipboardImagesDir = join(configDir, "medea-clipboard-history");
 export const currencyRatesPath = join(configDir, "medea-currency-rates.json");
+export const logDir = join(homedir(), "Library", "Logs", "Medea");
+export const logPath = join(logDir, "medea.log");

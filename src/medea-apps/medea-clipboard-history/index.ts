@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { trackSpawn } from "../../log.ts";
 import { once } from "node:events";
 import { styleText } from "node:util";
 import { confirm, isCancel, select } from "@clack/prompts";
@@ -125,10 +126,13 @@ const copyEntry = async (entry: ClipboardEntry): Promise<string> => {
 // Less needs -R to show colours, which would also run any escape codes in the copied text. So
 // those are removed first, and only the highlighter's colours reach it.
 const viewText = async (text: string, highlight: Highlight): Promise<void> => {
-  const pager = spawn("less", ["-RS", "-Ps(q to go back)"], {
-    env: { ...UTF8_ENVIRONMENT, LESSCHARSET: "utf-8", LESSSECURE: "1" },
-    stdio: ["pipe", "inherit", "inherit"],
-  });
+  const pager = trackSpawn(
+    spawn("less", ["-RS", "-Ps(q to go back)"], {
+      env: { ...UTF8_ENVIRONMENT, LESSCHARSET: "utf-8", LESSSECURE: "1" },
+      stdio: ["pipe", "inherit", "inherit"],
+    }),
+    "less",
+  );
   // Quitting before less has read everything closes the pipe, which is fine.
   pager.stdin.on("error", () => {});
   pager.stdin.end(highlight(toSafeText(text)));

@@ -1,4 +1,5 @@
 import { helperSocketPath } from "../paths.ts";
+import { currentTrace } from "../log.ts";
 import { runCommand } from "../shell.ts";
 import { sendSocketRequest } from "../socket.ts";
 
@@ -11,8 +12,17 @@ export type WindowAccess = "granted" | "missing" | "no-helper";
 
 /** Returns the helper's one-line reply, or undefined when it isn't running. */
 export const sendHelperRequest = async (request: string): Promise<string | undefined> => {
-  const reply = await sendSocketRequest(helperSocketPath, request, REQUEST_TIMEOUT_MS);
-  return reply?.trim();
+  const tracedReply = await sendSocketRequest(
+    helperSocketPath,
+    `trace ${currentTrace()} ${request}`,
+    REQUEST_TIMEOUT_MS,
+  );
+  const reply = tracedReply?.trim();
+  if (reply === "bad-command") {
+    // An older helper may still be running until its next restart.
+    return (await sendSocketRequest(helperSocketPath, request, REQUEST_TIMEOUT_MS))?.trim();
+  }
+  return reply;
 };
 
 /** The helper has to answer this, because the permission belongs to it and not to the CLI. */

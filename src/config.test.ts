@@ -47,3 +47,8 @@ test("ignores a clipboard history length that isn't a choice", () => {
     assert.equal(config.clipboardHistoryMonths, undefined);
   }
 });
+
+test("accepts only supported log size limits", () => {
+  assert.equal(parseConfig('{ "logMaxSizeMb": 100 }').logMaxSizeMb, 100);
+  assert.equal(parseConfig('{ "logMaxSizeMb": 7 }').logMaxSizeMb, undefined);
+});

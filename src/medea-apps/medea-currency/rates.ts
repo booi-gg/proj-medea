@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { currencyRatesPath } from "../../paths.ts";
+import { writeLog } from "../../log.ts";
 
 const RATES_URL = "https://api.frankfurter.dev/v2/rates?base=USD";
 const REFRESH_INTERVAL_MS = 24 * 60 * 60 * 1000;
@@ -125,7 +126,8 @@ export const refreshRates = async (
       await rm(temporaryPath, { force: true });
     }
     return true;
-  } catch {
+  } catch (error) {
+    writeLog("currency.refresh-failed", { error }, { level: "warn" });
     return false;
   }
 };

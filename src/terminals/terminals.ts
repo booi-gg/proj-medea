@@ -1,5 +1,6 @@
 import { readConfig, updateConfig } from "../config.ts";
 import { listApps } from "../launcher/apps.ts";
+import { writeLog } from "../log.ts";
 import { quoteForShell, runCommand } from "../shell.ts";
 
 // Ghostty keeps a window open after a "command" exits, leaving an empty window behind. So this
@@ -46,14 +47,16 @@ const launchers = {
       try {
         const shellInput = ` exec ${quoteForShell(launcherPath)}`;
         await runCommand("osascript", ["-e", OPEN_IN_GHOSTTY_SCRIPT, shellInput]);
-      } catch {
+      } catch (error) {
+        writeLog("terminal.open-fallback", { error }, { level: "warn" });
         await openWithApp("Ghostty", launcherPath);
       }
     },
     focus: async (ttyPath) => {
       try {
         await runCommand("osascript", ["-e", FOCUS_IN_GHOSTTY_SCRIPT, ttyPath]);
-      } catch {
+      } catch (error) {
+        writeLog("terminal.focus-fallback", { error }, { level: "warn" });
         await openWithApp("Ghostty");
       }
     },

@@ -1,7 +1,8 @@
 import { readFileSync } from "node:fs";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
-import { configPath } from "./paths.ts";
+import { configPath, logDir } from "./paths.ts";
+import { rotateLogs, withAction } from "./log.ts";
 
 export type AliasMap = Record<string, string[]>;
 export type HotkeyMap = Record<string, string>;
@@ -9,12 +10,16 @@ export type HotkeyMap = Record<string, string>;
 export const HISTORY_MONTH_CHOICES = [3, 4, 5, 12] as const;
 export type HistoryMonths = (typeof HISTORY_MONTH_CHOICES)[number];
 export const DEFAULT_HISTORY_MONTHS: HistoryMonths = 3;
+export const LOG_SIZE_CHOICES = [10, 50, 100, 500] as const;
+export type LogMaxSizeMb = (typeof LOG_SIZE_CHOICES)[number];
+export const DEFAULT_LOG_MAX_SIZE_MB: LogMaxSizeMb = 50;
 
 export interface Config {
   terminal?: string;
   aliases: AliasMap;
   hotkeys: HotkeyMap;
   clipboardHistoryMonths?: HistoryMonths;
+  logMaxSizeMb?: LogMaxSizeMb;
 }
 
 const EMPTY_CONFIG: Config = { aliases: {}, hotkeys: {} };
@@ -53,6 +58,8 @@ const parseHotkeyMap = (value: unknown): HotkeyMap => {
 
 const toHistoryMonths = (value: unknown): HistoryMonths | undefined =>
   HISTORY_MONTH_CHOICES.find((months) => months === value);
+const toLogMaxSizeMb = (value: unknown): LogMaxSizeMb | undefined =>
+  LOG_SIZE_CHOICES.find((size) => size === value);
 
 /** Broken or missing settings read as empty, so a bad file can't stop the app. */
 export const parseConfig = (configText: string): Config => {
@@ -63,11 +70,13 @@ export const parseConfig = (configText: string): Config => {
     }
     const terminal = typeof parsed.terminal === "string" ? parsed.terminal : undefined;
     const clipboardHistoryMonths = toHistoryMonths(parsed.clipboardHistoryMonths);
+    const logMaxSizeMb = toLogMaxSizeMb(parsed.logMaxSizeMb);
     return {
       terminal,
       aliases: parseAliasMap(parsed.aliases),
       hotkeys: parseHotkeyMap(parsed.hotkeys),
       ...(clipboardHistoryMonths === undefined ? {} : { clipboardHistoryMonths }),
+      ...(logMaxSizeMb === undefined ? {} : { logMaxSizeMb }),
     };
   } catch {
     return EMPTY_CONFIG;
@@ -93,7 +102,12 @@ export const readConfigSync = (): Config => {
 
 /** Merges into the saved settings, so changing one setting never wipes another. */
 export const updateConfig = async (changes: Partial<Config>): Promise<void> => {
-  const merged = { ...(await readConfig()), ...changes };
-  await mkdir(dirname(configPath), { recursive: true });
-  await writeFile(configPath, `${JSON.stringify(merged, null, 2)}\n`);
+  await withAction("config.update", { count: Object.keys(changes).length }, async () => {
+    const merged = { ...(await readConfig()), ...changes };
+    await mkdir(dirname(configPath), { recursive: true });
+    await writeFile(configPath, `${JSON.stringify(merged, null, 2)}\n`);
+    if (changes.logMaxSizeMb !== undefined) {
+      rotateLogs(process.env.MEDEA_LOG_DIR ?? logDir, changes.logMaxSizeMb, true);
+    }
+  });
 };

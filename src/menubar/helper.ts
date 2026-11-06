@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { existsSync, openSync } from "node:fs";
 import { mkdir, stat } from "node:fs/promises";
+import { join } from "node:path";
 import {
   buildDir,
   cliEntryPath,
@@ -15,10 +16,13 @@ import {
   recorderSourcePath,
 } from "../paths.ts";
 import { runCommand } from "../shell.ts";
+import { currentTrace, trackSpawn } from "../log.ts";
 import { writeLauncherScript } from "../terminals/launcher-script.ts";
 import { signHelper } from "./signing.ts";
 
 const PGREP_NO_MATCH_EXIT_CODE = 1;
+// Some CLT installations pair the default 26.x SDK with an older Swift compiler.
+const COMPATIBLE_SDK = "/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk";
 
 const isNoMatchError = (error: unknown): boolean =>
   error instanceof Error && "code" in error && error.code === PGREP_NO_MATCH_EXIT_CODE;
@@ -54,7 +58,13 @@ const compileSwift = async (sourcePaths: readonly string[], binaryPath: string):
     return;
   }
   await mkdir(buildDir, { recursive: true });
-  await runCommand("swiftc", ["-O", ...sourcePaths, "-o", binaryPath, "-framework", "AppKit"]);
+  await runCommand("swiftc", ["-O", ...sourcePaths, "-o", binaryPath, "-framework", "AppKit"], {
+    env: {
+      ...process.env,
+      ...(existsSync(COMPATIBLE_SDK) ? { SDKROOT: COMPATIBLE_SDK } : {}),
+      CLANG_MODULE_CACHE_PATH: join(buildDir, "clang-module-cache"),
+    },
+  });
 };
 
 export const buildRecorder = (): Promise<void> => compileSwift([recorderSourcePath], recorderPath);
@@ -83,10 +93,14 @@ export const startMenuBar = async (): Promise<void> => {
   await prepareMenuBar();
 
   const helperLog = openSync(helperLogPath, "w");
-  const helper = spawn(helperPath, [process.execPath, cliEntryPath], {
-    detached: true,
-    stdio: ["ignore", helperLog, helperLog],
-  });
+  const helper = trackSpawn(
+    spawn(helperPath, [process.execPath, cliEntryPath], {
+      detached: true,
+      stdio: ["ignore", helperLog, helperLog],
+      env: { ...process.env, MEDEA_TRACE: currentTrace() },
+    }),
+    "medea-status",
+  );
   await once(helper, "spawn");
   helper.unref();
 };

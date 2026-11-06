@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { trackSpawn, writeLog } from "../../log.ts";
 import { buildImagePreview } from "../../menubar/helper.ts";
 import { imagePreviewPath } from "../../paths.ts";
 
@@ -21,10 +22,14 @@ const noWindow: ImageWindow = {
 export const openImageWindow = async (): Promise<ImageWindow> => {
   try {
     await buildImagePreview();
-  } catch {
+  } catch (error) {
+    writeLog("image-preview.build-failed", { error }, { level: "warn" });
     return noWindow;
   }
-  const window = spawn(imagePreviewPath, { stdio: ["pipe", "ignore", "ignore"] });
+  const window = trackSpawn(
+    spawn(imagePreviewPath, { stdio: ["pipe", "ignore", "ignore"] }),
+    "medea-image-preview",
+  );
   window.on("error", () => {});
   // The window can close first, and writing to it then must not end Medea.
   window.stdin.on("error", () => {});

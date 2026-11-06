@@ -15,11 +15,12 @@ app.setActivationPolicy(.accessory)
 let windows = WindowManager()
 let controller = StatusItemController(cliCommand: cliCommand, windows: windows)
 let hotKeys = HotKeyCenter()
-NSLog("Medea hotkey handler status: \(hotKeys.installHandler())")
+let handlerStatus = hotKeys.installHandler()
+MedeaLog.event("hotkey.handler", level: handlerStatus == noErr ? "info" : "warn", trace: MedeaLog.startupTrace, fields: ["status": handlerStatus])
 let hotKeyStatus = hotKeys.registerPermanent(keyCode: hotKeyKeyCode, modifiers: hotKeyModifiers) {
   controller.showCli()
 }
-NSLog("Medea hotkey registration status: \(hotKeyStatus)")
+MedeaLog.event("hotkey.register", level: hotKeyStatus == noErr ? "info" : "warn", trace: MedeaLog.startupTrace, fields: ["kind": "launcher", "status": hotKeyStatus])
 controller.reloadHotKeys(into: hotKeys)
 
 // MARK: - Start
@@ -45,6 +46,7 @@ let helperSocket = HelperSocket(
     .path,
   onRequest: windows.answer
 )
-NSLog("Medea helper socket started: \(helperSocket.start())")
+let socketStarted = helperSocket.start()
+MedeaLog.event("helper.socket", level: socketStarted ? "info" : "warn", trace: MedeaLog.startupTrace, fields: ["ok": socketStarted])
 
 app.run()

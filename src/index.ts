@@ -1,6 +1,23 @@
 #!/usr/bin/env node
 import { flushCompileCache } from "node:module";
 import { buffer, text } from "node:stream/consumers";
+import { withAction } from "./log.ts";
+
+const PROCESS_COMMANDS = new Set([
+  "show",
+  "terminals",
+  "hotkeys",
+  "run",
+  "run-in-window",
+  "record-clipboard",
+  "record-clipboard-image",
+  "set-terminal",
+  "start",
+  "stop",
+  "status",
+  "sign",
+  "logs",
+]);
 
 // Each command loads only what it uses, because the helper starts this on every copy and hotkey.
 const main = async (): Promise<void> => {
@@ -8,11 +25,9 @@ const main = async (): Promise<void> => {
 
   if (command === undefined) {
     const { runLauncher } = await import("./launcher/launcher.ts");
-    const { closeOwnWindow } = await import("./terminals/close-window.ts");
     // Node saves the cache on a clean exit, and closing the window isn't one.
     flushCompileCache();
     await runLauncher();
-    await closeOwnWindow();
     return;
   }
   if (command === "show") {
@@ -39,7 +54,6 @@ const main = async (): Promise<void> => {
   }
   if (command === "run-in-window") {
     const { runLauncher } = await import("./launcher/launcher.ts");
-    const { closeOwnWindow } = await import("./terminals/close-window.ts");
     const { runInRunningCli } = await import("./terminals/running-cli.ts");
     // Two quick presses can both find nothing open, so the later window hands over and leaves.
     const hasHandedOver = argument !== undefined && (await runInRunningCli(argument));
@@ -47,7 +61,6 @@ const main = async (): Promise<void> => {
       flushCompileCache();
       await runLauncher(argument);
     }
-    await closeOwnWindow();
     return;
   }
   // Text comes through stdin because arguments can be read by anyone running "ps".
@@ -64,6 +77,11 @@ const main = async (): Promise<void> => {
   if (command === "set-terminal") {
     const { setTerminal } = await import("./terminals/actions.ts");
     await setTerminal(argument);
+    return;
+  }
+  if (command === "logs") {
+    const { showLogs } = await import("./log-viewer.ts");
+    await showLogs(process.argv.slice(3));
     return;
   }
 
@@ -90,7 +108,15 @@ const main = async (): Promise<void> => {
 };
 
 try {
-  await main();
+  const command = process.argv[2];
+  const kind =
+    command === undefined ? "search" : PROCESS_COMMANDS.has(command) ? command : "unknown";
+  const closesOwnWindow = command === undefined || command === "run-in-window";
+  await withAction("process.run", { kind, interactive: closesOwnWindow }, main);
+  if (closesOwnWindow) {
+    const { closeOwnWindow } = await import("./terminals/close-window.ts");
+    await closeOwnWindow();
+  }
 } catch (error) {
   const { log } = await import("@clack/prompts");
   log.error(error instanceof Error ? error.message : String(error));

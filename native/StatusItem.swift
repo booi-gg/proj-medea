@@ -91,7 +91,9 @@ final class HotKeyCenter {
       let result = register(keyCode: hotKey.keyCode, modifiers: hotKey.modifiers) {
         onPress(hotKey)
       }
-      NSLog("Medea hotkey for \(hotKey.value) registration status: \(result.status)")
+      MedeaLog.event("hotkey.register", level: result.status == noErr ? "info" : "warn", fields: [
+        "item": MedeaLog.safeItem(hotKey.value), "status": result.status,
+      ])
       if let ref = result.ref {
         itemHotKeys.append((id: result.id, ref: ref))
       }
@@ -99,14 +101,19 @@ final class HotKeyCenter {
   }
 }
 
-func openApp(at path: String) {
+@discardableResult
+func openApp(at path: String) -> Bool {
+  let span = MedeaLog.start("app.open", fields: ["item": MedeaLog.safeItem(path)])
   let process = Process()
   process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
   process.arguments = [path]
   do {
     try process.run()
+    MedeaLog.end(span, ok: true, fields: ["childPid": process.processIdentifier])
+    return true
   } catch {
-    NSLog("Medea could not open \(path): \(error.localizedDescription)")
+    MedeaLog.end(span, ok: false, fields: ["error": String(describing: type(of: error))])
+    return false
   }
 }
 
@@ -251,8 +258,7 @@ final class ClipboardWatcher {
 
   /// Type names only, so copied content never reaches the log.
   private func logSkip(_ reason: String, _ types: [NSPasteboard.PasteboardType]) {
-    let names = types.map(\.rawValue).joined(separator: ", ")
-    NSLog("Medea skipped a copy, \(reason): \(names)")
+    MedeaLog.event("clipboard.skip", fields: ["reason": reason, "typeCount": types.count])
   }
 
   private static func isOnlyAddress(_ text: String) -> Bool {
@@ -321,7 +327,7 @@ final class ClipboardWatcher {
   private func recordImage(_ image: Data, name: String?) {
     DispatchQueue.global(qos: .utility).async { [onCopy] in
       guard let png = Self.toPng(image) else {
-        NSLog("Medea skipped a copy, could not read the image data")
+        MedeaLog.event("clipboard.skip", level: "warn", fields: ["reason": "invalid image", "bytes": image.count])
         return
       }
       DispatchQueue.main.async { onCopy(.image(png, name: name)) }
@@ -352,7 +358,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let menu = NSMenu()
   private let terminalMenu = NSMenu()
-  private var clipsToRecord: [Clip] = []
+  private var clipsToRecord: [(clip: Clip, trace: String)] = []
   private var isRecordingClip = false
 
   init(cliCommand: [String], windows: WindowManager) {
@@ -375,6 +381,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     openItem.target = self
     menu.addItem(openItem)
 
+    let logsItem = NSMenuItem(
+      title: "Open Logs Folder",
+      action: #selector(handleOpenLogsFolder),
+      keyEquivalent: ""
+    )
+    logsItem.target = self
+    menu.addItem(logsItem)
+
     let terminalItem = NSMenuItem(title: "Set Terminal", action: nil, keyEquivalent: "")
     terminalItem.submenu = terminalMenu
     menu.addItem(terminalItem)
@@ -395,6 +409,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   }
 
   func menuWillOpen(_ menu: NSMenu) {
+    MedeaLog.event("menu.open")
     reloadTerminals()
   }
 
@@ -402,26 +417,54 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     showCli()
   }
 
+  @objc private func handleOpenLogsFolder() {
+    let span = MedeaLog.start("menu.open-logs-folder")
+    do {
+      try FileManager.default.createDirectory(
+        at: MedeaLog.directory,
+        withIntermediateDirectories: true,
+        attributes: [.posixPermissions: 0o700]
+      )
+      let opened = NSWorkspace.shared.open(MedeaLog.directory)
+      MedeaLog.end(span, ok: opened)
+      if !opened { NSSound.beep() }
+    } catch {
+      MedeaLog.end(span, ok: false, fields: ["error": String(describing: type(of: error))])
+      NSSound.beep()
+    }
+  }
+
   @objc private func handleTerminalChoice(_ sender: NSMenuItem) {
-    runCli(["set-terminal", sender.title]) { [weak self] _ in
+    MedeaLog.event("terminal.select")
+    runCli(["set-terminal", sender.title]) { [weak self] _, _ in
       self?.reloadTerminals()
     }
   }
 
   func showCli() {
+    let span = MedeaLog.start("launcher.show")
     let socketPath = cliSocketPath
     DispatchQueue.global(qos: .userInteractive).async { [weak self] in
       guard !focusRunningCli(socketPath: socketPath) else {
+        MedeaLog.end(span, ok: true, fields: ["kind": "focus"])
         return
       }
-      DispatchQueue.main.async { self?.runCli(["show"]) }
+      DispatchQueue.main.async {
+        guard let self else {
+          MedeaLog.end(span, ok: false)
+          return
+        }
+        self.runCli(["show"], trace: span.trace, parent: span.id) { _, ok in
+          MedeaLog.end(span, ok: ok, fields: ["kind": "launch"])
+        }
+      }
     }
   }
 
   func reloadHotKeys(into hotKeys: HotKeyCenter) {
-    runCli(["hotkeys"]) { output in
+    runCli(["hotkeys"]) { output, _ in
       guard let items = try? JSONDecoder().decode([ItemHotKey].self, from: output) else {
-        NSLog("Medea could not read the saved hotkeys")
+        MedeaLog.event("hotkey.load", level: "warn", fields: ["error": "decode"])
         return
       }
       hotKeys.replaceItemHotKeys(items) { [weak self] hotKey in
@@ -432,18 +475,29 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
   /// Apps and window actions run here, which is fastest. Everything else needs the CLI.
   private func runItem(_ hotKey: ItemHotKey) {
+    let span = MedeaLog.start("hotkey.press", fields: ["item": MedeaLog.safeItem(hotKey.value)])
     if let windowCommand = hotKey.windowCommand {
-      windows.runFromHotKey(windowCommand)
+      windows.runFromHotKey(windowCommand, trace: span.trace, parent: span.id)
+      MedeaLog.end(span, ok: true)
     } else if hotKey.value.hasPrefix("/") {
-      openApp(at: hotKey.value)
+      MedeaLog.end(span, ok: openApp(at: hotKey.value))
     } else {
-      runCli(["run", hotKey.value])
+      runCli(["run", hotKey.value], trace: span.trace, parent: span.id) { _, ok in
+        MedeaLog.end(span, ok: ok)
+      }
     }
   }
 
   /// One at a time, so two quick copies can't overwrite each other in the history file.
   func recordClip(_ clip: Clip) {
-    clipsToRecord.append(clip)
+    let trace = MedeaLog.newTrace()
+    switch clip {
+    case .text(let text):
+      MedeaLog.event("clipboard.detect", trace: trace, fields: ["kind": "text", "bytes": text.utf8.count])
+    case .image(let data, _):
+      MedeaLog.event("clipboard.detect", trace: trace, fields: ["kind": "image", "bytes": data.count])
+    }
+    clipsToRecord.append((clip: clip, trace: trace))
     recordNextClip()
   }
 
@@ -455,7 +509,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     let command: String
     let input: Data
     var environment: [String: String] = [:]
-    switch clipsToRecord.removeFirst() {
+    let next = clipsToRecord.removeFirst()
+    switch next.clip {
     case .text(let text):
       command = "record-clipboard"
       input = Data(text.utf8)
@@ -465,14 +520,18 @@ final class StatusItemController: NSObject, NSMenuDelegate {
       // Stdin holds the image, and arguments can be read by anyone running "ps".
       environment["MEDEA_IMAGE_NAME"] = name
     }
-    runCli([command], input: input, environment: environment) { [weak self] _ in
+    let span = MedeaLog.start("clipboard.record", trace: next.trace, fields: [
+      "kind": command == "record-clipboard" ? "text" : "image", "bytes": input.count,
+    ])
+    runCli([command], input: input, environment: environment, trace: span.trace, parent: span.id) { [weak self] _, ok in
+      MedeaLog.end(span, ok: ok)
       self?.isRecordingClip = false
       self?.recordNextClip()
     }
   }
 
   private func reloadTerminals() {
-    runCli(["terminals"]) { [weak self] output in
+    runCli(["terminals"]) { [weak self] output, _ in
       guard let choices = try? JSONDecoder().decode([TerminalChoice].self, from: output) else {
         return
       }
@@ -498,8 +557,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     _ arguments: [String],
     input: Data? = nil,
     environment: [String: String] = [:],
-    onFinish: ((Data) -> Void)? = nil
+    trace: String? = nil,
+    parent: String? = nil,
+    onFinish: ((Data, Bool) -> Void)? = nil
   ) {
+    let kind = arguments.first ?? "unknown"
+    let span = MedeaLog.start("cli.run", trace: trace, parent: parent, fields: ["kind": kind])
     let process = Process()
     let output = Pipe()
     let inputPipe = Pipe()
@@ -507,18 +570,22 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     process.arguments = Array(cliCommand.dropFirst()) + arguments
     process.standardOutput = output
     process.environment = ProcessInfo.processInfo.environment.merging(environment) { $1 }
+      .merging(["MEDEA_TRACE": span.trace]) { $1 }
     if input != nil {
       process.standardInput = inputPipe
     }
     process.terminationHandler = { _ in
       let data = output.fileHandleForReading.readDataToEndOfFile()
-      DispatchQueue.main.async { onFinish?(data) }
+      MedeaLog.end(span, ok: process.terminationStatus == 0, fields: [
+        "childPid": process.processIdentifier, "exitCode": process.terminationStatus,
+      ])
+      DispatchQueue.main.async { onFinish?(data, process.terminationStatus == 0) }
     }
     do {
       try process.run()
     } catch {
-      NSLog("Medea could not run the CLI: \(error.localizedDescription)")
-      onFinish?(Data())
+      MedeaLog.end(span, ok: false, fields: ["error": String(describing: type(of: error))])
+      onFinish?(Data(), false)
       return
     }
     if let input {

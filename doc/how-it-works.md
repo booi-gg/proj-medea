@@ -7,6 +7,14 @@ Medea is a command-line launcher for macOS. It is made of two programs:
 
 TypeScript can't call macOS AppKit directly, so anything that must stay alive in the background lives in the helper.
 
+## Logs
+
+The CLI and helper append one JSON object per line to `~/Library/Logs/Medea/medea.log`. Each record has a local timestamp, process IDs, a trace ID, and an action ID. Timed actions have `start` and `end` records; the latter includes duration and success. The helper passes `MEDEA_TRACE` to child CLI processes so one hotkey or copy can be followed across both programs. A terminal window opened through a `.command` script starts a new trace.
+
+Logs contain action types, safe item IDs, byte counts, exit codes and error categories. They never contain search text, clipboard content, link targets, command arguments or command output. Use `node src/start.js logs`, `node src/start.js logs --follow`, or `node src/start.js logs --trace <id>` to read them.
+
+Settings offers a total log size of 10, 50, 100 or 500 MB, defaulting to 50 MB. Node rotates the active file at one tenth of the limit and deletes the oldest archives when needed. The Swift helper only appends; `.build/helper.log` is reserved for raw crash output.
+
 ```text
 pnpm menubar:start
    └─ the CLI builds and starts the helper, then the CLI exits
@@ -33,6 +41,8 @@ src/
 ├── index.ts              Routes commands. Nothing else.
 ├── paths.ts              Every project path, in one place
 ├── config.ts             Reads and merges saved settings
+├── log.ts                Writes metadata-only JSONL across Node processes
+├── log-viewer.ts         Reads and follows log files
 ├── shell.ts              Shared command runner and shell quoting
 ├── socket.ts             Sends one request over a Unix socket
 ├── launcher/
@@ -93,6 +103,7 @@ src/
 native/
 ├── main.swift            The helper's startup code
 ├── StatusItem.swift      Menu bar icon, menu, global shortcuts and clipboard watcher
+├── Log.swift             Appends helper actions to the shared log
 ├── HelperSocket.swift    Answers requests from the CLI
 ├── WindowManager.swift   Finds and moves windows through the Accessibility API
 ├── WindowGeometry.swift  Works out frames, with no system calls
@@ -110,6 +121,9 @@ pnpm menubar:start    # start the helper
 pnpm menubar:stop     # stop the helper
 pnpm menubar:status   # check whether it is running
 pnpm menubar:sign     # one-time: keep Accessibility permission across rebuilds
+node src/start.js logs                 # read all logs
+node src/start.js logs --follow        # watch new entries
+node src/start.js logs --trace <id>   # one trigger across processes
 pnpm test             # run unit tests
 pnpm typecheck
 pnpm check            # format and lint
@@ -122,7 +136,7 @@ pnpm check            # format and lint
 1. `pgrep` looks for a running helper. If there is one, nothing else happens, so you never get two icons.
 2. `swiftc` compiles the helper's files to `.build/medea-status`, then signs it if the local signing identity exists. Compiling is skipped if the binary is newer than every source. `swiftc` only allows top-level code in a file called `main.swift`, so startup code lives there.
 3. It writes `.build/open-medea.command`, a script that goes to the project folder and runs `node src/start.js`.
-4. It starts the helper with `detached: true`, then `unref()`, so the CLI can exit while the helper keeps running. Helper output goes to `.build/helper.log`.
+4. It starts the helper with `detached: true`, then `unref()`, so the CLI can exit while the helper keeps running. Raw crash output goes to `.build/helper.log`; structured actions go to `~/Library/Logs/Medea/`.
 
 If the helper is already running, `start` does nothing, even if the Swift file changed. After editing Swift, run `pnpm menubar:stop` first.
 
@@ -130,20 +144,21 @@ If the helper is already running, `start` does nothing, even if the Swift file c
 
 1. `setActivationPolicy(.accessory)` hides it from the Dock.
 2. `NSStatusBar.system.statusItem(...)` asks macOS for a menu bar slot. On macOS 26, Control Centre hosts the actual window, so window lists show Control Centre as the owner, not the helper.
-3. `GlobalHotKey` registers `Cmd+Shift+Space` with Carbon's `RegisterEventHotKey`. The result is written to `helper.log`, where status `0` means success.
+3. `GlobalHotKey` registers `Cmd+Shift+Space` with Carbon's `RegisterEventHotKey`. The result is written to the structured log, where status `0` means success.
 4. `app.run()` starts the event loop. The helper must stay alive: if it exits, the icon and shortcut go with it.
 
 No `.app` bundle or `Info.plist` is needed. The helper runs as a bare binary, ad-hoc signed until `pnpm menubar:sign` has been run.
 
 ## The menu
 
-Left or right clicking the icon opens a menu. The helper holds no logic of its own: each item runs the CLI.
+Left or right clicking the icon opens a menu.
 
-| Item         | What it runs                                                                                               |
-| ------------ | ---------------------------------------------------------------------------------------------------------- |
-| Open Medea   | Asks the open CLI over `.build/cli.sock`, or runs `node src/start.js show` if none answers                 |
-| Set Terminal | `node src/start.js terminals` fills the list, and picking one runs `node src/start.js set-terminal <name>` |
-| Exit         | Quits the helper, which removes the icon and the shortcut                                                  |
+| Item             | What it does                                                                                               |
+| ---------------- | ---------------------------------------------------------------------------------------------------------- |
+| Open Medea       | Asks the open CLI over `.build/cli.sock`, or runs `node src/start.js show` if none answers                 |
+| Open Logs Folder | Opens `~/Library/Logs/Medea/` in Finder                                                                    |
+| Set Terminal     | `node src/start.js terminals` fills the list, and picking one runs `node src/start.js set-terminal <name>` |
+| Exit             | Quits the helper, which removes the icon and the shortcut                                                  |
 
 ## Choosing a terminal
 

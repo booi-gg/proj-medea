@@ -1,4 +1,5 @@
 import { buildRecorder } from "../menubar/helper.ts";
+import { writeLog } from "../log.ts";
 import { recorderPath } from "../paths.ts";
 import { runCommand } from "../shell.ts";
 
@@ -11,7 +12,8 @@ export const recordKeys = async (): Promise<string | undefined> => {
   try {
     const { stdout } = await runCommand(recorderPath);
     return stdout;
-  } catch {
+  } catch (error) {
+    writeLog("hotkey.record-failed", { error }, { level: "warn" });
     return undefined;
   }
 };

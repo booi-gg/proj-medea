@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
+import { withAction } from "../log.ts";
 import type { LauncherItem } from "../medea-apps/types.ts";
 import { stopMenuBar } from "../menubar/helper.ts";
 import { buildDir, launcherPath } from "../paths.ts";
@@ -40,7 +41,7 @@ const findItem = async (itemValue: string | undefined): Promise<LauncherItem | u
 };
 
 /** Runs an item from its hotkey, with no search window involved. */
-export const runCommandItem = async (itemValue: string | undefined): Promise<void> => {
+const runCommandItemInner = async (itemValue: string | undefined): Promise<void> => {
   if (itemValue === "command:exit") {
     await quitRunningCli();
     return;
@@ -65,3 +66,6 @@ export const runCommandItem = async (itemValue: string | undefined): Promise<voi
   }
   await item.run();
 };
+
+export const runCommandItem = async (itemValue: string | undefined): Promise<void> =>
+  withAction("item.run", { item: itemValue }, () => runCommandItemInner(itemValue));

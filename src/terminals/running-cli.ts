@@ -3,6 +3,7 @@ import { mkdir, rm } from "node:fs/promises";
 import { createServer } from "node:net";
 import { dirname } from "node:path";
 import { socketPath } from "../paths.ts";
+import { writeLog } from "../log.ts";
 import { getOwnTtyPath } from "../shell.ts";
 import { sendSocketRequest } from "../socket.ts";
 import { closeOwnWindow } from "./close-window.ts";
@@ -21,7 +22,8 @@ const focusOwnWindow = async (ttyPath: string): Promise<void> => {
   try {
     const launcher = await getSelectedLauncher();
     await launcher.focus(ttyPath);
-  } catch {
+  } catch (error) {
+    writeLog("terminal.focus-failed", { error }, { level: "warn" });
     // The escape sequence has already raised the window where the terminal honours it.
   }
 };

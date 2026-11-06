@@ -3,6 +3,7 @@ import { mkdir, rm, writeFile } from "node:fs/promises";
 import { userInfo } from "node:os";
 import { dirname } from "node:path";
 import { cliEntryPath, helperLogPath, helperPath, loginItemPath } from "../paths.ts";
+import { writeLog } from "../log.ts";
 import { runCommand } from "../shell.ts";
 import { prepareMenuBar } from "./helper.ts";
 
@@ -69,7 +70,8 @@ const readBackgroundItems = async (): Promise<string> => {
   try {
     const { stdout } = await runCommand("sfltool", ["dumpbtm"]);
     return stdout;
-  } catch {
+  } catch (error) {
+    writeLog("login-item.read-failed", { error }, { level: "warn" });
     // Apple doesn't document this tool, so losing it must not break the settings screen.
     return "";
   }

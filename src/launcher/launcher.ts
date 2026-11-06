@@ -11,6 +11,7 @@ import { refreshRatesIfStale } from "../medea-apps/medea-currency/rates.ts";
 import { findMedeaItem, listMedeaItems } from "../medea-apps/registry.ts";
 import type { LauncherItem } from "../medea-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
+import { withAction, writeLog } from "../log.ts";
 import { listenForRequests } from "../terminals/running-cli.ts";
 import { listApps, openApp } from "./apps.ts";
 import type { App } from "./apps.ts";
@@ -136,6 +137,7 @@ const showErrorsAsNotice = async (run: () => Promise<string>): Promise<string> =
   try {
     return await run();
   } catch (error) {
+    writeLog("item.notice-error", { error }, { level: "warn" });
     return styleText("red", error instanceof Error ? error.message : String(error));
   }
 };
@@ -144,10 +146,11 @@ const trackItem = async (
   session: Session,
   value: string,
   run: () => Promise<string>,
+  interactive = false,
 ): Promise<string> => {
   session.runningItem = value;
   try {
-    return await run();
+    return await withAction("item.run", { item: value, interactive }, run);
   } finally {
     session.runningItem = undefined;
   }
@@ -205,7 +208,10 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
     (item) => item?.value === value,
   );
   if (answer !== undefined) {
-    return { keepRunning: true, notice: await showErrorsAsNotice(answer.run) };
+    return {
+      keepRunning: true,
+      notice: await showErrorsAsNotice(() => trackItem(session, answer.value, answer.run)),
+    };
   }
   if (value === EXIT_VALUE && !wantsSettings) {
     return { keepRunning: false, notice: NO_NOTICE };
@@ -221,7 +227,7 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
   const nextNotice =
     item === undefined
       ? NO_NOTICE
-      : await trackItem(session, item.value, () => showErrorsAsNotice(item.run));
+      : await showErrorsAsNotice(() => trackItem(session, item.value, item.run, item.needsWindow));
   return { keepRunning: true, notice: nextNotice };
 };
 
@@ -237,9 +243,9 @@ const runItemByValue = async (value: string): Promise<string> => {
 const runNextItem = async (value: string, session: Session): Promise<RoundResult> => {
   session.nextItem = undefined;
   const run = (): Promise<string> => runItemByValue(value);
-  const notice = await trackItem(session, value, () =>
-    session.closeWhenDone ? run() : showErrorsAsNotice(run),
-  );
+  const item = findMedeaItem(value);
+  const tracked = (): Promise<string> => trackItem(session, value, run, item?.needsWindow);
+  const notice = session.closeWhenDone ? await tracked() : await showErrorsAsNotice(tracked);
   return { keepRunning: !session.closeWhenDone || session.nextItem !== undefined, notice };
 };
 

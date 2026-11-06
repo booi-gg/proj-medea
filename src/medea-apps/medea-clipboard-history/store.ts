@@ -5,6 +5,7 @@ import { basename, dirname, join, parse } from "node:path";
 import { DEFAULT_HISTORY_MONTHS, isObject, readConfig } from "../../config.ts";
 import type { HistoryMonths } from "../../config.ts";
 import { clipboardHistoryPath, clipboardImagesDir } from "../../paths.ts";
+import { withAction, writeLog } from "../../log.ts";
 import { toPreview } from "./format.ts";
 
 // History ends by age. These only stop heavy use from filling the disk or slowing every copy,
@@ -82,7 +83,10 @@ export const parseEntries = (fileText: string): ClipboardEntry[] => {
 export const readEntries = async (): Promise<ClipboardEntry[]> => {
   try {
     return parseEntries(await readFile(clipboardHistoryPath, "utf8"));
-  } catch {
+  } catch (error) {
+    if (!(error instanceof Error && "code" in error && error.code === "ENOENT")) {
+      writeLog("clipboard.read-failed", { error }, { level: "warn" });
+    }
     return [];
   }
 };
@@ -199,15 +203,23 @@ export const countEntriesToRemove = async (months: HistoryMonths): Promise<numbe
 
 /** Nothing else removes old entries when you aren't copying, so this runs when history is opened. */
 export const removeExpiredEntries = async (): Promise<void> => {
-  const [entries, months] = await Promise.all([readEntries(), readHistoryMonths()]);
-  const recent = keepRecentEntries(entries, months, Date.now());
-  if (recent.length < entries.length) {
-    await writeEntries(recent);
-  }
+  await withAction("clipboard.prune", {}, async () => {
+    const [entries, months] = await Promise.all([readEntries(), readHistoryMonths()]);
+    const recent = keepRecentEntries(entries, months, Date.now());
+    if (recent.length < entries.length) {
+      await writeEntries(recent);
+    }
+  });
 };
 
 export const recordText = async (text: string): Promise<void> => {
-  await saveEntry({ kind: "text", id: randomUUID(), text, copiedAt: Date.now() });
+  await withAction(
+    "clipboard.record",
+    { kind: "text", bytes: Buffer.byteLength(text) },
+    async () => {
+      await saveEntry({ kind: "text", id: randomUUID(), text, copiedAt: Date.now() });
+    },
+  );
 };
 
 /** Reads the size from the start of a PNG. Returns undefined for anything else. */
@@ -228,26 +240,32 @@ export const toImageName = (name: string | undefined): string | undefined =>
 export const recordImage = async (png: Buffer, copiedName?: string): Promise<void> => {
   const size = readPngSize(png);
   if (size === undefined || png.length > MAX_IMAGE_BYTES) {
+    writeLog("clipboard.skip", { kind: "image", bytes: png.length });
     return;
   }
-  const hash = createHash("sha256").update(png).digest("hex").slice(0, HASH_LENGTH);
-  await mkdir(clipboardImagesDir, { recursive: true, mode: OWNER_ONLY_FOLDER });
-  await writeFile(getImagePath(hash), png, { mode: OWNER_ONLY_FILE });
-  const name = toImageName(copiedName);
-  await saveEntry({
-    kind: "image",
-    id: randomUUID(),
-    hash,
-    ...size,
-    bytes: png.length,
-    copiedAt: Date.now(),
-    ...(name === undefined ? {} : { name }),
+  await withAction("clipboard.record", { kind: "image", bytes: png.length }, async () => {
+    const hash = createHash("sha256").update(png).digest("hex").slice(0, HASH_LENGTH);
+    await mkdir(clipboardImagesDir, { recursive: true, mode: OWNER_ONLY_FOLDER });
+    await writeFile(getImagePath(hash), png, { mode: OWNER_ONLY_FILE });
+    const name = toImageName(copiedName);
+    await saveEntry({
+      kind: "image",
+      id: randomUUID(),
+      hash,
+      ...size,
+      bytes: png.length,
+      copiedAt: Date.now(),
+      ...(name === undefined ? {} : { name }),
+    });
   });
 };
 
 export const removeEntry = async (id: string): Promise<void> => {
-  const entries = await readEntries();
-  await writeEntries(entries.filter((entry) => entry.id !== id));
+  await withAction("clipboard.remove", {}, async () => {
+    const entries = await readEntries();
+    await writeEntries(entries.filter((entry) => entry.id !== id));
+  });
 };
 
-export const clearEntries = (): Promise<void> => writeEntries([]);
+export const clearEntries = (): Promise<void> =>
+  withAction("clipboard.clear", {}, () => writeEntries([]));

@@ -72,13 +72,21 @@ final class WindowManager {
 
   /// Answers one line from the CLI's socket.
   func answer(_ request: String, reply: @escaping (String) -> Void) {
-    if request == "access" {
+    let parts = request.split(separator: " ", maxSplits: 2).map(String.init)
+    let traceValue = parts.count == 3 && parts[0] == "trace" ? parts[1] : nil
+    let isValidTrace = traceValue?.range(of: "^[a-f0-9-]{6,64}$", options: .regularExpression) != nil
+    let trace = isValidTrace ? traceValue : nil
+    let commandRequest = trace == nil ? request : parts[2]
+    if commandRequest == "access" {
       reply(AXIsProcessTrusted() ? "granted" : "missing")
-    } else if request == "access ask" {
+    } else if commandRequest == "access ask" {
       askForAccess()
       reply(Self.okReply)
-    } else if request.hasPrefix("window ") {
-      run(String(request.dropFirst("window ".count)), on: .behindFocused) { failure in
+    } else if commandRequest.hasPrefix("window ") {
+      let command = String(commandRequest.dropFirst("window ".count))
+      let span = MedeaLog.start("window.run", trace: trace, fields: ["kind": Self.safeCommand(command), "sourceKind": "socket"])
+      run(command, on: .behindFocused) { failure in
+        MedeaLog.end(span, ok: failure == nil, fields: ["result": failure?.rawValue ?? "ok"])
         reply(failure?.rawValue ?? Self.okReply)
       }
     } else {
@@ -87,14 +95,21 @@ final class WindowManager {
   }
 
   /// A hotkey has nowhere to show a message, so a failure is a beep.
-  func runFromHotKey(_ command: String) {
-    let frontApp = NSWorkspace.shared.frontmostApplication?.localizedName ?? "none"
+  func runFromHotKey(_ command: String, trace: String? = nil, parent: String? = nil) {
+    let span = MedeaLog.start("window.run", trace: trace, parent: parent, fields: [
+      "kind": Self.safeCommand(command), "sourceKind": "hotkey",
+    ])
     run(command, on: .focused) { failure in
-      if let failure {
-        NSLog("Medea window action failed: \(failure.rawValue), front app: \(frontApp)")
+      MedeaLog.end(span, ok: failure == nil, fields: ["result": failure?.rawValue ?? "ok"])
+      if failure != nil {
         DispatchQueue.main.async { NSSound.beep() }
       }
     }
+  }
+
+  private static func safeCommand(_ command: String) -> String {
+    let kind = command.split(separator: " ").first.map(String.init) ?? "unknown"
+    return ["place", "center", "restore", "display"].contains(kind) ? kind : "unknown"
   }
 
   private func askForAccess() {

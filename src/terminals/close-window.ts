@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { getOwnTtyPath, runCommand } from "../shell.ts";
+import { trackSpawn, writeLog } from "../log.ts";
 
 const TERMINAL_APP_PROGRAM = "Apple_Terminal";
 
@@ -40,12 +41,16 @@ export const closeOwnWindow = async (): Promise<void> => {
     const { stdout } = await runCommand("osascript", ["-e", FIND_WINDOW_SCRIPT, ttyPath]);
     const windowId = stdout.trim();
     if (windowId !== "") {
-      spawn("osascript", ["-e", CLOSE_WINDOW_SCRIPT, windowId], {
-        detached: true,
-        stdio: "ignore",
-      }).unref();
+      trackSpawn(
+        spawn("osascript", ["-e", CLOSE_WINDOW_SCRIPT, windowId], {
+          detached: true,
+          stdio: "ignore",
+        }),
+        "osascript",
+      ).unref();
     }
-  } catch {
+  } catch (error) {
+    writeLog("window.close-failed", { error }, { level: "warn" });
     // Only the tidy-up failed, and nothing is lost if the window stays open.
   }
 };

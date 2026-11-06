@@ -2,11 +2,13 @@ import { styleText } from "node:util";
 import { confirm, isCancel, select, spinner } from "@clack/prompts";
 import {
   DEFAULT_HISTORY_MONTHS,
+  DEFAULT_LOG_MAX_SIZE_MB,
   HISTORY_MONTH_CHOICES,
+  LOG_SIZE_CHOICES,
   readConfig,
   updateConfig,
 } from "../../config.ts";
-import type { HistoryMonths } from "../../config.ts";
+import type { HistoryMonths, LogMaxSizeMb } from "../../config.ts";
 import { drawScreen } from "../../launcher/screen.ts";
 import { askForWindowAccess, readWindowAccess } from "../../menubar/helper-socket.ts";
 import type { WindowAccess } from "../../menubar/helper-socket.ts";
@@ -28,6 +30,7 @@ const NAME = "Settings";
 const ICON = toMedeaIcon("⚙");
 const START_AT_LOGIN = "start-at-login";
 const CLIPBOARD_HISTORY = "clipboard-history";
+const LOG_SIZE = "log-size";
 const WINDOW_ACCESS = "window-access";
 const DONE = "done";
 const MONTHS_IN_YEAR = 12;
@@ -116,11 +119,27 @@ const chooseHistoryMonths = async (current: HistoryMonths): Promise<string> => {
   return `Clipboard history is kept for ${toMonthsLabel(months)}`;
 };
 
+const chooseLogSize = async (current: LogMaxSizeMb): Promise<string> => {
+  const size = await select({
+    message: "Keep logs up to",
+    initialValue: current,
+    options: LOG_SIZE_CHOICES.map((value) => ({ value, label: `${value} MB` })),
+  });
+  if (isCancel(size) || size === current) {
+    return "";
+  }
+  await updateConfig({ logMaxSizeMb: size });
+  return `Logs are kept up to ${size} MB`;
+};
+
 /** Shows the menu once. Returns the line to show next, or undefined when finished. */
 const runSettingsRound = async (notice: string): Promise<string | undefined> => {
   drawScreen({ title: "Settings", icon: ICON, notice });
-  const [state, { clipboardHistoryMonths = DEFAULT_HISTORY_MONTHS }, windowAccess] =
-    await Promise.all([checkLoginItem(), readConfig(), readWindowAccess()]);
+  const [
+    state,
+    { clipboardHistoryMonths = DEFAULT_HISTORY_MONTHS, logMaxSizeMb = DEFAULT_LOG_MAX_SIZE_MB },
+    windowAccess,
+  ] = await Promise.all([checkLoginItem(), readConfig(), readWindowAccess()]);
   const choice = await select({
     message: "Choose a setting",
     options: [
@@ -135,6 +154,11 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
         hint: "Older entries are deleted",
       },
       {
+        value: LOG_SIZE,
+        label: `Log size  ${logMaxSizeMb} MB`,
+        hint: "Oldest logs are removed when the limit is reached",
+      },
+      {
         value: WINDOW_ACCESS,
         label: `Window actions  ${WINDOW_ACCESS_LABELS[windowAccess]}`,
         hint: "Moves and resizes other apps' windows",
@@ -147,6 +171,9 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
   }
   if (choice === WINDOW_ACCESS) {
     return fixWindowAccess(windowAccess);
+  }
+  if (choice === LOG_SIZE) {
+    return chooseLogSize(logMaxSizeMb);
   }
   return choice === CLIPBOARD_HISTORY
     ? chooseHistoryMonths(clipboardHistoryMonths)

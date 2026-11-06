@@ -2,7 +2,6 @@
 import { intro, log } from "@clack/prompts";
 import { readConfig } from "./config.ts";
 import { toHelperHotkeys } from "./launcher/hotkeys.ts";
-import { runItemSettings } from "./launcher/item-settings.ts";
 import { runLauncher } from "./launcher/launcher.ts";
 import { showStatus, start, stop } from "./menubar/commands.ts";
 import { runCommandItem, runItemInWindow, setTerminal, showCli } from "./terminals/actions.ts";
@@ -10,7 +9,7 @@ import { closeOwnWindow, offerToCloseWindow } from "./terminals/close-window.ts"
 import { listTerminals } from "./terminals/terminals.ts";
 
 const main = async (): Promise<void> => {
-  const [command, argument, itemName] = process.argv.slice(2);
+  const [command, argument] = process.argv.slice(2);
 
   if (command === undefined) {
     await runLauncher();
@@ -41,12 +40,6 @@ const main = async (): Promise<void> => {
   }
   if (command === "set-terminal") {
     await setTerminal(argument);
-    return;
-  }
-
-  if (command === "settings" && argument !== undefined && itemName !== undefined) {
-    await runItemSettings(argument, itemName);
-    await offerToCloseWindow();
     return;
   }
 

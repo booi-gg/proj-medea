@@ -178,11 +178,11 @@ Aliases are stored in `~/.config/medea/config.json`, keyed by app path or comman
 }
 ```
 
-`updateConfig()` merges changes, so saving a terminal can't wipe aliases, or the other way round. Each item can have up to two aliases of up to 8 characters, so a row stays inside its title column. Aliases are lowercase with no spaces, and two items can't share one. These limits apply when saving in the settings window, so a hand-edited config can go over them.
+`updateConfig()` merges changes, so saving a terminal can't wipe aliases, or the other way round. Each item can have up to two aliases of up to 8 characters, so a row stays inside its title column. Aliases are lowercase with no spaces, and two items can't share one. These limits apply when saving in settings, so a hand-edited config can go over them.
 
-**Opening settings.** Shift+Enter or Tab on a result opens that item's settings in a new window, through `openItemSettings()`, and the search window stays where it is. The Set Alias command does the same after you pick an item. The window runs `node src/index.ts settings <value> <name>` from a `.build/settings-<hash>.command` script, with one script per item so two quick requests can't mix up items.
+**Opening settings.** Shift+Enter or Tab on a result opens that item's settings in the search window, and Done or Esc goes back to search. The Set Alias command does the same after you pick an item. An error in settings shows above the search bar instead of closing Medea.
 
-Search reads aliases on every keystroke, so one saved in a settings window works in the open search window straight away.
+Search reads aliases on every keystroke, so a new alias works as soon as you're back in search.
 
 **Reading keys.** `readKeysInto()` in `prompt.ts` reads raw bytes before clack does, because Node can't parse Shift+Enter and would type junk into the search bar. A settings key is forwarded as a normal Enter, with a flag saying settings were asked for.
 
@@ -197,7 +197,7 @@ The footer hint shows `⇧↵` in Ghostty and `tab` elsewhere. `stdin` has to be
 
 Search rows show a hotkey next to the name: `Calculator [calc] ⌃⌥9`. Any app or command can have one.
 
-The settings window is a menu: **Add alias**, **Create hotkey**, **Remove hotkey** (when one is set) and **Done**. Each change saves straight away.
+Settings is a menu: **Add alias**, **Create hotkey**, **Remove hotkey** (when one is set) and **Done**. Each change saves straight away.
 
 **Recording.** Create hotkey opens a small native window, `native/HotkeyRecorder.swift`, which shows the keys live as you press them. A terminal can't do this, because macOS and the terminal app take combos like `Cmd+Shift+K` first. A focused window receives them directly, so it needs no permission. It's a separate binary, `.build/medea-record`, so `pgrep` for the helper can't match it.
 
@@ -284,7 +284,7 @@ A link can have up to 3 arguments. Values are percent-encoded when the link star
 
 Terminal keeps a dead window open after a program exits, showing `[Process completed]`. Ghostty closes its own, so this only applies to Terminal.
 
-When search or a settings window finishes, Medea shows a **Close terminal** option, and Enter closes the window. Esc leaves it open. A window that quits because you changed terminal closes without asking.
+When search finishes, Medea shows a **Close terminal** option, and Enter closes the window. Esc leaves it open. A window that quits because you changed terminal closes without asking.
 
 - Launcher scripts set `MEDEA_WINDOW=1`, and only those windows can close. Running `pnpm start` in your own terminal never offers this.
 - The window is found while Node is alive and closed 0.6 seconds later, so Terminal doesn't ask about running processes.

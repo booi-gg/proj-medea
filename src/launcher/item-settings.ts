@@ -1,5 +1,5 @@
 import { styleText } from "node:util";
-import { confirm, intro, isCancel, log, outro, select, text } from "@clack/prompts";
+import { confirm, intro, isCancel, log, select, text } from "@clack/prompts";
 import { readConfig } from "../config.ts";
 import { listSettingsActions } from "../medea-apps/registry.ts";
 import { reloadHotkeys } from "../menubar/helper.ts";
@@ -110,12 +110,11 @@ const runSettingsRound = async (itemValue: string): Promise<boolean> => {
   return true;
 };
 
-/** The settings screen for one app or command. It runs in its own terminal window. */
+/** The settings screen for one item. It runs in the search window, then search comes back. */
 export const runItemSettings = async (itemValue: string, itemName: string): Promise<void> => {
   intro(itemName);
   let keepGoing = true;
   while (keepGoing) {
     keepGoing = await runSettingsRound(itemValue);
   }
-  outro("Done");
 };

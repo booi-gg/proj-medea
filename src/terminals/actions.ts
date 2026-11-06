@@ -27,21 +27,13 @@ export const setTerminal = async (name: string | undefined): Promise<void> => {
 };
 
 // One script per item, so two quick requests can't open the wrong item.
-const openItemWindow = async (
-  scriptPrefix: string,
-  itemValue: string,
-  cliArguments: readonly string[],
-): Promise<void> => {
+const openItemWindow = async (itemValue: string): Promise<void> => {
   const itemHash = createHash("sha1").update(itemValue).digest("hex").slice(0, 12);
-  const scriptPath = join(buildDir, `${scriptPrefix}-${itemHash}.command`);
-  await writeLauncherScript(scriptPath, cliArguments);
+  const scriptPath = join(buildDir, `run-${itemHash}.command`);
+  await writeLauncherScript(scriptPath, ["run-in-window", itemValue]);
   const launcher = await getSelectedLauncher();
   await launcher.open(scriptPath);
 };
-
-/** Opens an item's settings in a new window, leaving the search window where it is. */
-export const openItemSettings = (itemValue: string, itemName: string): Promise<void> =>
-  openItemWindow("settings", itemValue, ["settings", itemValue, itemName]);
 
 /** Runs an item that a hotkey opened a window for. */
 export const runItemInWindow = async (itemValue: string | undefined): Promise<void> => {
@@ -71,7 +63,7 @@ export const runCommandItem = async (itemValue: string | undefined): Promise<voi
     throw new Error(`Unknown command "${itemValue}".`);
   }
   if (item.needsWindow === true) {
-    await openItemWindow("run", item.value, ["run-in-window", item.value]);
+    await openItemWindow(item.value);
     return;
   }
   await item.run();

@@ -4,12 +4,12 @@ import { start, stop } from "../menubar/commands.ts";
 import { listMedeaItems } from "../medea-apps/registry.ts";
 import type { LauncherItem } from "../medea-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
-import { openItemSettings } from "../terminals/actions.ts";
 import { listenForRequests } from "../terminals/running-cli.ts";
 import { listApps, openApp } from "./apps.ts";
 import type { App } from "./apps.ts";
 import { renderBanner } from "./banner.ts";
 import { formatHotkey } from "./hotkeys.ts";
+import { runItemSettings } from "./item-settings.ts";
 import { promptForSelection } from "./prompt.ts";
 import type { LauncherOption } from "./prompt.ts";
 
@@ -87,7 +87,7 @@ const drawScreen = (notice = NO_NOTICE): void => {
   );
 };
 
-// Settings are read on every call, so one saved in a settings window shows here straight away.
+// Settings are read on every call, so one saved by a hotkey's window shows here straight away.
 const toOptions = (items: readonly LauncherItem[]): LauncherOption[] => {
   const { aliases, hotkeys } = readConfigSync();
   return items.map((item) => {
@@ -97,26 +97,28 @@ const toOptions = (items: readonly LauncherItem[]): LauncherOption[] => {
   });
 };
 
-const openSettingsFor = async (items: readonly LauncherItem[], value?: string): Promise<void> => {
-  const item = items.find((candidate) => candidate.value === value);
-  if (item !== undefined) {
-    await openItemSettings(item.value, item.name);
-  }
-};
-
-const pickItemForAlias = async (getItems: GetItems): Promise<void> => {
-  drawScreen();
-  const { value } = await promptForSelection(() => toOptions(getItems()), PICK_ITEM_PLACEHOLDER);
-  await openSettingsFor(getItems(), value);
-};
-
 // A link that fails to open shouldn't take the search window down with it.
-const runItem = async (item: LauncherItem | undefined): Promise<string> => {
+const showErrorsAsNotice = async (run: () => Promise<string>): Promise<string> => {
   try {
-    return (await item?.run()) ?? NO_NOTICE;
+    return await run();
   } catch (error) {
     return styleText("red", error instanceof Error ? error.message : String(error));
   }
+};
+
+const openSettingsFor = async (items: readonly LauncherItem[], value?: string): Promise<string> => {
+  const item = items.find((candidate) => candidate.value === value);
+  if (item === undefined) {
+    return NO_NOTICE;
+  }
+  drawScreen();
+  return showErrorsAsNotice(withoutNotice(() => runItemSettings(item.value, item.name)));
+};
+
+const pickItemForAlias = async (getItems: GetItems): Promise<string> => {
+  drawScreen();
+  const { value } = await promptForSelection(() => toOptions(getItems()), PICK_ITEM_PLACEHOLDER);
+  return openSettingsFor(getItems(), value);
 };
 
 /** Shows the search bar once. */
@@ -135,14 +137,13 @@ const runSearchRound = async (notice: string): Promise<RoundResult> => {
     return { keepRunning: false, notice: NO_NOTICE };
   }
   if (wantsSettings) {
-    await openSettingsFor(getItems(), value);
-    return { keepRunning: true, notice: NO_NOTICE };
+    return { keepRunning: true, notice: await openSettingsFor(getItems(), value) };
   }
   if (value === SET_ALIAS_VALUE) {
-    await pickItemForAlias(getItems);
-    return { keepRunning: true, notice: NO_NOTICE };
+    return { keepRunning: true, notice: await pickItemForAlias(getItems) };
   }
-  const nextNotice = await runItem(getItems().find((item) => item.value === value));
+  const item = getItems().find((candidate) => candidate.value === value);
+  const nextNotice = item === undefined ? NO_NOTICE : await showErrorsAsNotice(item.run);
   return { keepRunning: true, notice: nextNotice };
 };
 

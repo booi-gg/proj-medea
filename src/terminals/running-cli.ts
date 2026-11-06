@@ -27,9 +27,10 @@ export const listenForRequests = async (): Promise<() => void> => {
     connection.once("data", async (request) => {
       if (String(request).trim() === QUIT_REQUEST) {
         process.stdout.write(SHOW_CURSOR_SEQUENCE);
+        // Replies first, so whoever asked isn't kept waiting while the window is found.
+        connection.end();
         await closeOwnWindow();
-        connection.end(() => process.exit(0));
-        return;
+        process.exit(0);
       }
       process.stdout.write(RAISE_WINDOW_SEQUENCE);
       connection.end(ttyPath);

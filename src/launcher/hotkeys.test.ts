@@ -23,6 +23,8 @@ test("rejects things that are not hotkeys", () => {
 test("shows symbols", () => {
   assert.equal(formatHotkey("shift+cmd+k"), "⇧⌘K");
   assert.equal(formatHotkey("ctrl+option+shift+cmd+space"), "⌃⌥⇧⌘space");
+  assert.equal(formatHotkey("ctrl+option+left"), "⌃⌥←");
+  assert.equal(formatHotkey("ctrl+option+delete"), "⌃⌥⌫");
 });
 
 test("an empty hotkey is allowed, because it removes the hotkey", () => {

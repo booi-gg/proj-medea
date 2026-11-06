@@ -1,4 +1,5 @@
 import { styleText } from "node:util";
+import { select } from "@clack/prompts";
 import { readConfigSync } from "../config.ts";
 import { start, stop } from "../menubar/commands.ts";
 import { toMedeaIcon } from "../medea-apps/icon.ts";
@@ -19,6 +20,8 @@ const EXIT_VALUE = "command:exit";
 // Saved aliases and hotkeys use this value, so it stays when the command's name changes.
 const SET_ALIAS_VALUE = "command:set-alias";
 const CREATE_HOTKEY_VALUE = "command:create-hotkey";
+const END_PROGRAM_CHOICE = "end-program";
+const CANCEL_CHOICE = "cancel";
 const SEARCH_PLACEHOLDER = "Cast actions";
 const PICK_ITEM_PLACEHOLDER = "Choose an app or command";
 const APP_ICON = styleText("cyan", "◆");
@@ -140,6 +143,18 @@ const pickItemForSettings = async (getItems: GetItems, title: string): Promise<s
   return openSettingsFor(getItems(), value);
 };
 
+// Esc here also backs out of the question, so it can't end Medea by being pressed twice.
+const confirmEndProgram = async (): Promise<boolean> => {
+  const choice = await select({
+    message: "End Medea?",
+    options: [
+      { value: END_PROGRAM_CHOICE, label: "End program" },
+      { value: CANCEL_CHOICE, label: "Cancel" },
+    ],
+  });
+  return choice === END_PROGRAM_CHOICE;
+};
+
 /** Shows the search bar once. */
 const runSearchRound = async (notice: string, session: Session): Promise<RoundResult> => {
   drawScreen({ notice });
@@ -156,7 +171,10 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
   if (session.nextItem !== undefined) {
     return { keepRunning: true, notice: NO_NOTICE };
   }
-  if (cancelled || (value === EXIT_VALUE && !wantsSettings)) {
+  if (cancelled) {
+    return { keepRunning: !(await confirmEndProgram()), notice: NO_NOTICE };
+  }
+  if (value === EXIT_VALUE && !wantsSettings) {
     return { keepRunning: false, notice: NO_NOTICE };
   }
   if (wantsSettings) {

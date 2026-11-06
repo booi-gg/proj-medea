@@ -1,3 +1,4 @@
+import { styleText } from "node:util";
 import { readConfig, updateConfig } from "../../config.ts";
 import { reloadHotkeys } from "../../menubar/helper.ts";
 import { sendHelperRequest } from "../../menubar/helper-socket.ts";
@@ -9,6 +10,8 @@ import type { WindowAction } from "./actions.ts";
 const ICON = toMedeaIcon("▣");
 const OK_REPLY = "ok";
 const ADD_HOTKEYS_ID = "add-default-hotkeys";
+const SHOW_HOTKEYS_ID = "show-hotkeys";
+const SHOW_HOTKEYS_NAME = "Window Hotkeys, Show All";
 const NO_HELPER_MESSAGE = "Window actions need the menu bar item. Use Add Menu Bar Item first";
 
 // The keys are the helper's replies, from WindowFailure in native/WindowManager.swift.
@@ -32,11 +35,16 @@ const runWindowCommand = async (command: string): Promise<string> => {
   return "";
 };
 
-const toItem = ({ id, name, command }: WindowAction): LauncherItem => ({
+// The gray is the screen, so the empty part of a diagram still reads as part of it.
+const toDiagram = (diagram: string): string => styleText("bgGray", toMedeaIcon(diagram));
+
+const toItem = ({ id, name, command, diagram, hint }: WindowAction): LauncherItem => ({
   value: toWindowValue(id),
   name,
   icon: ICON,
   kind: "Window",
+  diagram: toDiagram(diagram),
+  ...(hint === undefined ? {} : { hint }),
   run: () => runWindowCommand(command),
 });
 
@@ -58,7 +66,24 @@ const addHotkeysItem: LauncherItem = {
   run: installDefaultHotkeys,
 };
 
-const items: readonly LauncherItem[] = [...WINDOW_ACTIONS.map(toItem), addHotkeysItem];
+const actionItems = WINDOW_ACTIONS.map(toItem);
+
+// Loaded late because the list needs the registry, which loads this file.
+const showWindowHotkeys = async (): Promise<string> => {
+  const { runHotkeyList } = await import("../../launcher/hotkey-list.ts");
+  return runHotkeyList({ title: SHOW_HOTKEYS_NAME, icon: ICON, getEntries: () => actionItems });
+};
+
+const showHotkeysItem: LauncherItem = {
+  value: toWindowValue(SHOW_HOTKEYS_ID),
+  name: SHOW_HOTKEYS_NAME,
+  icon: ICON,
+  kind: "Command",
+  needsWindow: true,
+  run: showWindowHotkeys,
+};
+
+const items: readonly LauncherItem[] = [...actionItems, showHotkeysItem, addHotkeysItem];
 
 export const windowActions: MedeaApp = {
   id: APP_ID,

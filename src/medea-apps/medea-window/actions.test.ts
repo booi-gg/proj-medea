@@ -12,6 +12,18 @@ test("action IDs and default hotkeys are unique", () => {
   assert.equal(new Set(hotkeys).size, hotkeys.length);
 });
 
+test("every diagram is six columns, so rows line up", () => {
+  for (const { id, diagram } of WINDOW_ACTIONS) {
+    assert.equal(diagram.length, 6, id);
+  }
+});
+
+test("hints stay short enough for an 80-column window", () => {
+  for (const { id, hint } of WINDOW_ACTIONS) {
+    assert.ok((hint ?? "").length <= 36, id);
+  }
+});
+
 test("default hotkeys are already in the saved form", () => {
   for (const { defaultHotkey } of WINDOW_ACTIONS) {
     assert.equal(normalizeHotkey(defaultHotkey), defaultHotkey);

@@ -11,6 +11,10 @@ export interface WindowAction {
   name: string;
   /** What the helper runs. Placements are x, y, width and height, as parts of the display. */
   command: string;
+  /** A small screen, with the filled part showing where the window ends up. */
+  diagram: string;
+  /** For an action the diagram can't show on its own. */
+  hint?: string;
   defaultHotkey: string;
 }
 
@@ -23,103 +27,130 @@ export const WINDOW_ACTIONS: readonly WindowAction[] = [
     id: "left-half",
     name: "Left Half",
     command: toPlacement(0, 0, 0.5, 1),
+    diagram: "███   ",
     defaultHotkey: "ctrl+option+left",
   },
   {
     id: "right-half",
     name: "Right Half",
     command: toPlacement(0.5, 0, 0.5, 1),
+    diagram: "   ███",
     defaultHotkey: "ctrl+option+right",
   },
   {
     id: "top-half",
     name: "Top Half",
     command: toPlacement(0, 0, 1, 0.5),
+    diagram: "▀▀▀▀▀▀",
     defaultHotkey: "ctrl+option+up",
   },
   {
     id: "bottom-half",
     name: "Bottom Half",
     command: toPlacement(0, 0.5, 1, 0.5),
+    diagram: "▄▄▄▄▄▄",
     defaultHotkey: "ctrl+option+down",
   },
   {
     id: "top-left",
     name: "Top Left Quarter",
     command: toPlacement(0, 0, 0.5, 0.5),
+    diagram: "▀▀▀   ",
     defaultHotkey: "ctrl+option+u",
   },
   {
     id: "top-right",
     name: "Top Right Quarter",
     command: toPlacement(0.5, 0, 0.5, 0.5),
+    diagram: "   ▀▀▀",
     defaultHotkey: "ctrl+option+i",
   },
   {
     id: "bottom-left",
     name: "Bottom Left Quarter",
     command: toPlacement(0, 0.5, 0.5, 0.5),
+    diagram: "▄▄▄   ",
     defaultHotkey: "ctrl+option+j",
   },
   {
     id: "bottom-right",
     name: "Bottom Right Quarter",
     command: toPlacement(0.5, 0.5, 0.5, 0.5),
+    diagram: "   ▄▄▄",
     defaultHotkey: "ctrl+option+k",
   },
   {
     id: "left-third",
     name: "Left Third",
     command: toPlacement(0, 0, THIRD, 1),
+    diagram: "██    ",
     defaultHotkey: "ctrl+option+d",
   },
   {
     id: "center-third",
     name: "Center Third",
     command: toPlacement(THIRD, 0, THIRD, 1),
+    diagram: "  ██  ",
     defaultHotkey: "ctrl+option+f",
   },
   {
     id: "right-third",
     name: "Right Third",
     command: toPlacement(TWO_THIRDS, 0, THIRD, 1),
+    diagram: "    ██",
     defaultHotkey: "ctrl+option+g",
   },
   {
     id: "left-two-thirds",
     name: "Left Two Thirds",
     command: toPlacement(0, 0, TWO_THIRDS, 1),
+    diagram: "████  ",
     defaultHotkey: "ctrl+option+e",
   },
   {
     id: "right-two-thirds",
     name: "Right Two Thirds",
     command: toPlacement(THIRD, 0, TWO_THIRDS, 1),
+    diagram: "  ████",
     defaultHotkey: "ctrl+option+t",
   },
   {
     id: "maximize",
     name: "Maximize",
     command: toPlacement(0, 0, 1, 1),
+    diagram: "██████",
     defaultHotkey: "ctrl+option+return",
   },
-  { id: "center", name: "Center", command: "center", defaultHotkey: "ctrl+option+c" },
+  {
+    id: "center",
+    name: "Center",
+    command: "center",
+    diagram: "  ▪▪  ",
+    hint: "Moves to the middle, same size",
+    defaultHotkey: "ctrl+option+c",
+  },
   {
     id: "restore",
     name: "Restore Window",
     command: "restore",
+    diagram: "  ↺   ",
+    hint: "Back to where it was before",
     defaultHotkey: "ctrl+option+delete",
   },
   {
     id: "next-display",
     name: "Next Display",
     command: "display next",
+    diagram: "  →   ",
+    hint: "Moves to the next display",
     defaultHotkey: "ctrl+option+cmd+right",
   },
   {
     id: "previous-display",
     name: "Previous Display",
     command: "display previous",
+    diagram: "  ←   ",
+    hint: "Moves to the previous display",
     defaultHotkey: "ctrl+option+cmd+left",
   },
 ];

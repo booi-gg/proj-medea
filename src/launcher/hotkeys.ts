@@ -102,6 +102,16 @@ const KEY_CODES: Record<string, number> = {
   f12: 111,
 };
 
+const KEY_SYMBOLS: Record<string, string> = {
+  left: "←",
+  right: "→",
+  up: "↑",
+  down: "↓",
+  return: "↩",
+  delete: "⌫",
+  tab: "⇥",
+};
+
 interface ParsedHotkey {
   modifiers: Modifier[];
   key: string;
@@ -139,7 +149,8 @@ export const formatHotkey = (hotkey: string): string => {
     return "";
   }
   const symbols = parsed.modifiers.map((modifier) => MODIFIERS[modifier].symbol).join("");
-  const key = parsed.key.length === 1 ? parsed.key.toUpperCase() : parsed.key;
+  const key =
+    KEY_SYMBOLS[parsed.key] ?? (parsed.key.length === 1 ? parsed.key.toUpperCase() : parsed.key);
   return `${symbols}${key}`;
 };
 

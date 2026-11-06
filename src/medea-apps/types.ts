@@ -4,6 +4,10 @@ export interface LauncherItem {
   name: string;
   icon: string;
   kind: string;
+  /** Six columns drawn in hotkey lists, picturing what the item does. */
+  diagram?: string;
+  /** A few words for hotkey lists, for what a diagram can't show. */
+  hint?: string;
   /** True when the item asks for input, so a hotkey has to open a window for it first. */
   needsWindow?: boolean;
   /** Resolves to a line to show above the search bar, or "" for none. */

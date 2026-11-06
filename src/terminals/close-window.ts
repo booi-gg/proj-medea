@@ -49,18 +49,3 @@ export const closeOwnWindow = async (): Promise<void> => {
     // Only the tidy-up failed, and nothing is lost if the window stays open.
   }
 };
-
-export const offerToCloseWindow = async (): Promise<void> => {
-  if (!canCloseOwnWindow()) {
-    return;
-  }
-  // Loaded here because the show command reaches this file and never prompts.
-  const { isCancel, select } = await import("@clack/prompts");
-  const choice = await select({
-    message: "Finished",
-    options: [{ value: "close", label: "Close terminal" }],
-  });
-  if (!isCancel(choice)) {
-    await closeOwnWindow();
-  }
-};

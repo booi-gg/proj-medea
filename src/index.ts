@@ -8,11 +8,11 @@ const main = async (): Promise<void> => {
 
   if (command === undefined) {
     const { runLauncher } = await import("./launcher/launcher.ts");
-    const { offerToCloseWindow } = await import("./terminals/close-window.ts");
+    const { closeOwnWindow } = await import("./terminals/close-window.ts");
     // Node saves the cache on a clean exit, and closing the window isn't one.
     flushCompileCache();
     await runLauncher();
-    await offerToCloseWindow();
+    await closeOwnWindow();
     return;
   }
   if (command === "show") {

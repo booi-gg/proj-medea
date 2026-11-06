@@ -44,6 +44,7 @@ src/
 │   ├── aliases.ts        Parses, checks and saves aliases
 │   ├── hotkeys.ts        Parses, checks and saves hotkeys
 │   ├── hotkey-recorder.ts Runs the native recorder window
+│   ├── hotkey-list.ts    The list of hotkeys you can run and edit from
 │   ├── banner.ts         The MEDEA logo
 │   ├── search.ts         Ranks results with match-sorter
 │   └── apps.ts           Finds installed apps and opens them
@@ -57,6 +58,8 @@ src/
 │   │   ├── format.ts     Row text, previews, ages and sizes
 │   │   ├── syntax.ts     Colours code, and leaves other text alone
 │   │   └── image-window.ts Runs the native window that shows images
+│   ├── medea-hotkeys/
+│   │   └── index.ts      The Hotkeys, Show All command
 │   ├── medea-settings/
 │   │   └── index.ts      The Settings screen
 │   ├── medea-window/
@@ -162,7 +165,7 @@ The menu and the shortcut both start in the helper, so bringing back an open CLI
 2. **If a CLI answers,** it raises its own window and runs the terminal's recipe to bring it back. The recipes stay in TypeScript, so the helper never needs to know which terminal is chosen.
 3. **If nothing answers,** the helper runs `node src/start.js show`. `showCli()` in `src/terminals/actions.ts` tries the socket once more, then the recipe opens `.build/open-medea.command`. The launcher uses an absolute Node path because a terminal's `PATH` can differ from your shell's. It clears the window first, because terminals type the launch command into a shell and that line would otherwise stay above Medea.
 
-The CLI has to stay open for this to work, so `runLauncher()` loops: after an action it clears the screen and shows search again. Exit and Esc end the loop.
+The CLI has to stay open for this to work, so `runLauncher()` loops: after an action it clears the screen and shows search again. The Exit command ends the loop. Esc at search asks first: **End program** ends it, and **Cancel** or a second Esc goes back to search.
 
 If you open a second CLI, such as `pnpm start` in another terminal, the newest one takes over the socket.
 
@@ -254,6 +257,8 @@ Settings is a menu: **Alias, Add**, **Hotkey, Create**, **Remove hotkey** (when 
 | Quicklink, Create    | Shows the form in the Medea window                        |
 | Clipboard            | Shows the list in the Medea window                        |
 | A quicklink          | Opens it, through the Medea window if it has `{argument}` |
+
+**Seeing them all.** `Hotkeys, Show All` lists everything with a saved hotkey, and `Window Hotkeys, Show All` lists every window action, including any with no hotkey. Each window action has a small diagram, a gray screen with the filled part showing where the window ends up, and a few words when a diagram can't show it. Enter runs the row and Tab opens its settings. The list stays open after running something, so you can try several in a row, and Esc goes back. It shows as many rows as the window has room for.
 
 **One window.** A hotkey for an item that needs a window sends `run <item>` over the socket before opening anything, so a second press never opens a second window. What the open window does depends on what it's showing:
 
@@ -448,9 +453,9 @@ The third Medea app. Search `Settings` for a list of toggles, where Enter flips 
 
 Terminal keeps a dead window open after a program exits, showing `[Process completed]`. Ghostty closes its own, so this only applies to Terminal.
 
-When search finishes, Medea shows a **Close terminal** option, and Enter closes the window. Esc leaves it open. A window that quits because you changed terminal closes without asking.
+When Medea ends, through the Exit command or **End program**, the window closes without asking. So does a window that quits because you changed terminal.
 
-- Launcher scripts set `MEDEA_WINDOW=1`, and only those windows can close. Running `pnpm start` in your own terminal never offers this.
+- Launcher scripts set `MEDEA_WINDOW=1`, and only those windows can close. Running `pnpm start` in your own terminal never closes it.
 - The window is found while Node is alive and closed 0.6 seconds later, so Terminal doesn't ask about running processes.
 - Only a `busy` tab can match. Terminal reuses tty names and dead windows keep them, so matching on the tty alone closes the wrong window.
 - A window with several tabs is left open.
@@ -463,5 +468,5 @@ When search finishes, Medea shows a **Close terminal** option, and Enter closes 
 
 - The helper doesn't restart after a reboot. Run `pnpm menubar:start` again.
 - The launcher contains the current Node path. If that path changes, run `pnpm menubar:stop`, then `pnpm menubar:start`.
-- After Exit or Esc, the next press opens a new window.
+- After Medea ends, the next press opens a new window.
 - Raising a minimized window is untested.

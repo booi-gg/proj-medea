@@ -52,6 +52,7 @@ export interface ExtraKey {
 export interface SelectionDisplay {
   /** Lists results before anything is typed. */
   listWhenEmpty?: boolean;
+  maxVisibleResults?: number;
   rank?: Rank;
   enterLabel?: string;
   settingsLabel?: string;
@@ -97,6 +98,7 @@ const renderRows = (
 
 interface ResultsDisplay {
   footer: string;
+  maxRows: number;
   layout: SplitLayout | undefined;
   renderPreview: RenderPreview | undefined;
 }
@@ -104,7 +106,7 @@ interface ResultsDisplay {
 const renderResults = (
   results: readonly LauncherOption[],
   cursor: number,
-  { footer, layout, renderPreview }: ResultsDisplay,
+  { footer, maxRows, layout, renderPreview }: ResultsDisplay,
 ): string => {
   if (results.length === 0) {
     return `\n\n    ${styleText("dim", "No results")}`;
@@ -118,7 +120,7 @@ const renderResults = (
         layout,
         PREVIEW_DIVIDER,
       )
-    : renderRows(results, cursor, MAX_VISIBLE_RESULTS);
+    : renderRows(results, cursor, maxRows);
   return `\n\n${rows.join("\n")}\n\n    ${styleText("dim", footer)}`;
 };
 
@@ -176,6 +178,7 @@ export const promptForSelection = async (
   placeholder: string,
   {
     listWhenEmpty = false,
+    maxVisibleResults = MAX_VISIBLE_RESULTS,
     rank = rankItems,
     enterLabel = "open",
     settingsLabel = "settings",
@@ -240,6 +243,7 @@ export const promptForSelection = async (
       }
       const results = renderResults(this.filteredOptions, this.cursor, {
         footer: toFooter(baseFooter, extraKey, focusedValue),
+        maxRows: maxVisibleResults,
         layout,
         renderPreview,
       });

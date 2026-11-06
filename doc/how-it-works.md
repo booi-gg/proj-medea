@@ -38,6 +38,8 @@ src/
 │   ├── prompt.ts         Draws the search bar and reads keys
 │   ├── item-settings.ts  The settings screen for one app or command
 │   ├── aliases.ts        Parses, checks and saves aliases
+│   ├── hotkeys.ts        Parses, checks and saves hotkeys
+│   ├── hotkey-recorder.ts Runs the native recorder window
 │   ├── banner.ts         The MEDEA logo
 │   ├── search.ts         Ranks results with match-sorter
 │   └── apps.ts           Finds installed apps and opens them
@@ -51,7 +53,8 @@ src/
     ├── close-window.ts   Closes a finished Terminal window
     └── actions.ts        Shows the CLI, changes terminal, opens item settings
 native/
-└── StatusItem.swift      The helper: menu bar icon, menu and global shortcut
+├── StatusItem.swift      The helper: menu bar icon, menu and global shortcuts
+└── HotkeyRecorder.swift  The window that records a hotkey
 doc/                      These docs
 .build/                   Generated: helper binary, launcher script, logs, socket
 ```
@@ -166,7 +169,7 @@ Aliases are stored in `~/.config/medea/config.json`, keyed by app path or comman
 }
 ```
 
-`updateConfig()` merges changes, so saving a terminal can't wipe aliases, or the other way round. Aliases are lowercase with no spaces, and two items can't share one.
+`updateConfig()` merges changes, so saving a terminal can't wipe aliases, or the other way round. Each item can have up to two aliases of up to 8 characters, so a row stays inside its title column. Aliases are lowercase with no spaces, and two items can't share one. These limits apply when saving in the settings window, so a hand-edited config can go over them.
 
 **Opening settings.** Shift+Enter or Tab on a result opens that item's settings in a new window, through `openItemSettings()`, and the search window stays where it is. The Set Alias command does the same after you pick an item. The window runs `node src/index.ts settings <value> <name>` from a `.build/settings-<hash>.command` script, with one script per item so two quick requests can't mix up items.
 
@@ -180,6 +183,36 @@ Search reads aliases on every keystroke, so one saved in a settings window works
 | Terminal | Not on the published lists of terminals that send a distinct code, so assume it behaves like Enter | Works |
 
 The footer hint shows `⇧↵` in Ghostty and `tab` elsewhere. `stdin` has to be resumed for each prompt: a paused stream stays paused when a listener is added, and the process would exit with code 13.
+
+## Hotkeys
+
+Search rows show a hotkey next to the name: `Calculator [calc] ⌃⌥9`. Any app or command can have one.
+
+The settings window is a menu: **Add alias**, **Create hotkey**, **Remove hotkey** (when one is set) and **Done**. Each change saves straight away.
+
+**Recording.** Create hotkey opens a small native window, `native/HotkeyRecorder.swift`, which shows the keys live as you press them. A terminal can't do this, because macOS and the terminal app take combos like `Cmd+Shift+K` first. A focused window receives them directly, so it needs no permission. It's a separate binary, `.build/medea-record`, so `pgrep` for the helper can't match it.
+
+- The recorder prints the combo as JSON and exits. `parseRecording()` turns that into a saved hotkey.
+- Esc, clicking away or 60 seconds cancels it.
+- A key with no modifier doesn't end the recording. The window asks you to hold a modifier.
+
+**Registering.**
+
+1. Saving writes `hotkeys` to `~/.config/medea/config.json`, keyed by item, in a fixed form such as `shift+cmd+k`.
+2. The CLI sends the running helper `SIGUSR1`, so the hotkey works with no restart.
+3. The helper runs `node src/index.ts hotkeys`, which turns saved hotkeys into Carbon key codes and flags, and registers them. `helper.log` records each result, where status `0` means success.
+
+**Pressing a hotkey.** An app opens directly through `open <path>`, without starting Node. A command runs `node src/index.ts run <value>`:
+
+| Command              | Hotkey does                                   |
+| -------------------- | --------------------------------------------- |
+| Exit                 | Quits the open search window                  |
+| Set Alias            | Opens Medea                                   |
+| Remove Menu Bar Item | Stops the helper, which also ends all hotkeys |
+
+`src/launcher/hotkeys.ts` holds the key table, checked against `HIToolbox/Events.h`. It uses US keyboard positions.
+
+A hotkey needs at least two modifiers, including `cmd` or `ctrl`, so it can't take over something like `cmd+q`. Duplicates and Medea's own `cmd+shift+space` are refused. A hotkey another app already uses isn't detected.
 
 ## Closing the window
 

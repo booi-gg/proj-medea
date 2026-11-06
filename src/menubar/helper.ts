@@ -8,6 +8,8 @@ import {
   helperLogPath,
   helperPath,
   launcherPath,
+  recorderPath,
+  recorderSourcePath,
   swiftSourcePath,
 } from "../paths.ts";
 import { runCommand } from "../shell.ts";
@@ -30,20 +32,23 @@ const findHelperPids = async (): Promise<number[]> => {
   }
 };
 
-const isHelperBuildCurrent = async (): Promise<boolean> => {
-  if (!existsSync(helperPath)) {
+const isBuildCurrent = async (sourcePath: string, binaryPath: string): Promise<boolean> => {
+  if (!existsSync(binaryPath)) {
     return false;
   }
-  const [source, helper] = await Promise.all([stat(swiftSourcePath), stat(helperPath)]);
-  return helper.mtimeMs >= source.mtimeMs;
+  const [source, binary] = await Promise.all([stat(sourcePath), stat(binaryPath)]);
+  return binary.mtimeMs >= source.mtimeMs;
 };
 
-const buildHelper = async (): Promise<void> => {
-  if (await isHelperBuildCurrent()) {
+const compileSwift = async (sourcePath: string, binaryPath: string): Promise<void> => {
+  if (await isBuildCurrent(sourcePath, binaryPath)) {
     return;
   }
-  await runCommand("swiftc", ["-O", swiftSourcePath, "-o", helperPath, "-framework", "AppKit"]);
+  await mkdir(buildDir, { recursive: true });
+  await runCommand("swiftc", ["-O", sourcePath, "-o", binaryPath, "-framework", "AppKit"]);
 };
+
+export const buildRecorder = (): Promise<void> => compileSwift(recorderSourcePath, recorderPath);
 
 export const isMenuBarRunning = async (): Promise<boolean> => {
   const pids = await findHelperPids();
@@ -54,8 +59,8 @@ export const startMenuBar = async (): Promise<void> => {
   if (await isMenuBarRunning()) {
     return;
   }
-  await mkdir(buildDir, { recursive: true });
-  await buildHelper();
+  await compileSwift(swiftSourcePath, helperPath);
+  await buildRecorder();
   await writeLauncherScript(launcherPath);
 
   const helperLog = openSync(helperLogPath, "w");
@@ -71,5 +76,13 @@ export const stopMenuBar = async (): Promise<void> => {
   const pids = await findHelperPids();
   for (const pid of pids) {
     process.kill(pid);
+  }
+};
+
+/** Tells the running helper to register the saved hotkeys again. */
+export const reloadHotkeys = async (): Promise<void> => {
+  const pids = await findHelperPids();
+  for (const pid of pids) {
+    process.kill(pid, "SIGUSR1");
   }
 };

@@ -7,6 +7,7 @@ import { listenForRequests } from "../terminals/running-cli.ts";
 import { listApps, openApp } from "./apps.ts";
 import type { App } from "./apps.ts";
 import { renderBanner } from "./banner.ts";
+import { formatHotkey } from "./hotkeys.ts";
 import { promptForSelection } from "./prompt.ts";
 import type { LauncherOption } from "./prompt.ts";
 
@@ -27,12 +28,21 @@ interface LauncherItem {
   run: () => Promise<void>;
 }
 
-const formatRow = ({ icon, name, kind }: LauncherItem, aliases: readonly string[]): string => {
+const formatRow = (
+  { icon, name, kind }: LauncherItem,
+  aliases: readonly string[],
+  hotkey: string,
+): string => {
   const tags = aliases.map((alias) => `[${alias}]`).join(" ");
-  const visibleWidth = name.length + (tags === "" ? 0 : tags.length + 1);
-  const padding = " ".repeat(Math.max(1, TITLE_COLUMN_WIDTH - visibleWidth));
-  const title = tags === "" ? name : `${name} ${styleText("cyan", tags)}`;
-  return `${icon} ${title}${padding}${styleText("gray", kind)}`;
+  const symbols = formatHotkey(hotkey);
+  const plainParts = [name, tags, symbols].filter((part) => part !== "");
+  const padding = " ".repeat(Math.max(1, TITLE_COLUMN_WIDTH - plainParts.join(" ").length));
+  const styledParts = [
+    name,
+    tags === "" ? "" : styleText("cyan", tags),
+    symbols === "" ? "" : styleText("yellow", symbols),
+  ].filter((part) => part !== "");
+  return `${icon} ${styledParts.join(" ")}${padding}${styleText("gray", kind)}`;
 };
 
 const toAppItem = ({ name, path }: App): LauncherItem => ({
@@ -66,12 +76,13 @@ const drawScreen = (): void => {
   process.stdout.write(`${CLEAR_SCREEN_SEQUENCE}${renderBanner(process.stdout.columns)}`);
 };
 
-// Aliases are read on every call, so one saved in a settings window works here straight away.
+// Settings are read on every call, so one saved in a settings window shows here straight away.
 const toOptions = (items: readonly LauncherItem[]): LauncherOption[] => {
-  const { aliases } = readConfigSync();
+  const { aliases, hotkeys } = readConfigSync();
   return items.map((item) => {
     const itemAliases = aliases[item.value] ?? [];
-    return { ...item, aliases: itemAliases, label: formatRow(item, itemAliases) };
+    const label = formatRow(item, itemAliases, hotkeys[item.value] ?? "");
+    return { ...item, aliases: itemAliases, label };
   });
 };
 

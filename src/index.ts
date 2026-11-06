@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 import { intro, log } from "@clack/prompts";
+import { readConfig } from "./config.ts";
+import { toHelperHotkeys } from "./launcher/hotkeys.ts";
 import { runItemSettings } from "./launcher/item-settings.ts";
 import { runLauncher } from "./launcher/launcher.ts";
 import { showStatus, start, stop } from "./menubar/commands.ts";
-import { setTerminal, showCli } from "./terminals/actions.ts";
+import { runCommandItem, setTerminal, showCli } from "./terminals/actions.ts";
 import { offerToCloseWindow } from "./terminals/close-window.ts";
 import { listTerminals } from "./terminals/terminals.ts";
 
@@ -21,6 +23,15 @@ const main = async (): Promise<void> => {
   }
   if (command === "terminals") {
     process.stdout.write(`${JSON.stringify(await listTerminals())}\n`);
+    return;
+  }
+  if (command === "hotkeys") {
+    const { hotkeys } = await readConfig();
+    process.stdout.write(`${JSON.stringify(toHelperHotkeys(hotkeys))}\n`);
+    return;
+  }
+  if (command === "run") {
+    await runCommandItem(argument);
     return;
   }
   if (command === "set-terminal") {

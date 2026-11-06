@@ -18,6 +18,21 @@ test("rejects spaces", () => {
   assert.equal(findAliasProblem(["my code"], "/a.app", {}), `"my code" can't contain spaces`);
 });
 
+test("allows two aliases at the maximum length", () => {
+  assert.equal(findAliasProblem(["12345678", "abcdefgh"], "/a.app", {}), undefined);
+});
+
+test("rejects more than two aliases", () => {
+  assert.equal(findAliasProblem(["a", "b", "c"], "/a.app", {}), "Use at most 2 aliases");
+});
+
+test("rejects an alias over the maximum length", () => {
+  assert.equal(
+    findAliasProblem(["ngangthoi"], "/a.app", {}),
+    `"ngangthoi" is too long, use 8 characters or fewer`,
+  );
+});
+
 test("rejects an alias another item uses, naming that item", () => {
   const aliases = { "/Applications/Visual Studio Code.app": ["code"] };
   assert.equal(

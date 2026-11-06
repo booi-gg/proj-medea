@@ -2,6 +2,9 @@ import { basename } from "node:path";
 import { readConfig, updateConfig } from "../config.ts";
 import type { AliasMap } from "../config.ts";
 
+export const MAX_ALIASES = 2;
+// Two aliases this long still fit beside a long app name in the launcher's title column.
+const MAX_ALIAS_LENGTH = 8;
 const COMMAND_PREFIX = "command:";
 const WHITESPACE = /\s/;
 
@@ -14,7 +17,7 @@ export const parseAliasInput = (input: string): string[] => {
   return [...new Set(aliases)];
 };
 
-const toDisplayName = (itemValue: string): string =>
+export const toDisplayName = (itemValue: string): string =>
   itemValue.startsWith(COMMAND_PREFIX)
     ? itemValue.slice(COMMAND_PREFIX.length)
     : basename(itemValue, ".app");
@@ -25,9 +28,16 @@ export const findAliasProblem = (
   itemValue: string,
   allAliases: AliasMap,
 ): string | undefined => {
+  if (aliases.length > MAX_ALIASES) {
+    return `Use at most ${MAX_ALIASES} aliases`;
+  }
   const withSpace = aliases.find((alias) => WHITESPACE.test(alias));
   if (withSpace !== undefined) {
     return `"${withSpace}" can't contain spaces`;
+  }
+  const tooLong = aliases.find((alias) => alias.length > MAX_ALIAS_LENGTH);
+  if (tooLong !== undefined) {
+    return `"${tooLong}" is too long, use ${MAX_ALIAS_LENGTH} characters or fewer`;
   }
   for (const [otherValue, otherAliases] of Object.entries(allAliases)) {
     const taken = aliases.find((alias) => otherAliases.includes(alias));

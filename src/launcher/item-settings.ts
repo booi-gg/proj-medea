@@ -1,23 +1,97 @@
-import { cancel, intro, isCancel, outro, text } from "@clack/prompts";
+import { styleText } from "node:util";
+import { intro, isCancel, log, outro, select, text } from "@clack/prompts";
 import { readConfig } from "../config.ts";
-import { findAliasProblem, parseAliasInput, saveAliases } from "./aliases.ts";
+import { reloadHotkeys } from "../menubar/helper.ts";
+import { MAX_ALIASES, findAliasProblem, parseAliasInput, saveAliases } from "./aliases.ts";
+import { recordKeys } from "./hotkey-recorder.ts";
+import { findHotkeyProblem, formatHotkey, parseRecording, saveHotkey } from "./hotkeys.ts";
 
-/** The settings screen for one app or command. It runs in its own terminal window. */
-export const runItemSettings = async (itemValue: string, itemName: string): Promise<void> => {
+const ADD_ALIAS = "add-alias";
+const CREATE_HOTKEY = "create-hotkey";
+const REMOVE_HOTKEY = "remove-hotkey";
+const DONE = "done";
+
+const withCurrentValue = (label: string, current: string): string =>
+  current === "" ? label : `${label}  ${styleText("cyan", current)}`;
+
+const editAliases = async (itemValue: string): Promise<void> => {
   const { aliases } = await readConfig();
-  intro(itemName);
-
   const input = await text({
-    message: "Aliases, separated by commas",
+    message: `Up to ${MAX_ALIASES} aliases, separated by commas`,
     placeholder: "Leave empty for none",
     initialValue: (aliases[itemValue] ?? []).join(", "),
     validate: (value) => findAliasProblem(parseAliasInput(value ?? ""), itemValue, aliases),
   });
+  if (!isCancel(input)) {
+    await saveAliases(itemValue, parseAliasInput(input));
+  }
+};
 
-  if (isCancel(input)) {
-    cancel("Nothing changed");
+const applyHotkey = async (itemValue: string, hotkey: string): Promise<void> => {
+  await saveHotkey(itemValue, hotkey);
+  await reloadHotkeys();
+};
+
+const createHotkey = async (itemValue: string): Promise<void> => {
+  log.info("Press your hotkey in the Record Hotkey window");
+  const recording = await recordKeys();
+  if (recording === undefined) {
+    log.info("Hotkey not changed");
     return;
   }
-  await saveAliases(itemValue, parseAliasInput(input));
-  outro("Saved");
+  const hotkey = parseRecording(recording);
+  if (hotkey === undefined) {
+    log.warn("That key can't be used for a hotkey");
+    return;
+  }
+  const { hotkeys } = await readConfig();
+  const problem = findHotkeyProblem(hotkey, itemValue, hotkeys);
+  if (problem !== undefined) {
+    log.warn(`${formatHotkey(hotkey)}: ${problem}`);
+    return;
+  }
+  await applyHotkey(itemValue, hotkey);
+  log.success(`Hotkey set to ${formatHotkey(hotkey)}`);
+};
+
+/** Shows the menu once. Returns false when the user is finished. */
+const runSettingsRound = async (itemValue: string): Promise<boolean> => {
+  const { aliases, hotkeys } = await readConfig();
+  const hotkey = hotkeys[itemValue] ?? "";
+  const aliasTags = (aliases[itemValue] ?? []).map((alias) => `[${alias}]`).join(" ");
+
+  const choice = await select({
+    message: "What do you want to change?",
+    options: [
+      { value: ADD_ALIAS, label: withCurrentValue("Add alias", aliasTags) },
+      { value: CREATE_HOTKEY, label: withCurrentValue("Create hotkey", formatHotkey(hotkey)) },
+      ...(hotkey === "" ? [] : [{ value: REMOVE_HOTKEY, label: "Remove hotkey" }]),
+      { value: DONE, label: "Done" },
+    ],
+  });
+
+  if (isCancel(choice) || choice === DONE) {
+    return false;
+  }
+  if (choice === ADD_ALIAS) {
+    await editAliases(itemValue);
+  }
+  if (choice === CREATE_HOTKEY) {
+    await createHotkey(itemValue);
+  }
+  if (choice === REMOVE_HOTKEY) {
+    await applyHotkey(itemValue, "");
+    log.success("Hotkey removed");
+  }
+  return true;
+};
+
+/** The settings screen for one app or command. It runs in its own terminal window. */
+export const runItemSettings = async (itemValue: string, itemName: string): Promise<void> => {
+  intro(itemName);
+  let keepGoing = true;
+  while (keepGoing) {
+    keepGoing = await runSettingsRound(itemValue);
+  }
+  outro("Done");
 };

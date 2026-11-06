@@ -5,28 +5,38 @@ private let hotKeySignature: OSType = 0x4D44_4541  // "MDEA"
 private let hotKeyKeyCode = UInt32(kVK_Space)
 private let hotKeyModifiers = UInt32(cmdKey | shiftKey)
 
-/// System-wide shortcut. Carbon delivers it without Accessibility or Input Monitoring permission.
-final class GlobalHotKey {
-  private let onPress: () -> Void
-  private var hotKeyRef: EventHotKeyRef?
+/// System-wide shortcuts. Carbon delivers them without Accessibility or Input Monitoring permission.
+final class HotKeyCenter {
+  private var actions: [UInt32: () -> Void] = [:]
+  private var itemHotKeys: [(id: UInt32, ref: EventHotKeyRef)] = []
   private var handlerRef: EventHandlerRef?
+  private var nextId: UInt32 = 1
 
-  init(onPress: @escaping () -> Void) {
-    self.onPress = onPress
-  }
-
-  func register(keyCode: UInt32, modifiers: UInt32) -> OSStatus {
+  func installHandler() -> OSStatus {
     var pressedEvent = EventTypeSpec(
       eventClass: OSType(kEventClassKeyboard),
       eventKind: UInt32(kEventHotKeyPressed)
     )
-    let handlerStatus = InstallEventHandler(
+    return InstallEventHandler(
       GetApplicationEventTarget(),
-      { _, _, userData in
-        guard let userData else {
+      { _, event, userData in
+        guard let event, let userData else {
           return OSStatus(eventNotHandledErr)
         }
-        Unmanaged<GlobalHotKey>.fromOpaque(userData).takeUnretainedValue().onPress()
+        var hotKeyId = EventHotKeyID()
+        let status = GetEventParameter(
+          event,
+          EventParamName(kEventParamDirectObject),
+          EventParamType(typeEventHotKeyID),
+          nil,
+          MemoryLayout<EventHotKeyID>.size,
+          nil,
+          &hotKeyId
+        )
+        guard status == noErr else {
+          return status
+        }
+        Unmanaged<HotKeyCenter>.fromOpaque(userData).takeUnretainedValue().fire(hotKeyId.id)
         return noErr
       },
       1,
@@ -34,18 +44,77 @@ final class GlobalHotKey {
       Unmanaged.passUnretained(self).toOpaque(),
       &handlerRef
     )
-    guard handlerStatus == noErr else {
-      return handlerStatus
-    }
-    return RegisterEventHotKey(
+  }
+
+  func fire(_ id: UInt32) {
+    actions[id]?()
+  }
+
+  @discardableResult
+  private func register(
+    keyCode: UInt32,
+    modifiers: UInt32,
+    action: @escaping () -> Void
+  ) -> (status: OSStatus, id: UInt32, ref: EventHotKeyRef?) {
+    let id = nextId
+    nextId += 1
+    var ref: EventHotKeyRef?
+    let status = RegisterEventHotKey(
       keyCode,
       modifiers,
-      EventHotKeyID(signature: hotKeySignature, id: 1),
+      EventHotKeyID(signature: hotKeySignature, id: id),
       GetApplicationEventTarget(),
       0,
-      &hotKeyRef
+      &ref
     )
+    if status == noErr {
+      actions[id] = action
+    }
+    return (status, id, ref)
   }
+
+  /// A shortcut that lasts as long as the helper runs.
+  func registerPermanent(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void)
+    -> OSStatus
+  {
+    register(keyCode: keyCode, modifiers: modifiers, action: action).status
+  }
+
+  /// Swaps the per-item hotkeys for this list.
+  func replaceItemHotKeys(_ hotKeys: [ItemHotKey], onPress: @escaping (String) -> Void) {
+    for hotKey in itemHotKeys {
+      UnregisterEventHotKey(hotKey.ref)
+      actions[hotKey.id] = nil
+    }
+    itemHotKeys = []
+
+    for hotKey in hotKeys {
+      let result = register(keyCode: hotKey.keyCode, modifiers: hotKey.modifiers) {
+        onPress(hotKey.value)
+      }
+      NSLog("Medea hotkey for \(hotKey.value) registration status: \(result.status)")
+      if let ref = result.ref {
+        itemHotKeys.append((id: result.id, ref: ref))
+      }
+    }
+  }
+}
+
+func openApp(at path: String) {
+  let process = Process()
+  process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
+  process.arguments = [path]
+  do {
+    try process.run()
+  } catch {
+    NSLog("Medea could not open \(path): \(error.localizedDescription)")
+  }
+}
+
+struct ItemHotKey: Decodable {
+  let keyCode: UInt32
+  let modifiers: UInt32
+  let value: String
 }
 
 struct TerminalChoice: Decodable {
@@ -116,6 +185,27 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     runCli(["show"])
   }
 
+  func reloadHotKeys(into hotKeys: HotKeyCenter) {
+    runCli(["hotkeys"]) { output in
+      guard let items = try? JSONDecoder().decode([ItemHotKey].self, from: output) else {
+        NSLog("Medea could not read the saved hotkeys")
+        return
+      }
+      hotKeys.replaceItemHotKeys(items) { [weak self] value in
+        self?.runItem(value)
+      }
+    }
+  }
+
+  /// Apps open directly, which is fastest. Commands need the CLI.
+  private func runItem(_ value: String) {
+    if value.hasPrefix("command:") {
+      runCli(["run", value])
+    } else {
+      openApp(at: value)
+    }
+  }
+
   private func reloadTerminals() {
     runCli(["terminals"]) { [weak self] output in
       guard let choices = try? JSONDecoder().decode([TerminalChoice].self, from: output) else {
@@ -166,7 +256,18 @@ guard !cliCommand.isEmpty else {
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
 let controller = StatusItemController(cliCommand: cliCommand)
-let hotKey = GlobalHotKey { controller.showCli() }
-let hotKeyStatus = hotKey.register(keyCode: hotKeyKeyCode, modifiers: hotKeyModifiers)
+let hotKeys = HotKeyCenter()
+NSLog("Medea hotkey handler status: \(hotKeys.installHandler())")
+let hotKeyStatus = hotKeys.registerPermanent(keyCode: hotKeyKeyCode, modifiers: hotKeyModifiers) {
+  controller.showCli()
+}
 NSLog("Medea hotkey registration status: \(hotKeyStatus)")
+controller.reloadHotKeys(into: hotKeys)
+
+// The CLI sends this signal after saving a hotkey, so it works without a restart.
+signal(SIGUSR1, SIG_IGN)
+let reloadSignal = DispatchSource.makeSignalSource(signal: SIGUSR1, queue: .main)
+reloadSignal.setEventHandler { controller.reloadHotKeys(into: hotKeys) }
+reloadSignal.resume()
+
 app.run()

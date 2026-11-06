@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
+import { stopMenuBar } from "../menubar/helper.ts";
 import { buildDir, launcherPath } from "../paths.ts";
 import { writeLauncherScript } from "./launcher-script.ts";
 import { focusRunningCli, quitRunningCli } from "./running-cli.ts";
@@ -36,4 +37,21 @@ export const openItemSettings = async (itemValue: string, itemName: string): Pro
   await writeLauncherScript(scriptPath, ["settings", itemValue, itemName]);
   const launcher = await getSelectedLauncher();
   await launcher.open(scriptPath);
+};
+
+/** Runs a command from its hotkey, with no search window involved. */
+export const runCommandItem = async (itemValue: string | undefined): Promise<void> => {
+  if (itemValue === "command:exit") {
+    await quitRunningCli();
+    return;
+  }
+  if (itemValue === "command:menu-bar") {
+    await stopMenuBar();
+    return;
+  }
+  if (itemValue === "command:set-alias") {
+    await showCli();
+    return;
+  }
+  throw new Error(`Unknown command "${itemValue}".`);
 };

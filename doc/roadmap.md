@@ -10,6 +10,7 @@ The goal is a Raycast-style launcher for macOS that runs as a CLI.
 | Search and open apps              | Yes, built | Nothing special                                                                                                  |
 | Search files and URLs             | Yes        | Nothing special expected                                                                                         |
 | Aliases and per-item settings     | Yes, built | Nothing special                                                                                                  |
+| Hotkeys for apps and commands     | Yes, built | Nothing special                                                                                                  |
 | Run your own scripts and commands | Yes        | Nothing special expected                                                                                         |
 | Clipboard history                 | Yes        | The helper must keep watching the clipboard                                                                      |
 | Switch windows, search menu items | Yes        | Accessibility permission                                                                                         |
@@ -30,7 +31,6 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 ## Later ideas
 
 - **Alias plus search text:** typing an alias then a query, like `f report`. This needs commands that take input, so it belongs with step 3.
-- **More item settings:** the settings window only has aliases so far, and it's the natural home for a per-item hotkey.
 
 ## Decisions
 

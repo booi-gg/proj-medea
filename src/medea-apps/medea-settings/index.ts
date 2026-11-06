@@ -60,7 +60,7 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
       {
         value: START_AT_LOGIN,
         label: `Start at login  ${STATE_LABELS[state]}`,
-        hint: "Puts Medea in the menu bar when you log in",
+        hint: "Keeps Medea in the menu bar",
       },
       { value: DONE, label: "Done" },
     ],

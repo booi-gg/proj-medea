@@ -315,6 +315,8 @@ Raycast pastes straight into the app you were using. Medea only copies, because 
 
 If the clipboard holds both text and an image, text wins, because apps like Excel also add a picture of the cells you copied.
 
+An image file copied in Finder counts as an image. The clipboard only holds its name and icon, so the watcher reads the file itself, up to 30 MB. Any format macOS can decode works, including JPEG, HEIC and GIF, and photos keep their rotation. Copying it back gives you the image, not the file. Conversion runs off the main thread, because that thread also answers hotkeys.
+
 Copies are recorded one at a time, so two quick copies can't overwrite each other.
 
 **What is never recorded.**
@@ -323,7 +325,7 @@ Copies are recorded one at a time, so two quick copies can't overwrite each othe
 | -------------------------------------------------------- | ------------------------------------------------------------------------------ |
 | Content marked confidential, temporary or auto-generated | The `org.nspasteboard.*` types and the legacy types listed at nspasteboard.org |
 | Anything copied in Passwords or Keychain Access          | The frontmost app's bundle ID                                                  |
-| Files                                                    | A file URL on the clipboard, because the text would only be the file's name    |
+| Copied files that aren't a single image                  | A file URL on the clipboard, because the text would only be the file's name    |
 | Content that is neither text nor an image                | No plain text or image data                                                    |
 | Blank text, or text over 100,000 characters              | Checked in `addEntry()`                                                        |
 

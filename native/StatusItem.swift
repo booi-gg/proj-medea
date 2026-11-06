@@ -1,5 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
+import UniformTypeIdentifiers
 
 private let hotKeySignature: OSType = 0x4D44_4541  // "MDEA"
 private let hotKeyKeyCode = UInt32(kVK_Space)
@@ -143,6 +144,8 @@ final class ClipboardWatcher {
     "Pasteboard generator type",
   ]
   private static let ignoredApps: Set<String> = ["com.apple.Passwords", "com.apple.keychainaccess"]
+  private static let maxImageFileBytes = 30_000_000
+  private static let pngSignature: [UInt8] = [0x89, 0x50, 0x4E, 0x47]
 
   private let pasteboard: NSPasteboard
   private let onCopy: (Clip) -> Void
@@ -173,26 +176,54 @@ final class ClipboardWatcher {
     let isIgnored =
       types.contains { Self.ignoredTypes.contains($0.rawValue) }
       || Self.ignoredApps.contains(frontApp)
-    // A copied file also carries its name as text, which isn't what was copied.
-    guard !isIgnored, !types.contains(.fileURL) else {
+    guard !isIgnored else {
+      return
+    }
+    // A copied file carries its name as text and its icon as an image. Neither is what was copied.
+    if types.contains(.fileURL) {
+      recordImage(readCopiedImageFile())
       return
     }
     // Text wins, because apps like Excel also add a picture of the cells you copied.
     if let text = pasteboard.string(forType: .string) {
       onCopy(.text(text))
-    } else if let png = readImageAsPng() {
-      onCopy(.image(png))
+    } else {
+      recordImage(pasteboard.data(forType: .png) ?? pasteboard.data(forType: .tiff))
     }
   }
 
-  private func readImageAsPng() -> Data? {
-    if let png = pasteboard.data(forType: .png) {
-      return png
-    }
-    guard let tiff = pasteboard.data(forType: .tiff) else {
+  /// Only one file, and only an image. Other files have nothing Medea can show yet.
+  private func readCopiedImageFile() -> Data? {
+    let options: [NSPasteboard.ReadingOptionKey: Any] = [.urlReadingFileURLsOnly: true]
+    let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: options) as? [URL] ?? []
+    guard urls.count == 1, let url = urls.first,
+      let values = try? url.resourceValues(forKeys: [.contentTypeKey, .fileSizeKey]),
+      values.contentType?.conforms(to: .image) == true,
+      (values.fileSize ?? .max) <= Self.maxImageFileBytes
+    else {
       return nil
     }
-    return NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:])
+    return try? Data(contentsOf: url)
+  }
+
+  /// Converting a large photo takes a moment, and this thread also answers hotkeys.
+  private func recordImage(_ image: Data?) {
+    guard let image else {
+      return
+    }
+    DispatchQueue.global(qos: .utility).async { [onCopy] in
+      guard let png = Self.toPng(image) else {
+        return
+      }
+      DispatchQueue.main.async { onCopy(.image(png)) }
+    }
+  }
+
+  private static func toPng(_ image: Data) -> Data? {
+    if image.starts(with: pngSignature) {
+      return image
+    }
+    return NSBitmapImageRep(data: image)?.representation(using: .png, properties: [:])
   }
 }
 

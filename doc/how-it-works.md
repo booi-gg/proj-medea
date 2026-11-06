@@ -212,7 +212,16 @@ The settings window is a menu: **Add alias**, **Create hotkey**, **Remove hotkey
 
 `src/launcher/hotkeys.ts` holds the key table, checked against `HIToolbox/Events.h`. It uses US keyboard positions.
 
-A hotkey needs at least two modifiers, including `cmd` or `ctrl`, so it can't take over something like `cmd+q`. Duplicates and Medea's own `cmd+shift+space` are refused. A hotkey another app already uses isn't detected.
+A hotkey needs at least two modifiers, including `cmd` or `ctrl`, so it can't take over something like `cmd+q`. Duplicates and Medea's own `cmd+shift+space` are refused.
+**Warnings for shortcuts already in use.** macOS has no way to list other apps' hotkeys: Apple's header says it's "not an error to register the same hotkey in multiple processes", and the exclusive flag only clashes with other exclusive hotkeys. Pausing system shortcuts while recording needs Accessibility permission. So Medea reads the symptoms instead:
+
+| What happens                                                                     | Warning                                  |
+| -------------------------------------------------------------------------------- | ---------------------------------------- |
+| Modifiers go down and up, but no key arrives, because something else took it     | The recorder says so and stays open      |
+| Focus leaves the recorder while keys are held, because another app reacted       | The terminal warns, and nothing is saved |
+| The key arrives and matches an enabled macOS shortcut from `CopySymbolicHotKeys` | The terminal asks "Use it anyway?"       |
+
+A shortcut used by an app that only reacts while it's frontmost can't be seen, and it isn't a conflict either, because a global hotkey wins.
 
 ## Closing the window
 

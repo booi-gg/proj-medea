@@ -173,12 +173,19 @@ export const findHotkeyProblem = (
 const isModifierName = (value: unknown): value is Modifier =>
   typeof value === "string" && Object.hasOwn(MODIFIERS, value);
 
+export type Recording =
+  | { kind: "keys"; hotkey: string; usedBySystem: boolean }
+  | { kind: "interrupted" };
+
 /** Reads the recorder's JSON. Returns undefined when it isn't a key Medea can register. */
-export const parseRecording = (recording: string): string | undefined => {
+export const parseRecording = (recording: string): Recording | undefined => {
   try {
     const parsed: unknown = JSON.parse(recording);
     if (typeof parsed !== "object" || parsed === null) {
       return undefined;
+    }
+    if ("interrupted" in parsed) {
+      return { kind: "interrupted" };
     }
     if (!("keyCode" in parsed) || !("modifiers" in parsed)) {
       return undefined;
@@ -188,7 +195,9 @@ export const parseRecording = (recording: string): string | undefined => {
     if (key === undefined || !Array.isArray(modifiers) || !modifiers.every(isModifierName)) {
       return undefined;
     }
-    return normalizeHotkey([...modifiers, key].join("+"));
+    const hotkey = normalizeHotkey([...modifiers, key].join("+"));
+    const usedBySystem = "usedBySystem" in parsed && parsed.usedBySystem === true;
+    return hotkey === undefined ? undefined : { kind: "keys", hotkey, usedBySystem };
   } catch {
     return undefined;
   }

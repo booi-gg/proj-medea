@@ -1,5 +1,5 @@
 import { styleText } from "node:util";
-import { intro, isCancel, log, outro, select, text } from "@clack/prompts";
+import { confirm, intro, isCancel, log, outro, select, text } from "@clack/prompts";
 import { readConfig } from "../config.ts";
 import { reloadHotkeys } from "../menubar/helper.ts";
 import { MAX_ALIASES, findAliasProblem, parseAliasInput, saveAliases } from "./aliases.ts";
@@ -32,22 +32,39 @@ const applyHotkey = async (itemValue: string, hotkey: string): Promise<void> => 
   await reloadHotkeys();
 };
 
+const confirmSystemShortcut = async (hotkey: string): Promise<boolean> => {
+  const answer = await confirm({
+    message: `${formatHotkey(hotkey)} is already a macOS shortcut. Use it anyway?`,
+    initialValue: false,
+  });
+  return answer === true;
+};
+
 const createHotkey = async (itemValue: string): Promise<void> => {
   log.info("Press your hotkey in the Record Hotkey window");
-  const recording = await recordKeys();
-  if (recording === undefined) {
+  const output = await recordKeys();
+  if (output === undefined) {
     log.info("Hotkey not changed");
     return;
   }
-  const hotkey = parseRecording(recording);
-  if (hotkey === undefined) {
+  const recording = parseRecording(output);
+  if (recording === undefined) {
     log.warn("That key can't be used for a hotkey");
     return;
   }
+  if (recording.kind === "interrupted") {
+    log.warn("Another app took focus while you held the keys, so that shortcut may be in use");
+    return;
+  }
+  const { hotkey, usedBySystem } = recording;
   const { hotkeys } = await readConfig();
   const problem = findHotkeyProblem(hotkey, itemValue, hotkeys);
   if (problem !== undefined) {
     log.warn(`${formatHotkey(hotkey)}: ${problem}`);
+    return;
+  }
+  if (usedBySystem && !(await confirmSystemShortcut(hotkey))) {
+    log.info("Hotkey not changed");
     return;
   }
   await applyHotkey(itemValue, hotkey);

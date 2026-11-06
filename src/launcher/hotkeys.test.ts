@@ -67,12 +67,28 @@ test("converts to Carbon key codes and flags", () => {
 });
 
 test("reads a recording", () => {
-  assert.equal(parseRecording('{"keyCode":40,"modifiers":["cmd","shift"]}'), "shift+cmd+k");
+  assert.deepEqual(parseRecording('{"keyCode":40,"modifiers":["cmd","shift"]}'), {
+    kind: "keys",
+    hotkey: "shift+cmd+k",
+    usedBySystem: false,
+  });
 });
 
 test("reads a punctuation key", () => {
-  assert.equal(parseRecording('{"keyCode":44,"modifiers":["ctrl","cmd"]}'), "ctrl+cmd+/");
+  const recording = parseRecording('{"keyCode":44,"modifiers":["ctrl","cmd"]}');
+  assert.equal(recording?.kind === "keys" && recording.hotkey, "ctrl+cmd+/");
   assert.equal(formatHotkey("ctrl+cmd+/"), "⌃⌘/");
+});
+
+test("reads a macOS shortcut warning", () => {
+  const recording = parseRecording(
+    '{"keyCode":20,"modifiers":["shift","cmd"],"usedBySystem":true}',
+  );
+  assert.equal(recording?.kind === "keys" && recording.usedBySystem, true);
+});
+
+test("reads an interrupted recording", () => {
+  assert.deepEqual(parseRecording('{"interrupted":true}'), { kind: "interrupted" });
 });
 
 test("rejects a recording of an unknown key or bad data", () => {

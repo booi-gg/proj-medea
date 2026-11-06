@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 import { styleText } from "node:util";
-import { autocomplete, cancel, intro, isCancel, log, outro, spinner } from "@clack/prompts";
+import { isCancel } from "@clack/core";
+import { intro, log, spinner } from "@clack/prompts";
 import { listApps, openApp } from "./apps.ts";
 import type { App } from "./apps.ts";
 import { listenForFocusRequests } from "./instance.ts";
+import { promptForSelection } from "./launcher-prompt.ts";
 import { isMenuBarRunning, showCli, startMenuBar, stopMenuBar } from "./menubar.ts";
-import { rankItems } from "./search.ts";
 
-const MAX_VISIBLE_RESULTS = 8;
 const NAME_COLUMN_WIDTH = 30;
 const EXIT_VALUE = "command:exit";
 const CLEAR_SCREEN_SEQUENCE = "\u001B[2J\u001B[H";
@@ -23,9 +23,6 @@ interface LauncherItem {
 
 const formatRow = (icon: string, name: string, kind: string): string =>
   `${icon} ${name.padEnd(NAME_COLUMN_WIDTH)} ${styleText("gray", kind)}`;
-
-// rankItems has already chosen the results, so clack's own filter must not remove any.
-const keepRankedResult = (): boolean => true;
 
 const start = async (): Promise<void> => {
   const progress = spinner();
@@ -70,34 +67,14 @@ const buildCommandItems = (menuBarRunning: boolean): LauncherItem[] => [
   toCommandItem(EXIT_VALUE, "Exit", async () => {}),
 ];
 
-/** Shows the search prompt once. Returns false when the CLI should exit. */
+/** Shows the search bar once. Returns false when the CLI should exit. */
 const runSearchRound = async (): Promise<boolean> => {
-  intro("supercast");
+  process.stdout.write(CLEAR_SCREEN_SEQUENCE);
   const [menuBarRunning, apps] = await Promise.all([isMenuBarRunning(), listApps()]);
   const items = [...buildCommandItems(menuBarRunning), ...apps.map(toAppItem)];
 
-  let lastQuery = "";
-
-  const selectedValue = await autocomplete({
-    message: "Search apps and commands",
-    maxItems: MAX_VISIBLE_RESULTS,
-    filter: keepRankedResult,
-    options() {
-      // Clack keeps focus on the old item while it stays listed. Enter must pick the top result.
-      if (this.userInput !== lastQuery) {
-        lastQuery = this.userInput;
-        this.focusedValue = undefined;
-      }
-      return rankItems(this.userInput, items);
-    },
-  });
-
-  if (isCancel(selectedValue)) {
-    cancel("Cancelled");
-    return false;
-  }
-  if (selectedValue === EXIT_VALUE) {
-    outro("Bye");
+  const selectedValue = await promptForSelection(items);
+  if (isCancel(selectedValue) || selectedValue === EXIT_VALUE) {
     return false;
   }
   await items.find(({ value }) => value === selectedValue)?.run();
@@ -108,8 +85,9 @@ const runSearchRound = async (): Promise<boolean> => {
 const runInteractive = async (): Promise<void> => {
   const stopListening = await listenForFocusRequests();
   try {
-    while (await runSearchRound()) {
-      process.stdout.write(CLEAR_SCREEN_SEQUENCE);
+    let keepRunning = true;
+    while (keepRunning) {
+      keepRunning = await runSearchRound();
     }
   } finally {
     stopListening();

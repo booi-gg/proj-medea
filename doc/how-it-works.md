@@ -28,6 +28,7 @@ left click or Cmd+Shift+Space
 | File                      | Purpose                                                 |
 | ------------------------- | ------------------------------------------------------- |
 | `index.ts`                | CLI entry point: subcommands and the search prompt      |
+| `launcher-prompt.ts`      | Draws the search bar and results                        |
 | `search.ts`               | Ranks results for what you typed                        |
 | `apps.ts`                 | Finds installed apps and opens them                     |
 | `menubar.ts`              | Builds, starts and stops the helper, and shows the CLI  |
@@ -83,18 +84,23 @@ A right click shows the Quit menu. The menu is attached only for that click, oth
 
 ## The search prompt
 
-`runInteractive()` in `index.ts` builds one list: the built-in commands, then the apps.
+The window starts as a bare search bar, with the screen cleared. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
+
+`promptForSelection()` in `launcher-prompt.ts` uses `AutocompletePrompt` from `@clack/core`, not `autocomplete` from `@clack/prompts`, because the higher-level prompt always draws its header and footer. `@clack/core` is pinned to the version `@clack/prompts` uses.
+
+`runSearchRound()` in `index.ts` builds one list: the built-in commands, then the apps.
 
 **Finding apps.** `listApps()` asks Spotlight for every application bundle through `mdfind`. `toApps()` then keeps only `/Applications`, `/System/Applications`, `~/Applications` and Finder, because Spotlight also returns helper apps from places like `~/Library`.
 
 **Ranking.** `rankItems()` orders results as exact match, prefix, word start, substring, then letters in order, so `vsc` finds Visual Studio Code. Items with equal rank keep their alphabetical order.
 
-**Rows.** Each row shows an icon, the name and a faded kind: `◆` Application or `⌘` Command. These live in the `label`, because clack only shows `hint` on the focused row. The label contains colour codes, so search uses the plain `name` field instead.
+**Rows.** Each row shows an icon, the name and a faded kind: `◆` Application or `⌘` Command. The label contains colour codes, so search uses the plain `name` field instead.
 
-**Two clack details matter here:**
+**Three clack details matter here. Recheck them when upgrading clack:**
 
-- Clack runs its own filter even on dynamic options, and that filter would hide matches like `vsc`. `keepRankedResult` lets everything through, so `rankItems()` alone decides.
-- Clack keeps focus on an item for as long as it stays in the results. Without the fix, typing `e` would leave "Remove Menu Bar Item" highlighted and Enter would run it. The `options()` getter clears focus whenever the typed text changes, so Enter always picks the top result. This sets clack's `focusedValue` field directly, so recheck it when upgrading clack.
+- Clack runs its own filter even on dynamic options, and that filter would hide matches like `vsc`. The prompt passes a filter that lets everything through, so `rankItems()` alone decides.
+- Clack keeps focus on an item for as long as it stays in the results. The `options()` getter clears focus whenever the typed text changes, so Enter always picks the top result. This sets clack's `focusedValue` field directly.
+- Clack crashes if a redraw has fewer lines than it expects. `BLANK_FRAME` keeps the same line count as the search bar when the prompt finishes.
 
 ## Stopping
 

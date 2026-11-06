@@ -84,7 +84,7 @@ A right click shows the Quit menu. The menu is attached only for that click, oth
 
 ## The search prompt
 
-The window starts as a bare search bar, with the screen cleared. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
+The window starts with the screen cleared, the teal SUPERCAST logo from `banner.ts`, and a bare search bar. The logo is drawn once per round, outside the prompt, so typing never redraws it. In windows under 76 columns it falls back to the plain name. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
 
 `promptForSelection()` in `launcher-prompt.ts` uses `AutocompletePrompt` from `@clack/core`, not `autocomplete` from `@clack/prompts`, because the higher-level prompt always draws its header and footer. `@clack/core` is pinned to the version `@clack/prompts` uses.
 

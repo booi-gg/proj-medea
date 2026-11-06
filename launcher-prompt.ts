@@ -3,7 +3,7 @@ import { AutocompletePrompt } from "@clack/core";
 import { rankItems } from "./search.ts";
 
 const MAX_VISIBLE_RESULTS = 8;
-const PLACEHOLDER = "Search apps and commands";
+const PLACEHOLDER = "Cast actions";
 const SEARCH_ICON = styleText("cyan", "❯");
 const FOCUS_ICON = styleText("cyan", "▸");
 const EMPTY_INPUT_CURSOR = "█";

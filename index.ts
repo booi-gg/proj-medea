@@ -4,6 +4,7 @@ import { isCancel } from "@clack/core";
 import { intro, log, spinner } from "@clack/prompts";
 import { listApps, openApp } from "./apps.ts";
 import type { App } from "./apps.ts";
+import { renderBanner } from "./banner.ts";
 import { listenForFocusRequests } from "./instance.ts";
 import { promptForSelection } from "./launcher-prompt.ts";
 import { isMenuBarRunning, showCli, startMenuBar, stopMenuBar } from "./menubar.ts";
@@ -69,7 +70,7 @@ const buildCommandItems = (menuBarRunning: boolean): LauncherItem[] => [
 
 /** Shows the search bar once. Returns false when the CLI should exit. */
 const runSearchRound = async (): Promise<boolean> => {
-  process.stdout.write(CLEAR_SCREEN_SEQUENCE);
+  process.stdout.write(`${CLEAR_SCREEN_SEQUENCE}${renderBanner(process.stdout.columns)}`);
   const [menuBarRunning, apps] = await Promise.all([isMenuBarRunning(), listApps()]);
   const items = [...buildCommandItems(menuBarRunning), ...apps.map(toAppItem)];
 

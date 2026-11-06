@@ -37,6 +37,16 @@ export interface Selection {
 type Rank = (query: string, options: readonly LauncherOption[]) => LauncherOption[];
 type RenderPreview = (value: string, width: number, height: number) => readonly string[];
 
+/** A key that acts on the focused result without leaving the list. */
+export interface ExtraKey {
+  /** A control character, because anything printable is search text. */
+  key: string;
+  hint: string;
+  /** The footer's label for a result, or undefined when the key does nothing there. */
+  getLabel: (value: string | undefined) => string | undefined;
+  run: () => void;
+}
+
 export interface SelectionDisplay {
   /** Lists results before anything is typed. */
   listWhenEmpty?: boolean;
@@ -47,6 +57,7 @@ export interface SelectionDisplay {
   renderPreview?: RenderPreview;
   /** Called with the focused result's value, and undefined when nothing is focused. */
   onFocus?: (value: string | undefined) => void;
+  extraKey?: ExtraKey;
   /** Ends the prompt early, so the caller can show it again with fresh options. */
   signal?: AbortSignal;
   initialQuery?: string;
@@ -112,8 +123,16 @@ export const readTextBeforeSettingsKey = (keys: string): string | undefined => {
  * Node can't parse the Shift+Enter sequences, so keys are read here first. A settings key becomes
  * a normal Enter for the prompt, with a note that settings were asked for.
  */
-const readKeysInto = (input: PassThrough, onSettingsKey: () => void): (() => void) => {
+const readKeysInto = (
+  input: PassThrough,
+  onSettingsKey: () => void,
+  extraKey: ExtraKey | undefined,
+): (() => void) => {
   const forwardKey = (chunk: Buffer): void => {
+    // Still forwarded: a control character types nothing, and the prompt redraws on every key.
+    if (extraKey !== undefined && chunk.includes(extraKey.key)) {
+      extraKey.run();
+    }
     const textBeforeKey = readTextBeforeSettingsKey(chunk.toString());
     if (textBeforeKey === undefined) {
       input.write(chunk);
@@ -134,6 +153,11 @@ const readKeysInto = (input: PassThrough, onSettingsKey: () => void): (() => voi
   };
 };
 
+const toFooter = (baseFooter: string, extraKey: ExtraKey | undefined, value?: string): string => {
+  const label = extraKey?.getLabel(value);
+  return label === undefined ? baseFooter : `${baseFooter}   ${extraKey?.hint} ${label}`;
+};
+
 /** A bare search bar. Results only appear once something has been typed. */
 export const promptForSelection = async (
   getOptions: () => readonly LauncherOption[],
@@ -145,11 +169,12 @@ export const promptForSelection = async (
     settingsLabel = "settings",
     renderPreview,
     onFocus,
+    extraKey,
     signal,
     initialQuery = "",
   }: SelectionDisplay = {},
 ): Promise<Selection> => {
-  const footer = `↵ ${enterLabel}   ${SETTINGS_KEY_HINT} ${settingsLabel}`;
+  const baseFooter = `↵ ${enterLabel}   ${SETTINGS_KEY_HINT} ${settingsLabel}`;
   const layout = toSplitLayout(process.stdout.columns, process.stdout.rows);
   let lastQuery = initialQuery;
   let wantsSettings = false;
@@ -177,13 +202,14 @@ export const promptForSelection = async (
         onFocus?.(undefined);
         return BLANK_FRAME;
       }
-      onFocus?.(this.filteredOptions[this.cursor]?.value);
+      const focusedValue = this.filteredOptions[this.cursor]?.value;
+      onFocus?.(focusedValue);
       const searchBar = renderSearchBar(this.userInput, this.userInputWithCursor, placeholder);
       if (isEmptyQuery(this.userInput) && !listWhenEmpty) {
         return searchBar;
       }
       const results = renderResults(this.filteredOptions, this.cursor, {
-        footer,
+        footer: toFooter(baseFooter, extraKey, focusedValue),
         layout,
         renderPreview,
       });
@@ -191,9 +217,13 @@ export const promptForSelection = async (
     },
   });
 
-  const stopReadingKeys = readKeysInto(input, () => {
-    wantsSettings = true;
-  });
+  const stopReadingKeys = readKeysInto(
+    input,
+    () => {
+      wantsSettings = true;
+    },
+    extraKey,
+  );
   try {
     const result = await prompt.prompt();
     if (isCancel(result)) {

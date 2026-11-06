@@ -39,6 +39,7 @@ const MAX_SEARCH_LENGTH = 2000;
 const COPY_IMAGE_SCRIPT = `on run argv
   set the clipboard to (read (POSIX file (item 1 of argv)) as «class PNGf»)
 end run`;
+const CLOSE_IMAGE_KEY = "\u0018";
 const COPY = "copy";
 const VIEW = "view";
 const DELETE = "delete";
@@ -103,7 +104,7 @@ const toImagePreviewLines = (
     `${width}×${height}`,
     styleText("dim", formatSize(bytes)),
     "",
-    styleText("dim", "Shown in the image window"),
+    styleText("dim", "Opens in its own window"),
   ];
   if (name === undefined) {
     return details;
@@ -223,6 +224,13 @@ const runHistoryRound = async (
     return lines;
   };
 
+  // Closing lasts until focus moves, so the image comes back on the next visit. Typing redraws
+  // without moving focus, and must not bring it back.
+  let focusedId: string | undefined;
+  let closedId: string | undefined;
+  const isImage = (entryId: string | undefined): boolean =>
+    entries.some(({ id, kind }) => id === entryId && kind === "image");
+
   const historyChange = new AbortController();
   const stopWatching = watchEntries(() => {
     historyChange.abort();
@@ -239,12 +247,25 @@ const runHistoryRound = async (
       signal: historyChange.signal,
       initialQuery,
       onFocus: (entryId) => {
+        if (entryId !== focusedId) {
+          focusedId = entryId;
+          closedId = undefined;
+        }
         const focused = entries.find(({ id }) => id === entryId);
-        if (focused?.kind === "image") {
+        if (focused?.kind === "image" && entryId !== closedId) {
           imageWindow.show(getImagePath(focused.hash));
         } else {
           imageWindow.hide();
         }
+      },
+      extraKey: {
+        key: CLOSE_IMAGE_KEY,
+        hint: "⌃X",
+        getLabel: (entryId) =>
+          isImage(entryId) && entryId !== closedId ? "close image" : undefined,
+        run: () => {
+          closedId = isImage(focusedId) ? focusedId : undefined;
+        },
       },
     },
   );

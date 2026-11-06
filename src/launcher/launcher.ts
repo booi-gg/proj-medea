@@ -1,14 +1,12 @@
-#!/usr/bin/env node
 import { styleText } from "node:util";
 import { isCancel } from "@clack/core";
-import { intro, log, spinner } from "@clack/prompts";
+import { start, stop } from "../menubar/commands.ts";
+import { isMenuBarRunning } from "../menubar/helper.ts";
+import { listenForRequests } from "../terminals/running-cli.ts";
 import { listApps, openApp } from "./apps.ts";
 import type { App } from "./apps.ts";
 import { renderBanner } from "./banner.ts";
-import { listenForRequests, quitRunningCli } from "./instance.ts";
-import { promptForSelection } from "./launcher-prompt.ts";
-import { isMenuBarRunning, showCli, startMenuBar, stopMenuBar } from "./menubar.ts";
-import { listTerminals, saveTerminal } from "./terminals.ts";
+import { promptForSelection } from "./prompt.ts";
 
 const NAME_COLUMN_WIDTH = 30;
 const EXIT_VALUE = "command:exit";
@@ -25,28 +23,6 @@ interface LauncherItem {
 
 const formatRow = (icon: string, name: string, kind: string): string =>
   `${icon} ${name.padEnd(NAME_COLUMN_WIDTH)} ${styleText("gray", kind)}`;
-
-const start = async (): Promise<void> => {
-  const progress = spinner();
-  progress.start("Starting the menu bar item");
-  try {
-    await startMenuBar();
-    progress.stop("Menu bar item is running");
-  } catch (error) {
-    progress.stop("Could not start the menu bar item");
-    throw error;
-  }
-};
-
-const stop = async (): Promise<void> => {
-  await stopMenuBar();
-  log.success("Menu bar item stopped");
-};
-
-const showStatus = async (): Promise<void> => {
-  const running = await isMenuBarRunning();
-  log.info(`Menu bar item is ${running ? "running" : "stopped"}`);
-};
 
 const toAppItem = ({ name, path }: App): LauncherItem => ({
   value: path,
@@ -84,7 +60,7 @@ const runSearchRound = async (): Promise<boolean> => {
 };
 
 // Stays open after each action so the shortcut can bring this same window back.
-const runInteractive = async (): Promise<void> => {
+export const runLauncher = async (): Promise<void> => {
   const stopListening = await listenForRequests();
   try {
     let keepRunning = true;
@@ -95,54 +71,3 @@ const runInteractive = async (): Promise<void> => {
     stopListening();
   }
 };
-
-// The open CLI lives in the old terminal, so it quits and the next open uses the new one.
-const setTerminal = async (name: string | undefined): Promise<void> => {
-  const changed = await saveTerminal(name);
-  if (changed) {
-    await quitRunningCli();
-  }
-};
-
-const main = async (): Promise<void> => {
-  const [command, argument] = process.argv.slice(2);
-
-  if (command === undefined) {
-    await runInteractive();
-    return;
-  }
-  if (command === "show") {
-    await showCli();
-    return;
-  }
-  if (command === "terminals") {
-    process.stdout.write(`${JSON.stringify(await listTerminals())}\n`);
-    return;
-  }
-  if (command === "set-terminal") {
-    await setTerminal(argument);
-    return;
-  }
-
-  intro("supercast");
-  if (command === "start") {
-    await start();
-    return;
-  }
-  if (command === "stop") {
-    await stop();
-    return;
-  }
-  if (command === "status") {
-    await showStatus();
-    return;
-  }
-  throw new Error(`Unknown command "${command}". Use start, stop or status.`);
-};
-
-try {
-  await main();
-} catch (error) {
-  log.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-}

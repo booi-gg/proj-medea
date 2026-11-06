@@ -9,33 +9,47 @@ TypeScript can't call macOS AppKit directly, so anything that must stay alive in
 
 ```text
 pnpm menubar:start
-   └─ menubar.ts builds and starts the helper, then the CLI exits
+   └─ the CLI builds and starts the helper, then the CLI exits
 
 supercast-status (keeps running)
    └─ owns the icon and the shortcut, waits for input
 
 Open Supercast in the menu, or Cmd+Shift+Space
-   └─ node index.ts show
+   └─ node src/index.ts show
         ├─ CLI already open: raise that window
         └─ no CLI open: start open-supercast.command in the chosen terminal
-             └─ node index.ts
+             └─ node src/index.ts
                   └─ search prompt
                        └─ Enter opens the app, then search returns
 ```
 
 ## Files
 
-| File                      | Purpose                                                  |
-| ------------------------- | -------------------------------------------------------- |
-| `index.ts`                | CLI entry point: subcommands and the search prompt       |
-| `launcher-prompt.ts`      | Draws the search bar and results                         |
-| `search.ts`               | Ranks results for what you typed                         |
-| `apps.ts`                 | Finds installed apps and opens them                      |
-| `menubar.ts`              | Builds, starts and stops the helper, and shows the CLI   |
-| `instance.ts`             | Talks to a running CLI over its socket                   |
-| `terminals.ts`            | Lists terminals, saves the choice, and launches each one |
-| `native/StatusItem.swift` | The helper: menu bar icon and global shortcut            |
-| `.build/`                 | Generated: helper binary, launcher script, `helper.log`  |
+Code is grouped by feature, and tests sit next to the file they cover.
+
+```text
+src/
+├── index.ts              Routes commands. Nothing else.
+├── paths.ts              Every project path, in one place
+├── shell.ts              Shared command runner and shell quoting
+├── launcher/
+│   ├── launcher.ts       The search loop and its list of items
+│   ├── prompt.ts         Draws the search bar and results
+│   ├── banner.ts         The SUPERCAST logo
+│   ├── search.ts         Ranks results for what you typed
+│   └── apps.ts           Finds installed apps and opens them
+├── menubar/
+│   ├── helper.ts         Builds, starts and stops the Swift helper
+│   └── commands.ts       The start, stop and status commands
+└── terminals/
+    ├── terminals.ts      Lists terminals, saves the choice, launches each one
+    ├── running-cli.ts    Talks to a running CLI over its socket
+    └── actions.ts        Shows the CLI and changes the terminal
+native/
+└── StatusItem.swift      The helper: menu bar icon, menu and global shortcut
+doc/                      These docs
+.build/                   Generated: helper binary, launcher script, logs, socket
+```
 
 ## Commands
 
@@ -51,11 +65,11 @@ pnpm check            # format and lint
 
 ## Starting the helper
 
-`pnpm menubar:start` calls `startMenuBar()` in `menubar.ts`:
+`pnpm menubar:start` calls `startMenuBar()` in `src/menubar/helper.ts`:
 
 1. `pgrep` looks for a running helper. If there is one, nothing else happens, so you never get two icons.
 2. `swiftc` compiles `native/StatusItem.swift` to `.build/supercast-status`. This is skipped if the binary is newer than the source.
-3. It writes `.build/open-supercast.command`, a script that goes to the project folder and runs `node index.ts`.
+3. It writes `.build/open-supercast.command`, a script that goes to the project folder and runs `node src/index.ts`.
 4. It starts the helper with `detached: true`, then `unref()`, so the CLI can exit while the helper keeps running. Helper output goes to `.build/helper.log`.
 
 If the helper is already running, `start` does nothing, even if the Swift file changed. After editing Swift, run `pnpm menubar:stop` first.
@@ -73,15 +87,15 @@ No `.app` bundle or `Info.plist` is needed. The helper runs as a bare, ad-hoc si
 
 Left or right clicking the icon opens a menu. The helper holds no logic of its own: each item runs the CLI.
 
-| Item           | What it runs                                                                                       |
-| -------------- | -------------------------------------------------------------------------------------------------- |
-| Open Supercast | `node index.ts show`                                                                               |
-| Set Terminal   | `node index.ts terminals` fills the list, and picking one runs `node index.ts set-terminal <name>` |
-| Exit           | Quits the helper, which removes the icon and the shortcut                                          |
+| Item           | What it runs                                                                                               |
+| -------------- | ---------------------------------------------------------------------------------------------------------- |
+| Open Supercast | `node src/index.ts show`                                                                                   |
+| Set Terminal   | `node src/index.ts terminals` fills the list, and picking one runs `node src/index.ts set-terminal <name>` |
+| Exit           | Quits the helper, which removes the icon and the shortcut                                                  |
 
 ## Choosing a terminal
 
-`terminals.ts` lists the terminals Supercast knows how to launch, filtered to the ones installed. The choice is saved in `~/.config/supercast/config.json`. Missing or broken config falls back to Terminal.
+`src/terminals/terminals.ts` lists the terminals Supercast knows how to launch, filtered to the ones installed. The choice is saved in `~/.config/supercast/config.json`. Missing or broken config falls back to Terminal.
 
 Changing the terminal tells the running CLI to quit, because it lives in the old terminal. The next open uses the new one.
 
@@ -100,24 +114,24 @@ To add a terminal, add a recipe to `launchers` and test both open and bring back
 
 ## Showing the CLI
 
-The menu and the shortcut both run `node index.ts show`. `showCli()` in `menubar.ts` then:
+The menu and the shortcut both run `node src/index.ts show`. `showCli()` in `src/terminals/actions.ts` then:
 
 1. Reads the chosen terminal.
 2. `focusRunningCli()` connects to `.build/cli.sock`. A running CLI answers on this socket with its tty path. A dead CLI refuses the connection, even if the socket file was left behind, so there is no stale state to clean up. It gives up after one second.
 3. **If a CLI answers,** the terminal's recipe brings it back.
 4. **If nothing answers,** the recipe opens `.build/open-supercast.command`. The launcher uses an absolute Node path because a terminal's `PATH` can differ from your shell's.
 
-The CLI has to stay open for this to work, so `runInteractive()` loops: after an action it clears the screen and shows search again. Exit and Esc end the loop.
+The CLI has to stay open for this to work, so `runLauncher()` loops: after an action it clears the screen and shows search again. Exit and Esc end the loop.
 
 If you open a second CLI, such as `pnpm start` in another terminal, the newest one takes over the socket.
 
 ## The search prompt
 
-The window starts with the screen cleared, the teal SUPERCAST logo from `banner.ts`, and a bare search bar. The logo is drawn once per round, outside the prompt, so typing never redraws it. In windows under 76 columns it falls back to the plain name. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
+The window starts with the screen cleared, the teal SUPERCAST logo from `src/launcher/banner.ts`, and a bare search bar. The logo is drawn once per round, outside the prompt, so typing never redraws it. In windows under 76 columns it falls back to the plain name. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
 
-`promptForSelection()` in `launcher-prompt.ts` uses `AutocompletePrompt` from `@clack/core`, not `autocomplete` from `@clack/prompts`, because the higher-level prompt always draws its header and footer. `@clack/core` is pinned to the version `@clack/prompts` uses.
+`promptForSelection()` in `src/launcher/prompt.ts` uses `AutocompletePrompt` from `@clack/core`, not `autocomplete` from `@clack/prompts`, because the higher-level prompt always draws its header and footer. `@clack/core` is pinned to the version `@clack/prompts` uses.
 
-`runSearchRound()` in `index.ts` builds one list: the built-in commands, then the apps.
+`runSearchRound()` in `src/launcher/launcher.ts` builds one list: the built-in commands, then the apps.
 
 **Finding apps.** `listApps()` asks Spotlight for every application bundle through `mdfind`. `toApps()` then keeps only `/Applications`, `/System/Applications`, `~/Applications` and Finder, because Spotlight also returns helper apps from places like `~/Library`.
 

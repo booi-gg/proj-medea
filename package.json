@@ -3,15 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "bin": {
-    "supercast": "./index.ts"
+    "supercast": "./src/index.ts"
   },
   "type": "module",
   "scripts": {
-    "start": "node index.ts",
+    "start": "node src/index.ts",
     "test": "node --test",
-    "menubar:start": "node index.ts start",
-    "menubar:stop": "node index.ts stop",
-    "menubar:status": "node index.ts status",
+    "menubar:start": "node src/index.ts start",
+    "menubar:stop": "node src/index.ts stop",
+    "menubar:status": "node src/index.ts status",
     "typecheck": "tsc",
     "check": "vp check",
     "format": "vp fmt",

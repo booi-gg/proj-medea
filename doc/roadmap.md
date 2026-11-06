@@ -22,7 +22,7 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 1. **Shortcut:** done. The helper listens for `Cmd+Shift+Space` and opens the CLI.
 2. **Search launcher:** done. Type to find apps and built-in commands, then press Enter.
 3. **Commands:** each command is a small TypeScript file or script in a folder, so adding one doesn't change the core.
-4. **Terminal choice:** done for Terminal and Ghostty, from the menu bar. Other terminals need a tested recipe in `terminals.ts`.
+4. **Terminal choice:** done for Terminal and Ghostty, from the menu bar. Other terminals need a tested recipe in `src/terminals/terminals.ts`.
 5. **Background features:** clipboard history, plus start at login so the shortcut survives a reboot.
 6. **Permission features:** window management and snippets, packaged as a signed `.app`. A rebuilt bare binary may lose granted permissions, so a stable app identity will matter here.
 

@@ -1,9 +1,6 @@
-import { execFile } from "node:child_process";
 import { homedir } from "node:os";
 import { basename } from "node:path";
-import { promisify } from "node:util";
-
-const runCommand = promisify(execFile);
+import { runCommand } from "../shell.ts";
 
 const APP_EXTENSION = ".app";
 const APP_BUNDLE_QUERY = "kMDItemContentType == 'com.apple.application-bundle'";

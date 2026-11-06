@@ -1,13 +1,11 @@
-import { execFile } from "node:child_process";
 import { once } from "node:events";
 import { mkdir, rm } from "node:fs/promises";
 import { connect, createServer } from "node:net";
-import { dirname, join } from "node:path";
+import { dirname } from "node:path";
 import { addAbortSignal } from "node:stream";
 import { text } from "node:stream/consumers";
-import { promisify } from "node:util";
-
-const runCommand = promisify(execFile);
+import { socketPath } from "../paths.ts";
+import { runCommand } from "../shell.ts";
 
 const REQUEST_TIMEOUT_MS = 1000;
 const QUIT_REQUEST = "quit";
@@ -15,8 +13,6 @@ const FOCUS_REQUEST = "focus";
 // Un-minimize, then raise. Terminal honours this with no Automation permission.
 const RAISE_WINDOW_SEQUENCE = "\u001B[1t\u001B[5t";
 const SHOW_CURSOR_SEQUENCE = "\u001B[?25h";
-
-const socketPath = join(import.meta.dirname, ".build", "cli.sock");
 
 const getOwnTtyPath = async (): Promise<string> => {
   const { stdout } = await runCommand("ps", ["-o", "tty=", "-p", String(process.pid)]);

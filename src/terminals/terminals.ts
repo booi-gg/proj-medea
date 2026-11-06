@@ -1,11 +1,8 @@
-import { execFile } from "node:child_process";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { promisify } from "node:util";
-import { listApps } from "./apps.ts";
-
-const runCommand = promisify(execFile);
+import { listApps } from "../launcher/apps.ts";
+import { quoteForShell, runCommand } from "../shell.ts";
 
 const configPath = join(homedir(), ".config", "supercast", "config.json");
 
@@ -28,8 +25,6 @@ const FOCUS_IN_GHOSTTY_SCRIPT = `on run argv
     activate
   end tell
 end run`;
-
-export const quoteForShell = (value: string): string => `'${value.replaceAll("'", `'\\''`)}'`;
 
 const openWithApp = async (appName: string, ...paths: string[]): Promise<void> => {
   await runCommand("open", ["-a", appName, ...paths]);

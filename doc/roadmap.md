@@ -22,7 +22,7 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 1. **Shortcut:** done. The helper listens for `Cmd+Shift+Space` and opens the CLI.
 2. **Search launcher:** done. Type to find apps and built-in commands, then press Enter.
 3. **Commands:** each command is a small TypeScript file or script in a folder, so adding one doesn't change the core.
-4. **Terminal choice:** let the user pick a terminal, such as Ghostty. Reusing one window is done for Terminal.
+4. **Terminal choice:** done for Terminal and Ghostty, from the menu bar. Other terminals need a tested recipe in `terminals.ts`.
 5. **Background features:** clipboard history, plus start at login so the shortcut survives a reboot.
 6. **Permission features:** window management and snippets, packaged as a signed `.app`. A rebuilt bare binary may lose granted permissions, so a stable app identity will matter here.
 
@@ -31,19 +31,12 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 - **Stay in a terminal for now.** A floating panel would feel closer to Raycast but needs much more native code. Revisit it if speed becomes a problem.
 - **`Cmd+Shift+Space` for now.** Raycast currently uses `Cmd+Space`. To switch, quit Raycast, change `hotKeyModifiers` in `native/StatusItem.swift`, run `pnpm menubar:stop`, then `pnpm menubar:start`.
 
-## Notes for the terminal chooser
-
-- The terminal is chosen in one place: `showCli()` in `menubar.ts`.
-- Raising the window uses an escape sequence in `instance.ts`. Check that Ghostty honours it, because window reuse depends on it.
-- Ghostty 1.4.0 is installed and registers for `public.unix-executable`.
-- Try `open -a Ghostty <launcher>` first. Launching with `-e` [reportedly shows a confirmation dialog](https://github.com/ghostty-org/ghostty/discussions/10203). Neither route has been tested yet.
-
 ## Not tested yet
 
 These need a person, because macOS blocks synthetic input from the development session:
 
-- A physical click on the menu bar icon. The button's action was tested from inside the process.
+- A physical click on the menu bar icon. The menu items and their actions were tested from inside the process.
 - A physical `Cmd+Shift+Space` press. Registration succeeded with status `0`.
-- The right-click Quit menu.
+- The Automation prompt from the real helper. Ghostty was tested from the development session, which has its own permission.
 
 Also untested: raising a minimized window. In one early test run, a CLI window went away for an unknown reason. It did not happen again in later runs, including through the real launcher, so watch for it.

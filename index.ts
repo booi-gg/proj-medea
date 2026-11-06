@@ -5,9 +5,10 @@ import { intro, log, spinner } from "@clack/prompts";
 import { listApps, openApp } from "./apps.ts";
 import type { App } from "./apps.ts";
 import { renderBanner } from "./banner.ts";
-import { listenForFocusRequests } from "./instance.ts";
+import { listenForRequests, quitRunningCli } from "./instance.ts";
 import { promptForSelection } from "./launcher-prompt.ts";
 import { isMenuBarRunning, showCli, startMenuBar, stopMenuBar } from "./menubar.ts";
+import { listTerminals, saveTerminal } from "./terminals.ts";
 
 const NAME_COLUMN_WIDTH = 30;
 const EXIT_VALUE = "command:exit";
@@ -84,7 +85,7 @@ const runSearchRound = async (): Promise<boolean> => {
 
 // Stays open after each action so the shortcut can bring this same window back.
 const runInteractive = async (): Promise<void> => {
-  const stopListening = await listenForFocusRequests();
+  const stopListening = await listenForRequests();
   try {
     let keepRunning = true;
     while (keepRunning) {
@@ -95,8 +96,16 @@ const runInteractive = async (): Promise<void> => {
   }
 };
 
+// The open CLI lives in the old terminal, so it quits and the next open uses the new one.
+const setTerminal = async (name: string | undefined): Promise<void> => {
+  const changed = await saveTerminal(name);
+  if (changed) {
+    await quitRunningCli();
+  }
+};
+
 const main = async (): Promise<void> => {
-  const [command] = process.argv.slice(2);
+  const [command, argument] = process.argv.slice(2);
 
   if (command === undefined) {
     await runInteractive();
@@ -104,6 +113,14 @@ const main = async (): Promise<void> => {
   }
   if (command === "show") {
     await showCli();
+    return;
+  }
+  if (command === "terminals") {
+    process.stdout.write(`${JSON.stringify(await listTerminals())}\n`);
+    return;
+  }
+  if (command === "set-terminal") {
+    await setTerminal(argument);
     return;
   }
 

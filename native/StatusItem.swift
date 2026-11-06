@@ -48,70 +48,124 @@ final class GlobalHotKey {
   }
 }
 
-/// Owns the menu bar item. Left click shows the CLI, right click shows Quit.
-final class StatusItemController: NSObject {
-  private let showCommand: [String]
-  private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
-  private let contextMenu = NSMenu()
+struct TerminalChoice: Decodable {
+  let name: String
+  let selected: Bool
+}
 
-  init(showCommand: [String]) {
-    self.showCommand = showCommand
+/// Owns the menu bar item and its menu. The CLI makes all the decisions.
+final class StatusItemController: NSObject, NSMenuDelegate {
+  private let cliCommand: [String]
+  private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+  private let menu = NSMenu()
+  private let terminalMenu = NSMenu()
+
+  init(cliCommand: [String]) {
+    self.cliCommand = cliCommand
     super.init()
 
-    let quitItem = NSMenuItem(
-      title: "Quit Supercast",
+    statusItem.button?.image = NSImage(
+      systemSymbolName: "terminal",
+      accessibilityDescription: "Supercast"
+    )
+    statusItem.button?.image?.isTemplate = true
+    statusItem.button?.toolTip = "Supercast"
+
+    let openItem = NSMenuItem(
+      title: "Open Supercast",
+      action: #selector(handleOpen),
+      keyEquivalent: ""
+    )
+    openItem.target = self
+    menu.addItem(openItem)
+
+    let terminalItem = NSMenuItem(title: "Set Terminal", action: nil, keyEquivalent: "")
+    terminalItem.submenu = terminalMenu
+    menu.addItem(terminalItem)
+
+    menu.addItem(.separator())
+
+    let exitItem = NSMenuItem(
+      title: "Exit",
       action: #selector(NSApplication.terminate(_:)),
       keyEquivalent: ""
     )
-    contextMenu.addItem(quitItem)
+    exitItem.target = NSApp
+    menu.addItem(exitItem)
 
-    guard let button = statusItem.button else {
-      return
-    }
-    button.image = NSImage(systemSymbolName: "terminal", accessibilityDescription: "Supercast")
-    button.image?.isTemplate = true
-    button.toolTip = "Open Supercast"
-    button.target = self
-    button.action = #selector(handleClick)
-    button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+    menu.delegate = self
+    statusItem.menu = menu
+    reloadTerminals()
   }
 
-  @objc private func handleClick() {
-    if NSApp.currentEvent?.type == .rightMouseUp {
-      showContextMenu()
-      return
-    }
+  func menuWillOpen(_ menu: NSMenu) {
+    reloadTerminals()
+  }
+
+  @objc private func handleOpen() {
     showCli()
   }
 
-  private func showContextMenu() {
-    statusItem.menu = contextMenu
-    statusItem.button?.performClick(nil)
-    statusItem.menu = nil
+  @objc private func handleTerminalChoice(_ sender: NSMenuItem) {
+    runCli(["set-terminal", sender.title]) { [weak self] _ in
+      self?.reloadTerminals()
+    }
   }
 
-  /// The CLI decides whether to reuse a running window or open a new one.
   func showCli() {
+    runCli(["show"])
+  }
+
+  private func reloadTerminals() {
+    runCli(["terminals"]) { [weak self] output in
+      guard let choices = try? JSONDecoder().decode([TerminalChoice].self, from: output) else {
+        return
+      }
+      self?.rebuildTerminalMenu(choices)
+    }
+  }
+
+  private func rebuildTerminalMenu(_ choices: [TerminalChoice]) {
+    terminalMenu.removeAllItems()
+    for choice in choices {
+      let item = NSMenuItem(
+        title: choice.name,
+        action: #selector(handleTerminalChoice(_:)),
+        keyEquivalent: ""
+      )
+      item.target = self
+      item.state = choice.selected ? .on : .off
+      terminalMenu.addItem(item)
+    }
+  }
+
+  private func runCli(_ arguments: [String], onFinish: ((Data) -> Void)? = nil) {
     let process = Process()
-    process.executableURL = URL(fileURLWithPath: showCommand[0])
-    process.arguments = Array(showCommand.dropFirst())
+    let output = Pipe()
+    process.executableURL = URL(fileURLWithPath: cliCommand[0])
+    process.arguments = Array(cliCommand.dropFirst()) + arguments
+    process.standardOutput = output
+    process.terminationHandler = { _ in
+      let data = output.fileHandleForReading.readDataToEndOfFile()
+      DispatchQueue.main.async { onFinish?(data) }
+    }
     do {
       try process.run()
     } catch {
-      NSLog("Supercast could not show the CLI: \(error.localizedDescription)")
+      NSLog("Supercast could not run the CLI: \(error.localizedDescription)")
     }
   }
 }
 
-let showCommand = Array(CommandLine.arguments.dropFirst())
-guard !showCommand.isEmpty else {
-  FileHandle.standardError.write(Data("usage: supercast-status <command> [arguments]\n".utf8))
+let cliCommand = Array(CommandLine.arguments.dropFirst())
+guard !cliCommand.isEmpty else {
+  FileHandle.standardError.write(Data("usage: supercast-status <cli command> [arguments]\n".utf8))
   exit(64)
 }
 
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
-let controller = StatusItemController(showCommand: showCommand)
+let controller = StatusItemController(cliCommand: cliCommand)
 let hotKey = GlobalHotKey { controller.showCli() }
 let hotKeyStatus = hotKey.register(keyCode: hotKeyKeyCode, modifiers: hotKeyModifiers)
 NSLog("Supercast hotkey registration status: \(hotKeyStatus)")

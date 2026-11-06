@@ -5,6 +5,7 @@ import { chmod, mkdir, stat, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { promisify } from "node:util";
 import { focusRunningCli } from "./instance.ts";
+import { getSelectedLauncher, quoteForShell } from "./terminals.ts";
 
 const runCommand = promisify(execFile);
 
@@ -16,8 +17,6 @@ const swiftSourcePath = join(projectDir, "native", "StatusItem.swift");
 const helperPath = join(buildDir, "supercast-status");
 const launcherPath = join(buildDir, "open-supercast.command");
 const helperLogPath = join(buildDir, "helper.log");
-
-const quoteForShell = (value: string): string => `'${value.replaceAll("'", `'\\''`)}'`;
 
 const isNoMatchError = (error: unknown): boolean =>
   error instanceof Error && "code" in error && error.code === PGREP_NO_MATCH_EXIT_CODE;
@@ -49,7 +48,6 @@ const buildHelper = async (): Promise<void> => {
   await runCommand("swiftc", ["-O", swiftSourcePath, "-o", helperPath, "-framework", "AppKit"]);
 };
 
-// Terminal opens .command files directly, so a click needs no Automation permission.
 // The absolute Node path keeps this working when Terminal's PATH differs from this shell's.
 const writeLauncher = async (): Promise<void> => {
   const script = [
@@ -76,7 +74,7 @@ export const startMenuBar = async (): Promise<void> => {
   await writeLauncher();
 
   const helperLog = openSync(helperLogPath, "w");
-  const helper = spawn(helperPath, [process.execPath, cliEntryPath, "show"], {
+  const helper = spawn(helperPath, [process.execPath, cliEntryPath], {
     detached: true,
     stdio: ["ignore", helperLog, helperLog],
   });
@@ -91,9 +89,13 @@ export const stopMenuBar = async (): Promise<void> => {
   }
 };
 
-/** Reuses a running CLI window, or opens a new one when none is running. */
+/** Reuses a running CLI window, or opens a new one in the chosen terminal. */
 export const showCli = async (): Promise<void> => {
-  const reusedRunningCli = await focusRunningCli();
-  const openArguments = reusedRunningCli ? ["-a", "Terminal"] : ["-a", "Terminal", launcherPath];
-  await runCommand("open", openArguments);
+  const launcher = await getSelectedLauncher();
+  const runningTtyPath = await focusRunningCli();
+  if (runningTtyPath === undefined) {
+    await launcher.open(launcherPath);
+    return;
+  }
+  await launcher.focus(runningTtyPath);
 };

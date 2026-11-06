@@ -14,10 +14,10 @@ pnpm menubar:start
 supercast-status (keeps running)
    └─ owns the icon and the shortcut, waits for input
 
-left click or Cmd+Shift+Space
+Open Supercast in the menu, or Cmd+Shift+Space
    └─ node index.ts show
         ├─ CLI already open: raise that window
-        └─ no CLI open: open -a Terminal open-supercast.command
+        └─ no CLI open: start open-supercast.command in the chosen terminal
              └─ node index.ts
                   └─ search prompt
                        └─ Enter opens the app, then search returns
@@ -25,16 +25,17 @@ left click or Cmd+Shift+Space
 
 ## Files
 
-| File                      | Purpose                                                 |
-| ------------------------- | ------------------------------------------------------- |
-| `index.ts`                | CLI entry point: subcommands and the search prompt      |
-| `launcher-prompt.ts`      | Draws the search bar and results                        |
-| `search.ts`               | Ranks results for what you typed                        |
-| `apps.ts`                 | Finds installed apps and opens them                     |
-| `menubar.ts`              | Builds, starts and stops the helper, and shows the CLI  |
-| `instance.ts`             | Detects a running CLI and raises its window             |
-| `native/StatusItem.swift` | The helper: menu bar icon and global shortcut           |
-| `.build/`                 | Generated: helper binary, launcher script, `helper.log` |
+| File                      | Purpose                                                  |
+| ------------------------- | -------------------------------------------------------- |
+| `index.ts`                | CLI entry point: subcommands and the search prompt       |
+| `launcher-prompt.ts`      | Draws the search bar and results                         |
+| `search.ts`               | Ranks results for what you typed                         |
+| `apps.ts`                 | Finds installed apps and opens them                      |
+| `menubar.ts`              | Builds, starts and stops the helper, and shows the CLI   |
+| `instance.ts`             | Talks to a running CLI over its socket                   |
+| `terminals.ts`            | Lists terminals, saves the choice, and launches each one |
+| `native/StatusItem.swift` | The helper: menu bar icon and global shortcut            |
+| `.build/`                 | Generated: helper binary, launcher script, `helper.log`  |
 
 ## Commands
 
@@ -68,19 +69,47 @@ If the helper is already running, `start` does nothing, even if the Swift file c
 
 No `.app` bundle or `Info.plist` is needed. The helper runs as a bare, ad-hoc signed binary.
 
+## The menu
+
+Left or right clicking the icon opens a menu. The helper holds no logic of its own: each item runs the CLI.
+
+| Item           | What it runs                                                                                       |
+| -------------- | -------------------------------------------------------------------------------------------------- |
+| Open Supercast | `node index.ts show`                                                                               |
+| Set Terminal   | `node index.ts terminals` fills the list, and picking one runs `node index.ts set-terminal <name>` |
+| Exit           | Quits the helper, which removes the icon and the shortcut                                          |
+
+## Choosing a terminal
+
+`terminals.ts` lists the terminals Supercast knows how to launch, filtered to the ones installed. The choice is saved in `~/.config/supercast/config.json`. Missing or broken config falls back to Terminal.
+
+Changing the terminal tells the running CLI to quit, because it lives in the old terminal. The next open uses the new one.
+
+Each terminal has its own recipe in `launchers`, because they start programs differently:
+
+| Terminal | Open                                                                                                       | Bring back                                                                     |
+| -------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Terminal | `open -a Terminal <launcher>`, with no permission needed                                                   | The CLI raises its own window with an escape sequence, then `open -a Terminal` |
+| Ghostty  | AppleScript `new window` with `initial input` of `exec <launcher>`, which needs Automation permission once | AppleScript `focus` on the terminal whose `tty` matches the CLI                |
+
+If AppleScript is refused, Ghostty falls back to `open -a Ghostty <launcher>`, which appears to ask for confirmation on each launch, and to plain activation for bringing it back. Because the fallback is silent, a broken script can look like a working one. In AppleScript, read `argv` into a variable before the `tell` block: Ghostty can't evaluate it in a `whose` clause.
+
+Ghostty uses `initial input` and not `command` because it keeps a window open after a `command` exits, even with `wait after command` set to false. With `exec`, the CLI replaces the shell, so the window closes when the CLI exits. A new Ghostty session takes about 1.5 seconds, because the shell starts first.
+
+To add a terminal, add a recipe to `launchers` and test both open and bring back.
+
 ## Showing the CLI
 
-A left click or the shortcut makes the helper run `node index.ts show`. All the decisions live in `showCli()` in `menubar.ts`, so the helper stays simple.
+The menu and the shortcut both run `node index.ts show`. `showCli()` in `menubar.ts` then:
 
-1. `focusRunningCli()` connects to `.build/cli.sock`. A running CLI answers on this socket. A dead CLI refuses the connection, even if the socket file was left behind, so there is no stale state to clean up. It gives up after one second.
-2. **If a CLI answers,** it writes an escape sequence to its own terminal that un-minimizes and raises its window. Then `open -a Terminal` brings Terminal to the front. This raises that exact window with no Automation permission.
-3. **If nothing answers,** `open -a Terminal .build/open-supercast.command` opens a new window. macOS treats `.command` files as scripts for Terminal, so this needs no Automation permission either. The launcher uses an absolute Node path because Terminal's `PATH` can differ from your shell's.
+1. Reads the chosen terminal.
+2. `focusRunningCli()` connects to `.build/cli.sock`. A running CLI answers on this socket with its tty path. A dead CLI refuses the connection, even if the socket file was left behind, so there is no stale state to clean up. It gives up after one second.
+3. **If a CLI answers,** the terminal's recipe brings it back.
+4. **If nothing answers,** the recipe opens `.build/open-supercast.command`. The launcher uses an absolute Node path because a terminal's `PATH` can differ from your shell's.
 
 The CLI has to stay open for this to work, so `runInteractive()` loops: after an action it clears the screen and shows search again. Exit and Esc end the loop.
 
 If you open a second CLI, such as `pnpm start` in another terminal, the newest one takes over the socket.
-
-A right click shows the Quit menu. The menu is attached only for that click, otherwise left clicks would open it too.
 
 ## The search prompt
 
@@ -104,12 +133,11 @@ The window starts with the screen cleared, the teal SUPERCAST logo from `banner.
 
 ## Stopping
 
-`pnpm menubar:stop`, or "Remove Menu Bar Item" in the search prompt, finds the helper with `pgrep` and sends it a kill signal. Quit in the right-click menu makes the helper exit by itself. Either way, the icon and shortcut go away.
+`pnpm menubar:stop`, or "Remove Menu Bar Item" in the search prompt, finds the helper with `pgrep` and sends it a kill signal. Exit in the menu makes the helper exit by itself. Either way, the icon and shortcut go away.
 
 ## Known limits
 
 - The helper doesn't restart after a reboot. Run `pnpm menubar:start` again.
 - The launcher contains the current Node path. If that path changes, run `pnpm menubar:stop`, then `pnpm menubar:start`.
 - After Exit or Esc, the next press opens a new window, and the finished one may stay open depending on your Terminal profile.
-- Raising a window relies on Terminal honouring the escape sequence. Other terminals need testing.
 - Raising a minimized window is untested.

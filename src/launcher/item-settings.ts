@@ -7,6 +7,9 @@ import { MAX_ALIASES, findAliasProblem, parseAliasInput, saveAliases } from "./a
 import { recordKeys } from "./hotkey-recorder.ts";
 import { findHotkeyProblem, formatHotkey, parseRecording, saveHotkey } from "./hotkeys.ts";
 
+export const ADD_ALIAS_LABEL = "Alias, Add (Medea)";
+export const CREATE_HOTKEY_LABEL = "Hotkey, Create (Medea)";
+
 const ADD_ALIAS = "add-alias";
 const CREATE_HOTKEY = "create-hotkey";
 const REMOVE_HOTKEY = "remove-hotkey";
@@ -82,8 +85,8 @@ const runSettingsRound = async (itemValue: string): Promise<boolean> => {
   const choice = await select({
     message: "What do you want to change?",
     options: [
-      { value: ADD_ALIAS, label: withCurrentValue("Add alias", aliasTags) },
-      { value: CREATE_HOTKEY, label: withCurrentValue("Create hotkey", formatHotkey(hotkey)) },
+      { value: ADD_ALIAS, label: withCurrentValue(ADD_ALIAS_LABEL, aliasTags) },
+      { value: CREATE_HOTKEY, label: withCurrentValue(CREATE_HOTKEY_LABEL, formatHotkey(hotkey)) },
       ...(hotkey === "" ? [] : [{ value: REMOVE_HOTKEY, label: "Remove hotkey" }]),
       ...appActions.map(({ label }) => ({ value: label, label })),
       { value: DONE, label: "Done" },

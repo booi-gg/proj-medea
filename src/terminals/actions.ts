@@ -54,7 +54,7 @@ export const runCommandItem = async (itemValue: string | undefined): Promise<voi
     await stopMenuBar();
     return;
   }
-  if (itemValue === "command:set-alias") {
+  if (itemValue === "command:set-alias" || itemValue === "command:create-hotkey") {
     await showCli();
     return;
   }

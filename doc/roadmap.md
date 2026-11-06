@@ -27,7 +27,7 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 2. **Search launcher:** done. Type to find apps and built-in commands, then press Enter.
 3. **Commands:** started. Medea apps live in `src/medea-apps/`, with Quicklinks and Clipboard History built. Loading scripts from a user folder is still to do.
 4. **Terminal choice:** done for Terminal and Ghostty, from the menu bar. Other terminals need a tested recipe in `src/terminals/terminals.ts`.
-5. **Background features:** done. Clipboard history records in the background, and Start at login in Medea Settings brings the helper back after a reboot.
+5. **Background features:** done. Clipboard history records in the background, and Start at login in Settings (Medea) brings the helper back after a reboot.
 6. **Permission features:** window management and snippets, packaged as a signed `.app`. A rebuilt bare binary may lose granted permissions, so a stable app identity will matter here.
 
 ## Later ideas

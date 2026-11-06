@@ -8,14 +8,16 @@ import { listenForRequests } from "../terminals/running-cli.ts";
 import { listApps, openApp } from "./apps.ts";
 import type { App } from "./apps.ts";
 import { formatHotkey } from "./hotkeys.ts";
-import { runItemSettings } from "./item-settings.ts";
+import { ADD_ALIAS_LABEL, CREATE_HOTKEY_LABEL, runItemSettings } from "./item-settings.ts";
 import { promptForSelection } from "./prompt.ts";
 import type { LauncherOption } from "./prompt.ts";
 import { drawScreen } from "./screen.ts";
 
 const TITLE_COLUMN_WIDTH = 40;
 const EXIT_VALUE = "command:exit";
+// Saved aliases and hotkeys use this value, so it stays when the command's name changes.
 const SET_ALIAS_VALUE = "command:set-alias";
+const CREATE_HOTKEY_VALUE = "command:create-hotkey";
 const SEARCH_PLACEHOLDER = "Cast actions";
 const PICK_ITEM_PLACEHOLDER = "Choose an app or command";
 const APP_ICON = styleText("cyan", "◆");
@@ -75,7 +77,8 @@ const buildCommandItems = (menuBarRunning: boolean): LauncherItem[] => [
   menuBarRunning
     ? toCommandItem("command:menu-bar", "Remove Menu Bar Item", stop)
     : toCommandItem("command:menu-bar", "Add Menu Bar Item", start),
-  toCommandItem(SET_ALIAS_VALUE, "Set Alias", doNothing),
+  toCommandItem(SET_ALIAS_VALUE, ADD_ALIAS_LABEL, doNothing),
+  toCommandItem(CREATE_HOTKEY_VALUE, CREATE_HOTKEY_LABEL, doNothing),
   toCommandItem(EXIT_VALUE, "Exit", doNothing),
 ];
 
@@ -107,7 +110,7 @@ const openSettingsFor = async (items: readonly LauncherItem[], value?: string): 
   return showErrorsAsNotice(withoutNotice(() => runItemSettings(item.value, item.name)));
 };
 
-const pickItemForAlias = async (getItems: GetItems): Promise<string> => {
+const pickItemForSettings = async (getItems: GetItems): Promise<string> => {
   drawScreen();
   const { value } = await promptForSelection(() => toOptions(getItems()), PICK_ITEM_PLACEHOLDER);
   return openSettingsFor(getItems(), value);
@@ -131,8 +134,8 @@ const runSearchRound = async (notice: string): Promise<RoundResult> => {
   if (wantsSettings) {
     return { keepRunning: true, notice: await openSettingsFor(getItems(), value) };
   }
-  if (value === SET_ALIAS_VALUE) {
-    return { keepRunning: true, notice: await pickItemForAlias(getItems) };
+  if (value === SET_ALIAS_VALUE || value === CREATE_HOTKEY_VALUE) {
+    return { keepRunning: true, notice: await pickItemForSettings(getItems) };
   }
   const item = getItems().find((candidate) => candidate.value === value);
   const nextNotice = item === undefined ? NO_NOTICE : await showErrorsAsNotice(item.run);

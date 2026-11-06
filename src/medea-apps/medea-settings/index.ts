@@ -13,6 +13,7 @@ import type { LauncherItem, MedeaApp } from "../types.ts";
 
 const APP_ID = "medea-settings";
 const OPEN_ID = "open";
+const NAME = "Settings (Medea)";
 const ICON = styleText("magenta", "⚙");
 const START_AT_LOGIN = "start-at-login";
 const DONE = "done";
@@ -54,7 +55,7 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
   drawScreen(notice);
   const state = await checkLoginItem();
   const choice = await select({
-    message: "Medea Settings",
+    message: NAME,
     options: [
       {
         value: START_AT_LOGIN,
@@ -80,7 +81,7 @@ const openSettings = async (): Promise<string> => {
 
 const openItem: LauncherItem = {
   value: `${APP_ID}:${OPEN_ID}`,
-  name: "Medea Settings",
+  name: NAME,
   icon: ICON,
   kind: "Command",
   needsWindow: true,

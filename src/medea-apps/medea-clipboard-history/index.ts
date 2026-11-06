@@ -122,7 +122,7 @@ const browseHistory = async (): Promise<string> => {
 
 const openItem: LauncherItem = {
   value: `${APP_ID}:${OPEN_ID}`,
-  name: "Clipboard History",
+  name: "Clipboard (Medea)",
   icon: ICON,
   kind: "Command",
   needsWindow: true,

@@ -52,7 +52,7 @@ src/
 │   │   ├── store.ts      Reads and saves the history file
 │   │   └── format.ts     Row previews and ages
 │   ├── medea-settings/
-│   │   └── index.ts      The Medea Settings screen
+│   │   └── index.ts      The Settings (Medea) screen
 │   └── medea-quicklinks/
 │       ├── index.ts      Search items and settings actions
 │       ├── store.ts      Reads and saves quicklinks.json
@@ -188,7 +188,7 @@ Aliases are stored in `~/.config/medea/config.json`, keyed by app path or comman
 
 `updateConfig()` merges changes, so saving a terminal can't wipe aliases, or the other way round. Each item can have up to two aliases of up to 8 characters, so a row stays inside its title column. Aliases are lowercase with no spaces, and two items can't share one. These limits apply when saving in settings, so a hand-edited config can go over them.
 
-**Opening settings.** Shift+Enter or Tab on a result opens that item's settings in the search window, and Done or Esc goes back to search. The Set Alias command does the same after you pick an item. An error in settings shows above the search bar instead of closing Medea.
+**Opening settings.** Shift+Enter or Tab on a result opens that item's settings in the search window, and Done or Esc goes back to search. The `Alias, Add (Medea)` and `Hotkey, Create (Medea)` commands do the same after you pick an item. An error in settings shows above the search bar instead of closing Medea.
 
 Search reads aliases on every keystroke, so a new alias works as soon as you're back in search.
 
@@ -205,9 +205,9 @@ The footer hint shows `⇧↵` in Ghostty and `tab` elsewhere. `stdin` has to be
 
 Search rows show a hotkey next to the name: `Calculator [calc] ⌃⌥9`. Any app or command can have one.
 
-Settings is a menu: **Add alias**, **Create hotkey**, **Remove hotkey** (when one is set) and **Done**. Each change saves straight away.
+Settings is a menu: **Alias, Add (Medea)**, **Hotkey, Create (Medea)**, **Remove hotkey** (when one is set) and **Done**. Each change saves straight away.
 
-**Recording.** Create hotkey opens a small native window, `native/HotkeyRecorder.swift`, which shows the keys live as you press them. A terminal can't do this, because macOS and the terminal app take combos like `Cmd+Shift+K` first. A focused window receives them directly, so it needs no permission. It's a separate binary, `.build/medea-record`, so `pgrep` for the helper can't match it.
+**Recording.** `Hotkey, Create (Medea)` opens a small native window, `native/HotkeyRecorder.swift`, which shows the keys live as you press them. A terminal can't do this, because macOS and the terminal app take combos like `Cmd+Shift+K` first. A focused window receives them directly, so it needs no permission. It's a separate binary, `.build/medea-record`, so `pgrep` for the helper can't match it.
 
 - The recorder prints the combo as JSON and exits. `parseRecording()` turns that into a saved hotkey.
 - Esc, clicking away or 60 seconds cancels it.
@@ -221,14 +221,15 @@ Settings is a menu: **Add alias**, **Create hotkey**, **Remove hotkey** (when on
 
 **Pressing a hotkey.** An item saved as a path is an app, and opens directly through `open <path>` without starting Node. Anything else runs `node src/index.ts run <value>`:
 
-| Command              | Hotkey does                                           |
-| -------------------- | ----------------------------------------------------- |
-| Exit                 | Quits the open search window                          |
-| Set Alias            | Opens Medea                                           |
-| Remove Menu Bar Item | Stops the helper, which also ends all hotkeys         |
-| Create Quicklink     | Opens a new window with the form                      |
-| Clipboard History    | Opens a new window with the list                      |
-| A quicklink          | Opens it, through a new window if it has `{argument}` |
+| Command                | Hotkey does                                           |
+| ---------------------- | ----------------------------------------------------- |
+| Exit                   | Quits the open search window                          |
+| Alias, Add (Medea)     | Opens Medea                                           |
+| Hotkey, Create (Medea) | Opens Medea                                           |
+| Remove Menu Bar Item   | Stops the helper, which also ends all hotkeys         |
+| Create Quicklink       | Opens a new window with the form                      |
+| Clipboard (Medea)      | Opens a new window with the list                      |
+| A quicklink            | Opens it, through a new window if it has `{argument}` |
 
 `src/launcher/hotkeys.ts` holds the key table, checked against `HIToolbox/Events.h`. It uses US keyboard positions.
 
@@ -293,7 +294,7 @@ A link can have up to 3 arguments. Values are percent-encoded when the link star
 
 ## Clipboard history
 
-The second Medea app. `Clipboard History` lists what you've copied, newest first, before you type anything. Typing filters by exact text, not loose letters, because loose matching on long text matches nearly everything. Enter copies the entry back and returns to search. Tab offers Copy, Delete and Delete all, and Delete all asks first.
+The second Medea app. `Clipboard (Medea)` lists what you've copied, newest first, before you type anything. Typing filters by exact text, not loose letters, because loose matching on long text matches nearly everything. Enter copies the entry back and returns to search. Tab offers Copy, Delete and Delete all, and Delete all asks first.
 
 Raycast pastes straight into the app you were using. Medea only copies, because sending Cmd+V to another app needs Accessibility permission. After choosing an entry, switch back and paste.
 
@@ -325,9 +326,9 @@ A password manager has to mark its copies for this to work, and an app that does
 
 `pbcopy` and `pbpaste` garble non-English text when the locale is empty, as it can be for the helper, so both run with `LC_CTYPE=UTF-8`.
 
-## Medea Settings
+## Settings (Medea)
 
-The third Medea app. Search `Medea Settings` for a list of toggles, where Enter flips the focused one. Esc or Done goes back to search.
+The third Medea app. Search `Settings (Medea)` for a list of toggles, where Enter flips the focused one. Esc or Done goes back to search.
 
 **Start at login** puts Medea in the menu bar when you log in, so the shortcut, hotkeys and clipboard recording survive a reboot.
 

@@ -4,6 +4,8 @@ import { readConfigSync } from "../config.ts";
 import { start, stop } from "../menubar/commands.ts";
 import { toMedeaIcon } from "../medea-apps/icon.ts";
 import { toCalculationItem } from "../medea-apps/medea-calculator/index.ts";
+import { calculate } from "../medea-apps/medea-calculator/calculate.ts";
+import { parseConversion } from "../medea-apps/medea-currency/convert.ts";
 import { toConversionItems } from "../medea-apps/medea-currency/index.ts";
 import { refreshRatesIfStale } from "../medea-apps/medea-currency/rates.ts";
 import { findMedeaItem, listMedeaItems } from "../medea-apps/registry.ts";
@@ -30,6 +32,7 @@ const SEARCH_PLACEHOLDER = "Cast actions";
 const PICK_ITEM_PLACEHOLDER = "Choose an app or command";
 const APP_ICON = styleText("cyan", "◆");
 const COMMAND_ICON = toMedeaIcon("⌘");
+const ACTIVE_SEARCH_ICON = toMedeaIcon("❯");
 
 type GetItems = () => LauncherItem[];
 
@@ -123,6 +126,11 @@ const rankWithAnswers = (query: string, options: readonly LauncherOption[]): Lau
   ];
 };
 
+const getActionSearchIcon = (query: string): string | undefined =>
+  calculate(query) !== undefined || parseConversion(query) !== undefined
+    ? ACTIVE_SEARCH_ICON
+    : undefined;
+
 // A link that fails to open shouldn't take the search window down with it.
 const showErrorsAsNotice = async (run: () => Promise<string>): Promise<string> => {
   try {
@@ -184,7 +192,7 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
   const { cancelled, value, wantsSettings, query } = await promptForSelection(
     () => toOptions(getItems()),
     SEARCH_PLACEHOLDER,
-    { rank: rankWithAnswers, replaceable: true },
+    { rank: rankWithAnswers, replaceable: true, getSearchIcon: getActionSearchIcon },
   );
   if (session.nextItem !== undefined) {
     return { keepRunning: true, notice: NO_NOTICE };

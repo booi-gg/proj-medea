@@ -68,6 +68,8 @@ export interface SelectionDisplay {
   /** True when nothing is lost by leaving, so a hotkey may switch this list for its own item. */
   replaceable?: boolean;
   initialQuery?: string;
+  /** Replaces the search arrow when the query activates a special action. */
+  getSearchIcon?: (query: string) => string | undefined;
 }
 
 let closeOpenList: (() => void) | undefined;
@@ -99,10 +101,15 @@ class SearchPrompt extends AutocompletePrompt<LauncherOption> {
   }
 }
 
-const renderSearchBar = (query: string, inputWithCursor: string, placeholder: string): string => {
+const renderSearchBar = (
+  query: string,
+  inputWithCursor: string,
+  placeholder: string,
+  icon = SEARCH_ICON,
+): string => {
   const content =
     query === "" ? `${END_OF_TEXT_CURSOR}${styleText("dim", placeholder)}` : inputWithCursor;
-  return `\n  ${SEARCH_ICON} ${content}`;
+  return `\n  ${icon} ${content}`;
 };
 
 const renderRows = (
@@ -209,6 +216,7 @@ export const promptForSelection = async (
     signal,
     replaceable = false,
     initialQuery = "",
+    getSearchIcon,
   }: SelectionDisplay = {},
 ): Promise<Selection> => {
   const baseFooter = `↵ ${enterLabel}   ${SETTINGS_KEY_HINT} ${settingsLabel}`;
@@ -259,7 +267,12 @@ export const promptForSelection = async (
       const focused = this.filteredOptions[this.cursor];
       focusedValue = focused?.value;
       onFocus?.(focusedValue);
-      const searchBar = renderSearchBar(this.userInput, this.userInputWithCursor, placeholder);
+      const searchBar = renderSearchBar(
+        this.userInput,
+        this.userInputWithCursor,
+        placeholder,
+        getSearchIcon?.(this.userInput),
+      );
       if (isEmptyQuery(this.userInput) && !listWhenEmpty) {
         return searchBar;
       }

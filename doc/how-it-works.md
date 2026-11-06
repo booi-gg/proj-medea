@@ -202,6 +202,8 @@ The window starts with the screen cleared, the MEDEA logo from `src/launcher/ban
 
 **Currency conversion.** Type `356 USD to INR` or `356 INR in USD` to see a conversion at the top of search. Target suggestions appear after `to` and narrow as you type: `356 INR to SD` suggests matching codes, with USD first. Enter or Tab copies the rounded number for the selected target. Literal symbols work too, including `$356 to INR`, `356₹ to $`, `€`, `£`, `¥` and `₩`; `$` means USD and `¥` means JPY. Unknown currency codes leave normal search results alone.
 
+The search arrow changes from cyan to Medea's magenta when the query is a calculator expression or a currency conversion, including a partial target such as `350 usd to`.
+
 The search path reads `~/.config/medea/medea-currency-rates.json` synchronously and never makes a network call. When a search window opens, Medea refreshes rates older than a day in the background from Frankfurter v2's fixed USD endpoint. The file is replaced atomically after a valid response, so a failed request leaves old rates usable. The row shows the date of each rate used, which can differ between currencies. These are daily reference rates, not live or bank exchange rates. On first use, a conversion query explains that rates are still unavailable until a download finishes; another keystroke updates the search results.
 
 **Four clack details matter here. Recheck them when upgrading clack:**

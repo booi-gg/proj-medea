@@ -9,6 +9,7 @@ The goal is a Raycast-style launcher for macOS that runs as a CLI.
 | Global shortcut                   | Yes, built | Reportedly no permission, but Raycast's manual lists Accessibility for hotkeys, so confirm with a real key press |
 | Search and open apps              | Yes, built | Nothing special                                                                                                  |
 | Search files and URLs             | Yes        | Nothing special expected                                                                                         |
+| Aliases and per-item settings     | Yes, built | Nothing special                                                                                                  |
 | Run your own scripts and commands | Yes        | Nothing special expected                                                                                         |
 | Clipboard history                 | Yes        | The helper must keep watching the clipboard                                                                      |
 | Switch windows, search menu items | Yes        | Accessibility permission                                                                                         |
@@ -25,6 +26,11 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 4. **Terminal choice:** done for Terminal and Ghostty, from the menu bar. Other terminals need a tested recipe in `src/terminals/terminals.ts`.
 5. **Background features:** clipboard history, plus start at login so the shortcut survives a reboot.
 6. **Permission features:** window management and snippets, packaged as a signed `.app`. A rebuilt bare binary may lose granted permissions, so a stable app identity will matter here.
+
+## Later ideas
+
+- **Alias plus search text:** typing an alias then a query, like `f report`. This needs commands that take input, so it belongs with step 3.
+- **More item settings:** the settings window only has aliases so far, and it's the natural home for a per-item hotkey.
 
 ## Decisions
 

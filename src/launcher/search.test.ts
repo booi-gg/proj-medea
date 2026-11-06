@@ -33,6 +33,24 @@ test("ignores case and accents", () => {
   assert.deepEqual(rankNames("cafe", "Café"), ["Café"]);
 });
 
+test("an alias beats a word in another name", () => {
+  const items = [
+    { name: "Claude Code URL Handler" },
+    { name: "Visual Studio Code", aliases: ["code"] },
+  ];
+  assert.equal(rankItems("code", items)[0]?.name, "Visual Studio Code");
+});
+
+test("finds an item by a partial alias", () => {
+  const items = [{ name: "Calculator" }, { name: "Google Chrome", aliases: ["web"] }];
+  assert.deepEqual(rankItems("we", items), [items[1]]);
+});
+
+test("finds an item by any of its aliases", () => {
+  const items = [{ name: "Visual Studio Code", aliases: ["code", "ide"] }];
+  assert.deepEqual(rankItems("ide", items), items);
+});
+
 test("drops items that do not match", () => {
   assert.deepEqual(rankNames("zzz", "Safari", "Notes"), []);
 });

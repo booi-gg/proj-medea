@@ -1,10 +1,6 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { readConfig, updateConfig } from "../config.ts";
 import { listApps } from "../launcher/apps.ts";
 import { quoteForShell, runCommand } from "../shell.ts";
-
-const configPath = join(homedir(), ".config", "medea", "config.json");
 
 // Ghostty keeps a window open after a "command" exits, leaving an empty window behind. So this
 // opens a normal shell and replaces it with exec: when the CLI exits, the window closes.
@@ -71,24 +67,12 @@ const DEFAULT_TERMINAL: TerminalName = "Terminal";
 const isTerminalName = (value: unknown): value is TerminalName =>
   typeof value === "string" && Object.hasOwn(launchers, value);
 
-/** Reads the saved terminal from config text, falling back to the default. */
-export const parseSavedTerminal = (configText: string): TerminalName => {
-  try {
-    const config: unknown = JSON.parse(configText);
-    const saved = typeof config === "object" && config !== null && "terminal" in config;
-    return saved && isTerminalName(config.terminal) ? config.terminal : DEFAULT_TERMINAL;
-  } catch {
-    return DEFAULT_TERMINAL;
-  }
-};
+/** Uses a saved name when it is supported, otherwise the default. */
+export const toTerminalName = (saved: unknown): TerminalName =>
+  isTerminalName(saved) ? saved : DEFAULT_TERMINAL;
 
-const readSavedTerminal = async (): Promise<TerminalName> => {
-  try {
-    return parseSavedTerminal(await readFile(configPath, "utf8"));
-  } catch {
-    return DEFAULT_TERMINAL;
-  }
-};
+const readSavedTerminal = async (): Promise<TerminalName> =>
+  toTerminalName((await readConfig()).terminal);
 
 export const getSelectedLauncher = async (): Promise<TerminalLauncher> =>
   launchers[await readSavedTerminal()];
@@ -114,7 +98,6 @@ export const saveTerminal = async (name: string | undefined): Promise<boolean> =
   if (name === (await readSavedTerminal())) {
     return false;
   }
-  await mkdir(dirname(configPath), { recursive: true });
-  await writeFile(configPath, `${JSON.stringify({ terminal: name }, null, 2)}\n`);
+  await updateConfig({ terminal: name });
   return true;
 };

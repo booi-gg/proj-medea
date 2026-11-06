@@ -31,10 +31,13 @@ Code is grouped by feature, and tests sit next to the file they cover.
 src/
 ├── index.ts              Routes commands. Nothing else.
 ├── paths.ts              Every project path, in one place
+├── config.ts             Reads and merges saved settings
 ├── shell.ts              Shared command runner and shell quoting
 ├── launcher/
 │   ├── launcher.ts       The search loop and its list of items
-│   ├── prompt.ts         Draws the search bar and results
+│   ├── prompt.ts         Draws the search bar and reads keys
+│   ├── item-settings.ts  The settings screen for one app or command
+│   ├── aliases.ts        Parses, checks and saves aliases
 │   ├── banner.ts         The MEDEA logo
 │   ├── search.ts         Ranks results with match-sorter
 │   └── apps.ts           Finds installed apps and opens them
@@ -44,7 +47,9 @@ src/
 └── terminals/
     ├── terminals.ts      Lists terminals, saves the choice, launches each one
     ├── running-cli.ts    Talks to a running CLI over its socket
-    └── actions.ts        Shows the CLI and changes the terminal
+    ├── launcher-script.ts Writes the scripts terminals open
+    ├── close-window.ts   Closes a finished Terminal window
+    └── actions.ts        Shows the CLI, changes terminal, opens item settings
 native/
 └── StatusItem.swift      The helper: menu bar icon, menu and global shortcut
 doc/                      These docs
@@ -145,6 +150,48 @@ The window starts with the screen cleared, the MEDEA logo from `src/launcher/ban
 - Clack keeps focus on an item for as long as it stays in the results. The `options()` getter clears focus whenever the typed text changes, so Enter always picks the top result. This sets clack's `focusedValue` field directly.
 - Clack crashes if a redraw has fewer lines than it expects. `BLANK_FRAME` keeps the same line count as the search bar when the prompt finishes.
 
+## Aliases and item settings
+
+Any app or command can have aliases, shown next to its name: `Visual Studio Code [code] [ide]`. They're searched like the name, so `code` or a partial `cod` finds it. You still press Enter to run it.
+
+Aliases are stored in `~/.config/medea/config.json`, keyed by app path or command ID:
+
+```json
+{
+  "terminal": "Ghostty",
+  "aliases": {
+    "/Applications/Visual Studio Code.app": ["code", "ide"],
+    "command:exit": ["q"]
+  }
+}
+```
+
+`updateConfig()` merges changes, so saving a terminal can't wipe aliases, or the other way round. Aliases are lowercase with no spaces, and two items can't share one.
+
+**Opening settings.** Shift+Enter or Tab on a result opens that item's settings in a new window, through `openItemSettings()`, and the search window stays where it is. The Set Alias command does the same after you pick an item. The window runs `node src/index.ts settings <value> <name>` from a `.build/settings-<hash>.command` script, with one script per item so two quick requests can't mix up items.
+
+Search reads aliases on every keystroke, so one saved in a settings window works in the open search window straight away.
+
+**Reading keys.** `readKeysInto()` in `prompt.ts` reads raw bytes before clack does, because Node can't parse Shift+Enter and would type junk into the search bar. A settings key is forwarded as a normal Enter, with a flag saying settings were asked for.
+
+| Terminal | Shift+Enter                                                                                        | Tab   |
+| -------- | -------------------------------------------------------------------------------------------------- | ----- |
+| Ghostty  | Sends `ESC[27;2;13~` by default, so it works                                                       | Works |
+| Terminal | Not on the published lists of terminals that send a distinct code, so assume it behaves like Enter | Works |
+
+The footer hint shows `⇧↵` in Ghostty and `tab` elsewhere. `stdin` has to be resumed for each prompt: a paused stream stays paused when a listener is added, and the process would exit with code 13.
+
+## Closing the window
+
+Terminal keeps a dead window open after a program exits, showing `[Process completed]`. Ghostty closes its own, so this only applies to Terminal.
+
+When search or a settings window finishes, Medea shows a **Close terminal** option, and Enter closes the window. Esc leaves it open. A window that quits because you changed terminal closes without asking.
+
+- Launcher scripts set `MEDEA_WINDOW=1`, and only those windows can close. Running `pnpm start` in your own terminal never offers this.
+- The window is found while Node is alive and closed 0.6 seconds later, so Terminal doesn't ask about running processes.
+- Only a `busy` tab can match. Terminal reuses tty names and dead windows keep them, so matching on the tty alone closes the wrong window.
+- A window with several tabs is left open.
+
 ## Stopping
 
 `pnpm menubar:stop`, or "Remove Menu Bar Item" in the search prompt, finds the helper with `pgrep` and sends it a kill signal. Exit in the menu makes the helper exit by itself. Either way, the icon and shortcut go away.
@@ -153,5 +200,5 @@ The window starts with the screen cleared, the MEDEA logo from `src/launcher/ban
 
 - The helper doesn't restart after a reboot. Run `pnpm menubar:start` again.
 - The launcher contains the current Node path. If that path changes, run `pnpm menubar:stop`, then `pnpm menubar:start`.
-- After Exit or Esc, the next press opens a new window, and the finished one may stay open depending on your Terminal profile.
+- After Exit or Esc, the next press opens a new window.
 - Raising a minimized window is untested.

@@ -1,21 +1,16 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { parseSavedTerminal } from "./terminals.ts";
+import { toTerminalName } from "./terminals.ts";
 
-test("reads a saved terminal", () => {
-  assert.equal(parseSavedTerminal('{ "terminal": "Ghostty" }'), "Ghostty");
+test("keeps a supported terminal", () => {
+  assert.equal(toTerminalName("Ghostty"), "Ghostty");
 });
 
-test("falls back to Terminal for an unsupported name", () => {
-  assert.equal(parseSavedTerminal('{ "terminal": "Notepad" }'), "Terminal");
-});
-
-test("falls back to Terminal for broken or empty config", () => {
-  assert.equal(parseSavedTerminal("not json"), "Terminal");
-  assert.equal(parseSavedTerminal("null"), "Terminal");
-  assert.equal(parseSavedTerminal("{}"), "Terminal");
+test("falls back to Terminal for an unsupported or missing name", () => {
+  assert.equal(toTerminalName("Notepad"), "Terminal");
+  assert.equal(toTerminalName(undefined), "Terminal");
 });
 
 test("does not treat inherited object keys as terminals", () => {
-  assert.equal(parseSavedTerminal('{ "terminal": "toString" }'), "Terminal");
+  assert.equal(toTerminalName("toString"), "Terminal");
 });

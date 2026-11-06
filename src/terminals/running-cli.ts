@@ -5,7 +5,8 @@ import { dirname } from "node:path";
 import { addAbortSignal } from "node:stream";
 import { text } from "node:stream/consumers";
 import { socketPath } from "../paths.ts";
-import { runCommand } from "../shell.ts";
+import { getOwnTtyPath } from "../shell.ts";
+import { closeOwnWindow } from "./close-window.ts";
 
 const REQUEST_TIMEOUT_MS = 1000;
 const QUIT_REQUEST = "quit";
@@ -13,11 +14,6 @@ const FOCUS_REQUEST = "focus";
 // Un-minimize, then raise. Terminal honours this with no Automation permission.
 const RAISE_WINDOW_SEQUENCE = "\u001B[1t\u001B[5t";
 const SHOW_CURSOR_SEQUENCE = "\u001B[?25h";
-
-const getOwnTtyPath = async (): Promise<string> => {
-  const { stdout } = await runCommand("ps", ["-o", "tty=", "-p", String(process.pid)]);
-  return `/dev/${stdout.trim()}`;
-};
 
 /** While the CLI is open it answers on this socket. A dead CLI refuses the connection. */
 export const listenForRequests = async (): Promise<() => void> => {
@@ -28,9 +24,10 @@ export const listenForRequests = async (): Promise<() => void> => {
   const server = createServer((connection) => {
     // A caller that disconnects early must not crash the open CLI.
     connection.on("error", () => connection.destroy());
-    connection.once("data", (request) => {
+    connection.once("data", async (request) => {
       if (String(request).trim() === QUIT_REQUEST) {
         process.stdout.write(SHOW_CURSOR_SEQUENCE);
+        await closeOwnWindow();
         connection.end(() => process.exit(0));
         return;
       }

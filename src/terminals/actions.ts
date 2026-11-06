@@ -1,4 +1,7 @@
-import { launcherPath } from "../paths.ts";
+import { createHash } from "node:crypto";
+import { join } from "node:path";
+import { buildDir, launcherPath } from "../paths.ts";
+import { writeLauncherScript } from "./launcher-script.ts";
 import { focusRunningCli, quitRunningCli } from "./running-cli.ts";
 import { getSelectedLauncher, saveTerminal } from "./terminals.ts";
 
@@ -19,4 +22,18 @@ export const setTerminal = async (name: string | undefined): Promise<void> => {
   if (changed) {
     await quitRunningCli();
   }
+};
+
+// One script per item, so two quick requests can't open the wrong item's settings.
+const getSettingsScriptPath = (itemValue: string): string => {
+  const itemHash = createHash("sha1").update(itemValue).digest("hex").slice(0, 12);
+  return join(buildDir, `settings-${itemHash}.command`);
+};
+
+/** Opens an item's settings in a new window, leaving the search window where it is. */
+export const openItemSettings = async (itemValue: string, itemName: string): Promise<void> => {
+  const scriptPath = getSettingsScriptPath(itemValue);
+  await writeLauncherScript(scriptPath, ["settings", itemValue, itemName]);
+  const launcher = await getSelectedLauncher();
+  await launcher.open(scriptPath);
 };

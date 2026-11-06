@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 import { intro, log } from "@clack/prompts";
+import { runItemSettings } from "./launcher/item-settings.ts";
 import { runLauncher } from "./launcher/launcher.ts";
 import { showStatus, start, stop } from "./menubar/commands.ts";
 import { setTerminal, showCli } from "./terminals/actions.ts";
+import { offerToCloseWindow } from "./terminals/close-window.ts";
 import { listTerminals } from "./terminals/terminals.ts";
 
 const main = async (): Promise<void> => {
-  const [command, argument] = process.argv.slice(2);
+  const [command, argument, itemName] = process.argv.slice(2);
 
   if (command === undefined) {
     await runLauncher();
+    await offerToCloseWindow();
     return;
   }
   if (command === "show") {
@@ -22,6 +25,12 @@ const main = async (): Promise<void> => {
   }
   if (command === "set-terminal") {
     await setTerminal(argument);
+    return;
+  }
+
+  if (command === "settings" && argument !== undefined && itemName !== undefined) {
+    await runItemSettings(argument, itemName);
+    await offerToCloseWindow();
     return;
   }
 

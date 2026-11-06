@@ -1,9 +1,16 @@
+import { PassThrough } from "node:stream";
 import { styleText } from "node:util";
-import { AutocompletePrompt } from "@clack/core";
+import { AutocompletePrompt, isCancel } from "@clack/core";
 import { rankItems } from "./search.ts";
 
 const MAX_VISIBLE_RESULTS = 8;
-const PLACEHOLDER = "Cast actions";
+const ENTER_KEY = "\r";
+const TAB_KEY = "\t";
+// Ghostty sends the first by default. The second is the kitty keyboard protocol's form.
+const SHIFT_ENTER_KEYS = ["\u001B[27;2;13~", "\u001B[13;2u"];
+const SETTINGS_KEYS = new Set([TAB_KEY, ...SHIFT_ENTER_KEYS]);
+// Terminal sends the same bytes for Shift+Enter and Enter, so Tab is the key that always works.
+const SETTINGS_KEY_HINT = process.env.TERM_PROGRAM === "ghostty" ? "⇧↵" : "tab";
 const SEARCH_ICON = styleText("cyan", "❯");
 const FOCUS_ICON = styleText("cyan", "▸");
 const EMPTY_INPUT_CURSOR = "█";
@@ -13,14 +20,21 @@ const BLANK_FRAME = "\n";
 export interface LauncherOption {
   value: string;
   name: string;
+  aliases: readonly string[];
   label: string;
+}
+
+export interface Selection {
+  cancelled: boolean;
+  value: string | undefined;
+  wantsSettings: boolean;
 }
 
 const isEmptyQuery = (query: string): boolean => query.trim() === "";
 
-const renderSearchBar = (query: string, inputWithCursor: string): string => {
+const renderSearchBar = (query: string, inputWithCursor: string, placeholder: string): string => {
   const content =
-    query === "" ? `${EMPTY_INPUT_CURSOR}${styleText("dim", PLACEHOLDER)}` : inputWithCursor;
+    query === "" ? `${EMPTY_INPUT_CURSOR}${styleText("dim", placeholder)}` : inputWithCursor;
   return `\n  ${SEARCH_ICON} ${content}`;
 };
 
@@ -33,14 +47,46 @@ const renderResults = (results: readonly LauncherOption[], cursor: number): stri
     const isFocused = item === results[cursor];
     return isFocused ? `  ${FOCUS_ICON} ${item.label}` : `    ${styleText("dim", item.label)}`;
   });
-  return `\n\n${rows.join("\n")}`;
+  const hint = styleText("dim", `↵ open   ${SETTINGS_KEY_HINT} settings`);
+  return `\n\n${rows.join("\n")}\n\n    ${hint}`;
+};
+
+/**
+ * Node can't parse the Shift+Enter sequences, so keys are read here first. A settings key becomes
+ * a normal Enter for the prompt, with a note that settings were asked for.
+ */
+const readKeysInto = (input: PassThrough, onSettingsKey: () => void): (() => void) => {
+  const forwardKey = (chunk: Buffer): void => {
+    if (SETTINGS_KEYS.has(chunk.toString())) {
+      onSettingsKey();
+      input.write(ENTER_KEY);
+      return;
+    }
+    input.write(chunk);
+  };
+  process.stdin.setRawMode(true);
+  process.stdin.on("data", forwardKey);
+  // A paused stream stays paused when a listener is added, and the process would then exit.
+  process.stdin.resume();
+
+  return () => {
+    process.stdin.off("data", forwardKey);
+    process.stdin.setRawMode(false);
+    process.stdin.pause();
+  };
 };
 
 /** A bare search bar. Results only appear once something has been typed. */
-export const promptForSelection = (items: readonly LauncherOption[]) => {
+export const promptForSelection = async (
+  getOptions: () => readonly LauncherOption[],
+  placeholder: string,
+): Promise<Selection> => {
   let lastQuery = "";
+  let wantsSettings = false;
+  const input = new PassThrough();
 
   const prompt = new AutocompletePrompt<LauncherOption>({
+    input,
     // rankItems has already chosen the results, so clack's own filter must not remove any.
     filter: () => true,
     options() {
@@ -49,18 +95,34 @@ export const promptForSelection = (items: readonly LauncherOption[]) => {
         lastQuery = this.userInput;
         this.focusedValue = undefined;
       }
-      return isEmptyQuery(this.userInput) ? [] : rankItems(this.userInput, items);
+      return isEmptyQuery(this.userInput) ? [] : rankItems(this.userInput, getOptions());
     },
     render() {
       if (this.state === "submit" || this.state === "cancel") {
         return BLANK_FRAME;
       }
-      const searchBar = renderSearchBar(this.userInput, this.userInputWithCursor);
+      const searchBar = renderSearchBar(this.userInput, this.userInputWithCursor, placeholder);
       if (isEmptyQuery(this.userInput)) {
         return searchBar;
       }
       return `${searchBar}${renderResults(this.filteredOptions, this.cursor)}`;
     },
   });
-  return prompt.prompt();
+
+  const stopReadingKeys = readKeysInto(input, () => {
+    wantsSettings = true;
+  });
+  try {
+    const result = await prompt.prompt();
+    if (isCancel(result)) {
+      return { cancelled: true, value: undefined, wantsSettings: false };
+    }
+    return {
+      cancelled: false,
+      value: typeof result === "string" ? result : undefined,
+      wantsSettings,
+    };
+  } finally {
+    stopReadingKeys();
+  }
 };

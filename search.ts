@@ -4,8 +4,10 @@ const MatchRank = {
   exact: 0,
   prefix: 1,
   wordStart: 2,
-  substring: 3,
-  letters: 4,
+  initials: 3,
+  substring: 4,
+  lettersFromStart: 5,
+  letters: 6,
 } as const;
 
 const hasLettersInOrder = (query: string, label: string): boolean => {
@@ -27,13 +29,21 @@ const getMatchRank = (query: string, label: string): number => {
   if (label.startsWith(query)) {
     return MatchRank.prefix;
   }
-  if (label.split(WORD_SEPARATORS).some((word) => word.startsWith(query))) {
+  const words = label.split(WORD_SEPARATORS);
+  if (words.some((word) => word.startsWith(query))) {
     return MatchRank.wordStart;
+  }
+  const initials = words.map((word) => word.charAt(0)).join("");
+  if (initials.startsWith(query)) {
+    return MatchRank.initials;
   }
   if (label.includes(query)) {
     return MatchRank.substring;
   }
-  return hasLettersInOrder(query, label) ? MatchRank.letters : NO_MATCH;
+  if (!hasLettersInOrder(query, label)) {
+    return NO_MATCH;
+  }
+  return label.startsWith(query.charAt(0)) ? MatchRank.lettersFromStart : MatchRank.letters;
 };
 
 /** Best matches first. Items with the same rank keep their original order. */

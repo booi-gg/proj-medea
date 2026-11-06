@@ -92,7 +92,7 @@ The window starts with the screen cleared, the teal SUPERCAST logo from `banner.
 
 **Finding apps.** `listApps()` asks Spotlight for every application bundle through `mdfind`. `toApps()` then keeps only `/Applications`, `/System/Applications`, `~/Applications` and Finder, because Spotlight also returns helper apps from places like `~/Library`.
 
-**Ranking.** `rankItems()` orders results as exact match, prefix, word start, substring, then letters in order, so `vsc` finds Visual Studio Code. Items with equal rank keep their alphabetical order.
+**Ranking.** `rankItems()` orders results as exact match, prefix, word start, initials, substring, letters in order from the first letter, then any letters in order. So `vs` puts Visual Studio Code first. Items with equal rank keep their alphabetical order.
 
 **Rows.** Each row shows an icon, the name and a faded kind: `◆` Application or `⌘` Command. The label contains colour codes, so search uses the plain `name` field instead.
 

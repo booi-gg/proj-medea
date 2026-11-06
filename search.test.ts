@@ -15,7 +15,15 @@ test("ranks exact, prefix, word start, substring, then in-order letters", () => 
   assert.deepEqual(rankNames("cat", ...names), ["Cat", "Cattle", "Big Cat", "Bobcat", "Copy Art"]);
 });
 
-test("finds initials through in-order letters", () => {
+test("ranks initials above loose letter matches", () => {
+  assert.deepEqual(rankNames("vs", "Brave Browser", "Visual Studio Code", "VoiceMemos"), [
+    "Visual Studio Code",
+    "VoiceMemos",
+    "Brave Browser",
+  ]);
+});
+
+test("finds initials", () => {
   assert.deepEqual(rankNames("vsc", "Safari", "Visual Studio Code"), ["Visual Studio Code"]);
 });
 

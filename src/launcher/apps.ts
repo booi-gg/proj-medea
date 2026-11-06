@@ -1,36 +1,47 @@
+import { readdir } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename } from "node:path";
+import { basename, join } from "node:path";
 import { runCommand } from "../shell.ts";
 
 const APP_EXTENSION = ".app";
-const APP_BUNDLE_QUERY = "kMDItemContentType == 'com.apple.application-bundle'";
 const FINDER_PATH = "/System/Library/CoreServices/Finder.app";
-const MAX_MDFIND_OUTPUT_BYTES = 10 * 1024 * 1024;
+// Reaches apps in a vendor folder, like /Applications/Adobe Photoshop/Photoshop.app.
+const MAX_FOLDER_DEPTH = 2;
 
 export interface App {
   name: string;
   path: string;
 }
 
-const isLaunchableApp = (path: string, roots: readonly string[]): boolean => {
-  if (path === FINDER_PATH) {
-    return true;
+/**
+ * Finds .app bundles by reading folders, so the list doesn't depend on Spotlight's index, which
+ * was missing at least one installed app. Bundles are never opened, so helpers stay out.
+ */
+export const findAppPaths = async (folder: string, depth: number): Promise<string[]> => {
+  const entries = await readdir(folder, { withFileTypes: true }).catch(() => []);
+  const visible = entries.filter(({ name }) => !name.startsWith("."));
+
+  const appPaths = visible
+    .filter(({ name }) => name.endsWith(APP_EXTENSION))
+    .map(({ name }) => join(folder, name));
+
+  if (depth === 0) {
+    return appPaths;
   }
-  const root = roots.find((candidate) => path.startsWith(candidate));
-  if (root === undefined || !path.endsWith(APP_EXTENSION)) {
-    return false;
-  }
-  const isNestedInAnotherApp = path.slice(root.length).includes(`${APP_EXTENSION}/`);
-  return !isNestedInAnotherApp;
+  const subfolders = visible.filter(
+    (entry) => entry.isDirectory() && !entry.name.endsWith(APP_EXTENSION),
+  );
+  const nestedPaths = await Promise.all(
+    subfolders.map(({ name }) => findAppPaths(join(folder, name), depth - 1)),
+  );
+  return [...appPaths, ...nestedPaths.flat()];
 };
 
-export const toApps = (paths: readonly string[], homeDir: string): App[] => {
-  const roots = ["/Applications/", "/System/Applications/", `${homeDir}/Applications/`];
+export const toApps = (paths: readonly string[]): App[] => {
   const appsByName = new Map<string, App>();
-
   for (const path of paths.toSorted()) {
     const name = basename(path, APP_EXTENSION);
-    if (isLaunchableApp(path, roots) && !appsByName.has(name)) {
+    if (!appsByName.has(name)) {
       appsByName.set(name, { name, path });
     }
   }
@@ -40,10 +51,9 @@ export const toApps = (paths: readonly string[], homeDir: string): App[] => {
 };
 
 export const listApps = async (): Promise<App[]> => {
-  const { stdout } = await runCommand("mdfind", [APP_BUNDLE_QUERY], {
-    maxBuffer: MAX_MDFIND_OUTPUT_BYTES,
-  });
-  return toApps(stdout.trim().split("\n"), homedir());
+  const folders = ["/Applications", "/System/Applications", join(homedir(), "Applications")];
+  const paths = await Promise.all(folders.map((folder) => findAppPaths(folder, MAX_FOLDER_DEPTH)));
+  return toApps([...paths.flat(), FINDER_PATH]);
 };
 
 export const openApp = async (path: string): Promise<void> => {

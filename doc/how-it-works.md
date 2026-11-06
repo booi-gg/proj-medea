@@ -36,7 +36,7 @@ src/
 │   ├── launcher.ts       The search loop and its list of items
 │   ├── prompt.ts         Draws the search bar and results
 │   ├── banner.ts         The SUPERCAST logo
-│   ├── search.ts         Ranks results for what you typed
+│   ├── search.ts         Ranks results with match-sorter
 │   └── apps.ts           Finds installed apps and opens them
 ├── menubar/
 │   ├── helper.ts         Builds, starts and stops the Swift helper
@@ -133,9 +133,9 @@ The window starts with the screen cleared, the teal SUPERCAST logo from `src/lau
 
 `runSearchRound()` in `src/launcher/launcher.ts` builds one list: the built-in commands, then the apps.
 
-**Finding apps.** `listApps()` asks Spotlight for every application bundle through `mdfind`. `toApps()` then keeps only `/Applications`, `/System/Applications`, `~/Applications` and Finder, because Spotlight also returns helper apps from places like `~/Library`.
+**Finding apps.** `listApps()` reads `/Applications`, `/System/Applications` and `~/Applications`, two folders deep, plus Finder. It doesn't use Spotlight, because Spotlight's results depend on its index: it missed `News.app`. VS Code also went missing from one CLI's list shortly after its Spotlight record changed, though that cause was never proven. Bundles are never opened, so helper apps inside them stay out.
 
-**Ranking.** `rankItems()` orders results as exact match, prefix, word start, initials, substring, letters in order from the first letter, then any letters in order. So `vs` puts Visual Studio Code first. Items with equal rank keep their alphabetical order.
+**Ranking.** `rankItems()` uses the [match-sorter](https://github.com/kentcdodds/match-sorter) library: exact match, then prefix, word start, substring, initials, and finally letters in order. Items that match equally well keep their alphabetical order. It was chosen by comparing fuzzysort, fzf, match-sorter and fuse.js on the real app list.
 
 **Rows.** Each row shows an icon, the name and a faded kind: `◆` Application or `⌘` Command. The label contains colour codes, so search uses the plain `name` field instead.
 

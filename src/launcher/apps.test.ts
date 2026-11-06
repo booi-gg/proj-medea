@@ -1,45 +1,58 @@
 import assert from "node:assert/strict";
-import { test } from "node:test";
-import { toApps } from "./apps.ts";
+import { mkdir, mkdtemp, rm, symlink } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { after, before, test } from "node:test";
+import { findAppPaths, toApps } from "./apps.ts";
 
-const HOME = "/Users/test";
-const toNames = (...paths: string[]): string[] => toApps(paths, HOME).map(({ name }) => name);
+let root = "";
 
-test("keeps apps from the application folders and Finder", () => {
-  assert.deepEqual(
-    toNames(
-      "/Applications/Safari.app",
-      "/System/Applications/Utilities/Terminal.app",
-      "/Users/test/Applications/Local.app",
-      "/System/Library/CoreServices/Finder.app",
-    ),
-    ["Finder", "Local", "Safari", "Terminal"],
-  );
+before(async () => {
+  root = await mkdtemp(join(tmpdir(), "supercast-apps-"));
+  await mkdir(join(root, "Top.app", "Contents", "Helpers", "Helper.app"), { recursive: true });
+  await mkdir(join(root, "Vendor", "Suite", "Nested.app"), { recursive: true });
+  await mkdir(join(root, "Vendor", "Suite", "Deep", "TooDeep.app"), { recursive: true });
+  await mkdir(join(root, ".Hidden.app"));
+  await mkdir(join(root, "Target.app"));
+  await symlink(join(root, "Target.app"), join(root, "Linked.app"));
 });
 
-test("drops helpers outside the application folders", () => {
-  assert.deepEqual(
-    toNames(
-      "/System/Library/CoreServices/Dock.app",
-      "/Users/test/Library/Application Support/zoom.us/Helper.app",
-      "/Users/other/Applications/Old.app",
-    ),
-    [],
-  );
+after(async () => {
+  await rm(root, { recursive: true, force: true });
 });
 
-test("drops apps nested inside another app", () => {
-  assert.deepEqual(
-    toNames("/Applications/Big.app", "/Applications/Big.app/Contents/Helpers/Small.app"),
-    ["Big"],
-  );
+const toRelative = (paths: string[]): string[] =>
+  paths.map((path) => path.slice(root.length + 1)).toSorted();
+
+test("finds apps, including symlinks and apps in subfolders", async () => {
+  assert.deepEqual(toRelative(await findAppPaths(root, 2)), [
+    "Linked.app",
+    "Target.app",
+    "Top.app",
+    "Vendor/Suite/Nested.app",
+  ]);
 });
 
-test("drops paths that are not apps", () => {
-  assert.deepEqual(toNames("/Applications/notes.txt", ""), []);
+test("never looks inside an app bundle", async () => {
+  const paths = await findAppPaths(root, 5);
+  assert.ok(!paths.some((path) => path.includes("Helper.app")));
+});
+
+test("stops at the depth limit", async () => {
+  assert.ok(!(await findAppPaths(root, 2)).some((path) => path.includes("TooDeep.app")));
+});
+
+test("a missing folder gives no apps", async () => {
+  assert.deepEqual(await findAppPaths(join(root, "missing"), 2), []);
+});
+
+test("names apps and sorts them", () => {
+  const names = toApps(["/Applications/Zoom.app", "/Applications/Arc.app"]).map(({ name }) => name);
+  assert.deepEqual(names, ["Arc", "Zoom"]);
 });
 
 test("keeps one app per name", () => {
-  const apps = toApps(["/Users/test/Applications/Notes.app", "/Applications/Notes.app"], HOME);
-  assert.deepEqual(apps, [{ name: "Notes", path: "/Applications/Notes.app" }]);
+  assert.deepEqual(toApps(["/Users/test/Applications/Notes.app", "/Applications/Notes.app"]), [
+    { name: "Notes", path: "/Applications/Notes.app" },
+  ]);
 });

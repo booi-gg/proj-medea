@@ -44,6 +44,8 @@ enum WindowFailure: String, Error {
 }
 
 private enum WindowTarget {
+  /// Closing an app's last window leaves that app in front with nothing to move, while another
+  /// app's window looks active. That window is the one you mean, so it's used instead.
   case focused
   /// Search itself is the focused window, so the one you were using is the next one down.
   case behindFocused
@@ -86,9 +88,10 @@ final class WindowManager {
 
   /// A hotkey has nowhere to show a message, so a failure is a beep.
   func runFromHotKey(_ command: String) {
+    let frontApp = NSWorkspace.shared.frontmostApplication?.localizedName ?? "none"
     run(command, on: .focused) { failure in
       if let failure {
-        NSLog("Medea window action failed: \(failure.rawValue)")
+        NSLog("Medea window action failed: \(failure.rawValue), front app: \(frontApp)")
         DispatchQueue.main.async { NSSound.beep() }
       }
     }
@@ -118,9 +121,9 @@ final class WindowManager {
     let frontPid = NSWorkspace.shared.frontmostApplication?.processIdentifier
     queue.async { [self] in
       do {
-        let window = try findWindow(target, frontPid: frontPid)
+        let (window, isFocused) = try findWindow(target, frontPid: frontPid)
         try perform(command, on: window, areas: areas)
-        if case .behindFocused = target {
+        if !isFocused {
           raise(window)
         }
         finish(nil)
@@ -149,19 +152,19 @@ final class WindowManager {
     return areas.sorted { ($0.minX, $0.minY) < ($1.minX, $1.minY) }
   }
 
-  private func findWindow(_ target: WindowTarget, frontPid: pid_t?) throws -> AXUIElement {
+  private func findWindow(
+    _ target: WindowTarget,
+    frontPid: pid_t?
+  ) throws -> (window: AXUIElement, isFocused: Bool) {
     let focused = frontPid.flatMap(readFocusedWindow)
-    let window: AXUIElement?
-    switch target {
-    case .focused:
-      window = focused
-    case .behindFocused:
-      window = findTopWindow(except: focused)
+    if case .focused = target, let focused {
+      return (focused, true)
     }
-    guard let window else {
+    // With nothing focused there's nothing to skip, so this is simply the top window.
+    guard let window = findTopWindow(except: focused) else {
       throw WindowFailure.noWindow
     }
-    return window
+    return (window, false)
   }
 
   private func toAppElement(pid: pid_t) -> AXUIElement {

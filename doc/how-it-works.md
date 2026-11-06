@@ -258,7 +258,7 @@ Settings is a menu: **Alias, Add**, **Hotkey, Create**, **Remove hotkey** (when 
 | Clipboard            | Shows the list in the Medea window                        |
 | A quicklink          | Opens it, through the Medea window if it has `{argument}` |
 
-**Seeing them all.** `Hotkeys, Show All` lists everything with a saved hotkey, and `Window Hotkeys, Show All` lists every window action, including any with no hotkey. Each window action has a small diagram, a gray screen with the filled part showing where the window ends up, and a few words when a diagram can't show it. Enter runs the row and Tab opens its settings. The list stays open after running something, so you can try several in a row, and Esc goes back. It shows as many rows as the window has room for.
+**Seeing them all.** `Hotkeys, Show All` lists everything with a saved hotkey, and `Window Hotkeys, Show All` lists every window action, including any with no hotkey. Each window action has a small diagram, a bracketed screen with the filled part showing where the window ends up, and a few words when a diagram can't show it. Enter runs the row and Tab opens its settings. The list stays open after running something, so you can try several in a row, and Esc goes back. It shows as many rows as the window has room for.
 
 **One window.** A hotkey for an item that needs a window sends `run <item>` over the socket before opening anything, so a second press never opens a second window. What the open window does depends on what it's showing:
 
@@ -406,6 +406,8 @@ Rectangle-style window moves: halves, quarters, thirds, two-thirds, Maximize, Ce
 | ------ | --------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------- |
 | Hotkey | `node src/start.js hotkeys` gives the helper the command up front, so Node never starts | The focused window                        | Beeps and writes `helper.log` |
 | Search | `window <command>` over `.build/helper.sock`                                            | The window behind Medea, which then rises | Shows a red line above search |
+
+**A front app with no windows.** Closing Medea closes its Terminal window, but Terminal stays the front app, while another app's window still looks active. A hotkey then finds nothing focused, so it moves the top window on screen and brings it forward, the same way search does.
 
 **Finding the window from search.** Medea's own window is focused when you press Enter, so moving the focused window would move Medea. The helper walks the on-screen window list, which runs front to back and needs no permission, and takes the first window that isn't the focused one. Only Accessibility can move a window, so each entry is matched to an app's window by its frame. This keeps no state, so it works however Medea was opened, including from another window of the same terminal.
 

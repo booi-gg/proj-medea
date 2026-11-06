@@ -1,4 +1,3 @@
-import { styleText } from "node:util";
 import { readConfig, updateConfig } from "../../config.ts";
 import { reloadHotkeys } from "../../menubar/helper.ts";
 import { sendHelperRequest } from "../../menubar/helper-socket.ts";
@@ -35,8 +34,9 @@ const runWindowCommand = async (command: string): Promise<string> => {
   return "";
 };
 
-// The gray is the screen, so the empty part of a diagram still reads as part of it.
-const toDiagram = (diagram: string): string => styleText("bgGray", toMedeaIcon(diagram));
+// Terminal rows touch, so a filled background would join every diagram into one block. The
+// brackets stop short of the row's edges, which keeps each screen apart from its neighbours.
+const toDiagram = (diagram: string): string => `[${toMedeaIcon(diagram)}]`;
 
 const toItem = ({ id, name, command, diagram, hint }: WindowAction): LauncherItem => ({
   value: toWindowValue(id),

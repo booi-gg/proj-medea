@@ -16,13 +16,13 @@ test("says when an item has no hotkey", () => {
 });
 
 test("draws the diagram in place of the icon, and adds any words after the hotkey", () => {
-  const row = toPlainRow({ ...entry, diagram: "███   ", hint: "Some words" }, "ctrl+option+left");
-  assert.match(row, /^███ {3} Left Half\s+⌃⌥←\s+Some words$/);
+  const row = toPlainRow({ ...entry, diagram: "[█▌ ]", hint: "Some words" }, "ctrl+option+left");
+  assert.match(row, /^\[█▌ \] Left Half\s+⌃⌥←\s+Some words$/);
 });
 
 test("names line up whether or not a row has a diagram", () => {
   const plain = toPlainRow(entry, "ctrl+option+c");
-  const drawn = toPlainRow({ ...entry, diagram: "██████" }, "ctrl+option+c");
+  const drawn = toPlainRow({ ...entry, diagram: "[███]" }, "ctrl+option+c");
   assert.equal(plain.indexOf("Left Half"), drawn.indexOf("Left Half"));
 });
 

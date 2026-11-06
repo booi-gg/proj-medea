@@ -15,7 +15,7 @@ import { drawScreen } from "./screen.ts";
 
 const NAME_COLUMN_WIDTH = 22;
 const HOTKEY_COLUMN_WIDTH = 8;
-const DIAGRAM_WIDTH = 6;
+const DIAGRAM_WIDTH = 5;
 const MIN_VISIBLE_ROWS = 8;
 // The logo, title, notice, search bar and footer.
 const ROWS_AROUND_LIST = 16;

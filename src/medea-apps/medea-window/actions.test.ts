@@ -12,9 +12,9 @@ test("action IDs and default hotkeys are unique", () => {
   assert.equal(new Set(hotkeys).size, hotkeys.length);
 });
 
-test("every diagram is six columns, so rows line up", () => {
+test("every diagram is three columns, so rows line up", () => {
   for (const { id, diagram } of WINDOW_ACTIONS) {
-    assert.equal(diagram.length, 6, id);
+    assert.equal(diagram.length, 3, id);
   }
 });
 

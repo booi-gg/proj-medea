@@ -3,7 +3,7 @@
 Medea is a command-line launcher for macOS. It is made of two programs:
 
 - **The CLI** (TypeScript and clack) shows the search prompt, and stays open until you exit it.
-- **The helper** (a small Swift program) stays running. It owns the menu bar icon and the global shortcut.
+- **The helper** (a small Swift program) stays running. It owns the menu bar icon, the global shortcut and moving windows.
 
 TypeScript can't call macOS AppKit directly, so anything that must stay alive in the background lives in the helper.
 
@@ -34,6 +34,7 @@ src/
 ├── paths.ts              Every project path, in one place
 ├── config.ts             Reads and merges saved settings
 ├── shell.ts              Shared command runner and shell quoting
+├── socket.ts             Sends one request over a Unix socket
 ├── launcher/
 │   ├── launcher.ts       The search loop and its list of items
 │   ├── prompt.ts         Draws the search bar and reads keys
@@ -48,6 +49,7 @@ src/
 │   └── apps.ts           Finds installed apps and opens them
 ├── medea-apps/
 │   ├── types.ts          What an app gives the launcher
+│   ├── icon.ts           Gives Medea's own items their reserved icon colour
 │   ├── registry.ts       The list of installed apps
 │   ├── medea-clipboard-history/
 │   │   ├── index.ts      The history list and its actions
@@ -56,7 +58,10 @@ src/
 │   │   ├── syntax.ts     Colours code, and leaves other text alone
 │   │   └── image-window.ts Runs the native window that shows images
 │   ├── medea-settings/
-│   │   └── index.ts      The Settings (Medea) screen
+│   │   └── index.ts      The Settings screen
+│   ├── medea-window/
+│   │   ├── index.ts      Search items and failure messages
+│   │   └── actions.ts    The window actions and their default hotkeys
 │   └── medea-quicklinks/
 │       ├── index.ts      Search items and settings actions
 │       ├── store.ts      Reads and saves quicklinks.json
@@ -65,6 +70,8 @@ src/
 │       └── form.ts       The create, edit and argument prompts
 ├── menubar/
 │   ├── helper.ts         Builds, starts and stops the Swift helper
+│   ├── helper-socket.ts  Talks to the running helper over its socket
+│   ├── signing.ts        Signs the helper so permissions survive a rebuild
 │   ├── login-item.ts     Turns Start at login on and off
 │   └── commands.ts       The start, stop and status commands
 └── terminals/
@@ -74,7 +81,11 @@ src/
     ├── close-window.ts   Closes a finished Terminal window
     └── actions.ts        Shows the CLI, changes terminal, opens item windows
 native/
-├── StatusItem.swift      The helper: menu bar icon, menu and global shortcuts
+├── main.swift            The helper's startup code
+├── StatusItem.swift      Menu bar icon, menu, global shortcuts and clipboard watcher
+├── HelperSocket.swift    Answers requests from the CLI
+├── WindowManager.swift   Finds and moves windows through the Accessibility API
+├── WindowGeometry.swift  Works out frames, with no system calls
 ├── HotkeyRecorder.swift  The window that records a hotkey
 └── ImagePreview.swift    The floating window that shows clipboard images
 doc/                      These docs
@@ -88,6 +99,7 @@ pnpm start            # open the search prompt
 pnpm menubar:start    # start the helper
 pnpm menubar:stop     # stop the helper
 pnpm menubar:status   # check whether it is running
+pnpm menubar:sign     # one-time: keep Accessibility permission across rebuilds
 pnpm test             # run unit tests
 pnpm typecheck
 pnpm check            # format and lint
@@ -98,7 +110,7 @@ pnpm check            # format and lint
 `pnpm menubar:start` calls `startMenuBar()` in `src/menubar/helper.ts`:
 
 1. `pgrep` looks for a running helper. If there is one, nothing else happens, so you never get two icons.
-2. `swiftc` compiles `native/StatusItem.swift` to `.build/medea-status`. This is skipped if the binary is newer than the source.
+2. `swiftc` compiles the helper's files to `.build/medea-status`, then signs it if the local signing identity exists. Compiling is skipped if the binary is newer than every source. `swiftc` only allows top-level code in a file called `main.swift`, so startup code lives there.
 3. It writes `.build/open-medea.command`, a script that goes to the project folder and runs `node src/start.js`.
 4. It starts the helper with `detached: true`, then `unref()`, so the CLI can exit while the helper keeps running. Helper output goes to `.build/helper.log`.
 
@@ -111,7 +123,7 @@ If the helper is already running, `start` does nothing, even if the Swift file c
 3. `GlobalHotKey` registers `Cmd+Shift+Space` with Carbon's `RegisterEventHotKey`. The result is written to `helper.log`, where status `0` means success.
 4. `app.run()` starts the event loop. The helper must stay alive: if it exits, the icon and shortcut go with it.
 
-No `.app` bundle or `Info.plist` is needed. The helper runs as a bare, ad-hoc signed binary.
+No `.app` bundle or `Info.plist` is needed. The helper runs as a bare binary, ad-hoc signed until `pnpm menubar:sign` has been run.
 
 ## The menu
 
@@ -174,7 +186,7 @@ The window starts with the screen cleared, the MEDEA logo from `src/launcher/ban
 
 **Ranking.** `rankItems()` uses the [match-sorter](https://github.com/kentcdodds/match-sorter) library: exact match, then prefix, word start, substring, initials, and finally letters in order. Items that match equally well keep their alphabetical order. It was chosen by comparing fuzzysort, fzf, match-sorter and fuse.js on the real app list.
 
-**Rows.** Each row shows an icon, the name and a faded kind: `◆` Application or `⌘` Command. The label contains colour codes, so search uses the plain `name` field instead.
+**Rows.** Each row shows an icon, the name and a faded kind: `◆` Application or `⌘` Command. The label contains colour codes, so search uses the plain `name` field instead. Magenta icons are reserved for Medea's own apps and commands, and `toMedeaIcon()` is the only place that sets it.
 
 **Three clack details matter here. Recheck them when upgrading clack:**
 
@@ -200,7 +212,7 @@ Aliases are stored in `~/.config/medea/config.json`, keyed by app path or comman
 
 `updateConfig()` merges changes, so saving a terminal can't wipe aliases, or the other way round. Each item can have up to two aliases of up to 8 characters, so a row stays inside its title column. Aliases are lowercase with no spaces, and two items can't share one. These limits apply when saving in settings, so a hand-edited config can go over them.
 
-**Opening settings.** Shift+Enter or Tab on a result opens that item's settings in the search window, and Done or Esc goes back to search. The `Alias, Add (Medea)` and `Hotkey, Create (Medea)` commands do the same after you pick an item. An error in settings shows above the search bar instead of closing Medea.
+**Opening settings.** Shift+Enter or Tab on a result opens that item's settings in the search window, and Done or Esc goes back to search. The `Alias, Add` and `Hotkey, Create` commands do the same after you pick an item. An error in settings shows above the search bar instead of closing Medea.
 
 Search reads aliases on every keystroke, so a new alias works as soon as you're back in search.
 
@@ -217,9 +229,9 @@ The footer hint shows `⇧↵` in Ghostty and `tab` elsewhere. `stdin` has to be
 
 Search rows show a hotkey next to the name: `Calculator [calc] ⌃⌥9`. Any app or command can have one.
 
-Settings is a menu: **Alias, Add (Medea)**, **Hotkey, Create (Medea)**, **Remove hotkey** (when one is set) and **Done**. Each change saves straight away.
+Settings is a menu: **Alias, Add**, **Hotkey, Create**, **Remove hotkey** (when one is set) and **Done**. Each change saves straight away.
 
-**Recording.** `Hotkey, Create (Medea)` opens a small native window, `native/HotkeyRecorder.swift`, which shows the keys live as you press them. A terminal can't do this, because macOS and the terminal app take combos like `Cmd+Shift+K` first. A focused window receives them directly, so it needs no permission. It's a separate binary, `.build/medea-record`, so `pgrep` for the helper can't match it.
+**Recording.** `Hotkey, Create` opens a small native window, `native/HotkeyRecorder.swift`, which shows the keys live as you press them. A terminal can't do this, because macOS and the terminal app take combos like `Cmd+Shift+K` first. A focused window receives them directly, so it needs no permission. It's a separate binary, `.build/medea-record`, so `pgrep` for the helper can't match it.
 
 - The recorder prints the combo as JSON and exits. `parseRecording()` turns that into a saved hotkey.
 - Esc, clicking away or 60 seconds cancels it.
@@ -231,17 +243,17 @@ Settings is a menu: **Alias, Add (Medea)**, **Hotkey, Create (Medea)**, **Remove
 2. The CLI sends the running helper `SIGUSR1`, so the hotkey works with no restart.
 3. The helper runs `node src/start.js hotkeys`, which turns saved hotkeys into Carbon key codes and flags, and registers them. `helper.log` records each result, where status `0` means success.
 
-**Pressing a hotkey.** An item saved as a path is an app, and opens directly through `open <path>` without starting Node. Anything else runs `node src/start.js run <value>`:
+**Pressing a hotkey.** An item saved as a path is an app, and opens directly through `open <path>` without starting Node. A window action also runs in the helper. Anything else runs `node src/start.js run <value>`:
 
-| Command                   | Hotkey does                                               |
-| ------------------------- | --------------------------------------------------------- |
-| Exit                      | Quits the open search window                              |
-| Alias, Add (Medea)        | Opens Medea                                               |
-| Hotkey, Create (Medea)    | Opens Medea                                               |
-| Remove Menu Bar Item      | Stops the helper, which also ends all hotkeys             |
-| Quicklink, Create (Medea) | Shows the form in the Medea window                        |
-| Clipboard (Medea)         | Shows the list in the Medea window                        |
-| A quicklink               | Opens it, through the Medea window if it has `{argument}` |
+| Command              | Hotkey does                                               |
+| -------------------- | --------------------------------------------------------- |
+| Exit                 | Quits the open search window                              |
+| Alias, Add           | Opens Medea                                               |
+| Hotkey, Create       | Opens Medea                                               |
+| Remove Menu Bar Item | Stops the helper, which also ends all hotkeys             |
+| Quicklink, Create    | Shows the form in the Medea window                        |
+| Clipboard            | Shows the list in the Medea window                        |
+| A quicklink          | Opens it, through the Medea window if it has `{argument}` |
 
 **One window.** A hotkey for an item that needs a window sends `run <item>` over the socket before opening anything, so a second press never opens a second window. What the open window does depends on what it's showing:
 
@@ -282,7 +294,7 @@ An item with `needsWindow: true` asks for input, so its hotkey opens a new windo
 
 ## Quicklinks
 
-The first Medea app, modelled on Raycast's. `Quicklink, Create (Medea)` asks for a name, a link and an optional app to open it with. Links appear in search with a `↗` icon, and aliases and hotkeys work as they do for apps. Tab opens settings, which add `Edit link` and `Delete link`.
+The first Medea app, modelled on Raycast's. `Quicklink, Create` asks for a name, a link and an optional app to open it with. Links appear in search with a `↗` icon, and aliases and hotkeys work as they do for apps. Tab opens settings, which add `Edit link` and `Delete link`.
 
 Links are stored in `~/.config/medea/medea-quicklinks.json`:
 
@@ -317,7 +329,7 @@ A link can have up to 3 arguments. Values are percent-encoded when the link star
 
 ## Clipboard history
 
-The second Medea app. `Clipboard (Medea)` lists what you've copied, newest first, before you type anything. Typing filters by exact text, not loose letters, because loose matching on long text matches nearly everything. Enter copies the entry back and returns to search. Tab offers Copy, View full text or Open image, Delete and Delete all, and Delete all asks first.
+The second Medea app. `Clipboard` lists what you've copied, newest first, before you type anything. Typing filters by exact text, not loose letters, because loose matching on long text matches nearly everything. Enter copies the entry back and returns to search. Tab offers Copy, View full text or Open image, Delete and Delete all, and Delete all asks first.
 
 Raycast pastes straight into the app you were using. Medea only copies, because sending Cmd+V to another app needs Accessibility permission. After choosing an entry, switch back and paste.
 
@@ -365,7 +377,7 @@ Copies are recorded one at a time, so two quick copies can't overwrite each othe
 
 A password manager has to mark its copies for this to work, and an app that doesn't will be recorded like any other.
 
-**Storage.** `~/.config/medea/medea-clipboard-history.json` keeps entries for 3 months by default. Settings (Medea) offers 3, 4 or 5 months or 1 year, with nothing unlimited, saved as `clipboardHistoryMonths` in `config.json`, and asks first if a shorter choice would delete anything. Old entries go on each copy and when the history opens. So heavy use can't fill the disk or slow every copy, history also stops at 5,000 entries, 20 million characters of text and 2 GB of images, dropping the oldest first. Images live in `~/.config/medea/medea-clipboard-history/` as `<hash>.png`. Images over 30 MB are skipped. Each save removes any image no entry mentions, so deleting an entry frees its files.
+**Storage.** `~/.config/medea/medea-clipboard-history.json` keeps entries for 3 months by default. Settings offers 3, 4 or 5 months or 1 year, with nothing unlimited, saved as `clipboardHistoryMonths` in `config.json`, and asks first if a shorter choice would delete anything. Old entries go on each copy and when the history opens. So heavy use can't fill the disk or slow every copy, history also stops at 5,000 entries, 20 million characters of text and 2 GB of images, dropping the oldest first. Images live in `~/.config/medea/medea-clipboard-history/` as `<hash>.png`. Images over 30 MB are skipped. Each save removes any image no entry mentions, so deleting an entry frees its files.
 
 None of this is encrypted, and only your user can read it. Saving writes a temporary file and renames it, so a reader never sees half a file.
 
@@ -377,9 +389,42 @@ Text is copied back with `pbcopy`. Images go through AppleScript's `set the clip
 
 `pbcopy` and `pbpaste` garble non-English text when the locale is empty, as it can be for the helper, so both run with `LC_CTYPE=UTF-8`.
 
-## Settings (Medea)
+## Window actions
 
-The third Medea app. Search `Settings (Medea)` for a list of toggles, where Enter flips the focused one. Esc or Done goes back to search.
+Rectangle-style window moves: halves, quarters, thirds, two-thirds, Maximize, Center, Restore Window, and Next and Previous Display. They appear in search with a `▣` icon and the kind `Window`, and aliases and hotkeys work as they do for anything else. It's written directly on Apple's Accessibility API, which is what Rectangle uses too, so nothing else needs to be installed.
+
+**Where the code sits.** `src/medea-apps/medea-window/actions.ts` is the one list of actions, so adding a placement needs no Swift. A placement is four fractions of the display, like `place 0 0 0.5 1` for the left half. The helper only understands `place`, `center`, `restore` and `display`. Moving needs the helper because it holds the permission, and Restore needs a process that stays running to remember frames.
+
+**Two ways in.**
+
+| From   | Path                                                                                    | Moves                                     | A failure                     |
+| ------ | --------------------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------- |
+| Hotkey | `node src/start.js hotkeys` gives the helper the command up front, so Node never starts | The focused window                        | Beeps and writes `helper.log` |
+| Search | `window <command>` over `.build/helper.sock`                                            | The window behind Medea, which then rises | Shows a red line above search |
+
+**Finding the window from search.** Medea's own window is focused when you press Enter, so moving the focused window would move Medea. The helper walks the on-screen window list, which runs front to back and needs no permission, and takes the first window that isn't the focused one. Only Accessibility can move a window, so each entry is matched to an app's window by its frame. This keeps no state, so it works however Medea was opened, including from another window of the same terminal.
+
+**Moving the window.**
+
+- The display is the one holding most of the window. Its area leaves out the menu bar and Dock, and is converted from AppKit's bottom-left origin to Accessibility's top-left one.
+- Size is set, then position, then size again. The first fits the window to where it's going, and the last undoes any limit macOS applied at the old position.
+- `AXEnhancedUserInterface` is switched off during the move and back on after, because Chrome and Electron animate each step while it's on.
+- Apps can refuse a size. Terminal snaps to its character grid, for example. A window against the right or bottom edge then moves back to that edge.
+- Accessibility calls wait on the other app, so they run on their own queue with a half-second timeout, away from the thread that answers hotkeys.
+
+**Restore.** The first move saves the window's frame. Further moves keep it, unless you've moved the window yourself since. It's held in memory, so restarting the helper forgets it.
+
+**Default hotkeys.** `Window Hotkeys, Add Defaults` fills in Rectangle's layout, such as `⌃⌥←` and `⌃⌥U`, and skips anything already taken or set. macOS can't tell Medea when another app registers the same keys, so quit Rectangle first or both will act.
+
+**Permission.** The helper needs Accessibility, not the CLI, so the CLI asks it over the socket. The Window actions row in Settings shows the state and opens the right page. macOS ties the grant to the binary's signature:
+
+- An ad-hoc signature changes with every build, so a rebuilt helper can show as allowed in System Settings and still be refused. Remove it from the list and add it again.
+- `pnpm menubar:sign` creates a `Medea Local Signing` certificate in the login keychain, once, and every build after that signs with it. It needs running by hand because it changes the keychain.
+- A process started from a terminal may be counted as part of that terminal for this permission, and one started at login as itself. This hasn't been tested yet.
+
+## Settings
+
+The third Medea app. Search `Settings` for a list of toggles, where Enter flips the focused one. Esc or Done goes back to search.
 
 **Start at login** puts Medea in the menu bar when you log in, so the shortcut, hotkeys and clipboard recording survive a reboot.
 

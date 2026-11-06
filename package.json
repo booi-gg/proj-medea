@@ -12,6 +12,7 @@
     "menubar:start": "node src/start.js start",
     "menubar:stop": "node src/start.js stop",
     "menubar:status": "node src/start.js status",
+    "menubar:sign": "node src/start.js sign",
     "typecheck": "tsc",
     "check": "vp check",
     "format": "vp fmt",

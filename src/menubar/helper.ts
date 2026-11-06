@@ -7,15 +7,16 @@ import {
   cliEntryPath,
   helperLogPath,
   helperPath,
+  helperSourcePaths,
   imagePreviewPath,
   imagePreviewSourcePath,
   launcherPath,
   recorderPath,
   recorderSourcePath,
-  swiftSourcePath,
 } from "../paths.ts";
 import { runCommand } from "../shell.ts";
 import { writeLauncherScript } from "../terminals/launcher-script.ts";
+import { signHelper } from "./signing.ts";
 
 const PGREP_NO_MATCH_EXIT_CODE = 1;
 
@@ -34,26 +35,32 @@ const findHelperPids = async (): Promise<number[]> => {
   }
 };
 
-const isBuildCurrent = async (sourcePath: string, binaryPath: string): Promise<boolean> => {
+const isBuildCurrent = async (
+  sourcePaths: readonly string[],
+  binaryPath: string,
+): Promise<boolean> => {
   if (!existsSync(binaryPath)) {
     return false;
   }
-  const [source, binary] = await Promise.all([stat(sourcePath), stat(binaryPath)]);
-  return binary.mtimeMs >= source.mtimeMs;
+  const [binary, sources] = await Promise.all([
+    stat(binaryPath),
+    Promise.all(sourcePaths.map((sourcePath) => stat(sourcePath))),
+  ]);
+  return sources.every((source) => binary.mtimeMs >= source.mtimeMs);
 };
 
-const compileSwift = async (sourcePath: string, binaryPath: string): Promise<void> => {
-  if (await isBuildCurrent(sourcePath, binaryPath)) {
+const compileSwift = async (sourcePaths: readonly string[], binaryPath: string): Promise<void> => {
+  if (await isBuildCurrent(sourcePaths, binaryPath)) {
     return;
   }
   await mkdir(buildDir, { recursive: true });
-  await runCommand("swiftc", ["-O", sourcePath, "-o", binaryPath, "-framework", "AppKit"]);
+  await runCommand("swiftc", ["-O", ...sourcePaths, "-o", binaryPath, "-framework", "AppKit"]);
 };
 
-export const buildRecorder = (): Promise<void> => compileSwift(recorderSourcePath, recorderPath);
+export const buildRecorder = (): Promise<void> => compileSwift([recorderSourcePath], recorderPath);
 
 export const buildImagePreview = (): Promise<void> =>
-  compileSwift(imagePreviewSourcePath, imagePreviewPath);
+  compileSwift([imagePreviewSourcePath], imagePreviewPath);
 
 export const isMenuBarRunning = async (): Promise<boolean> => {
   const pids = await findHelperPids();
@@ -62,7 +69,8 @@ export const isMenuBarRunning = async (): Promise<boolean> => {
 
 /** Builds everything the helper needs to run. */
 export const prepareMenuBar = async (): Promise<void> => {
-  await compileSwift(swiftSourcePath, helperPath);
+  await compileSwift(helperSourcePaths, helperPath);
+  await signHelper();
   await buildRecorder();
   await buildImagePreview();
   await writeLauncherScript(launcherPath);

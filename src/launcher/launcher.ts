@@ -1,6 +1,7 @@
 import { styleText } from "node:util";
 import { readConfigSync } from "../config.ts";
 import { start, stop } from "../menubar/commands.ts";
+import { toMedeaIcon } from "../medea-apps/icon.ts";
 import { findMedeaItem, listMedeaItems } from "../medea-apps/registry.ts";
 import type { LauncherItem } from "../medea-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
@@ -21,7 +22,7 @@ const CREATE_HOTKEY_VALUE = "command:create-hotkey";
 const SEARCH_PLACEHOLDER = "Cast actions";
 const PICK_ITEM_PLACEHOLDER = "Choose an app or command";
 const APP_ICON = styleText("cyan", "◆");
-const COMMAND_ICON = styleText("magenta", "⌘");
+const COMMAND_ICON = toMedeaIcon("⌘");
 
 type GetItems = () => LauncherItem[];
 

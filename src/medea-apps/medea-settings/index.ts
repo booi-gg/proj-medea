@@ -8,6 +8,8 @@ import {
 } from "../../config.ts";
 import type { HistoryMonths } from "../../config.ts";
 import { drawScreen } from "../../launcher/screen.ts";
+import { askForWindowAccess, readWindowAccess } from "../../menubar/helper-socket.ts";
+import type { WindowAccess } from "../../menubar/helper-socket.ts";
 import {
   disableLoginItem,
   enableLoginItem,
@@ -17,14 +19,16 @@ import {
 } from "../../menubar/login-item.ts";
 import type { LoginItemState } from "../../menubar/login-item.ts";
 import { countEntriesToRemove, removeExpiredEntries } from "../medea-clipboard-history/store.ts";
+import { toMedeaIcon } from "../icon.ts";
 import type { LauncherItem, MedeaApp } from "../types.ts";
 
 const APP_ID = "medea-settings";
 const OPEN_ID = "open";
-const NAME = "Settings (Medea)";
-const ICON = styleText("magenta", "⚙");
+const NAME = "Settings";
+const ICON = toMedeaIcon("⚙");
 const START_AT_LOGIN = "start-at-login";
 const CLIPBOARD_HISTORY = "clipboard-history";
+const WINDOW_ACCESS = "window-access";
 const DONE = "done";
 const MONTHS_IN_YEAR = 12;
 
@@ -32,6 +36,23 @@ const STATE_LABELS: Record<LoginItemState, string> = {
   on: styleText("green", "● On"),
   off: styleText("gray", "○ Off"),
   blocked: styleText("yellow", "▲ Blocked in System Settings"),
+};
+
+const WINDOW_ACCESS_LABELS: Record<WindowAccess, string> = {
+  granted: styleText("green", "● On"),
+  missing: styleText("yellow", "▲ Needs Accessibility"),
+  "no-helper": styleText("gray", "○ Menu bar item not running"),
+};
+
+const fixWindowAccess = async (access: WindowAccess): Promise<string> => {
+  if (access === "granted") {
+    return "Window actions are ready";
+  }
+  if (access === "no-helper") {
+    return "Use Add Menu Bar Item first, then come back";
+  }
+  await askForWindowAccess();
+  return "Turn on medea-status under Accessibility, then come back";
 };
 
 const toggleStartAtLogin = async (state: LoginItemState): Promise<string> => {
@@ -98,10 +119,8 @@ const chooseHistoryMonths = async (current: HistoryMonths): Promise<string> => {
 /** Shows the menu once. Returns the line to show next, or undefined when finished. */
 const runSettingsRound = async (notice: string): Promise<string | undefined> => {
   drawScreen({ title: "Settings", icon: ICON, notice });
-  const [state, { clipboardHistoryMonths = DEFAULT_HISTORY_MONTHS }] = await Promise.all([
-    checkLoginItem(),
-    readConfig(),
-  ]);
+  const [state, { clipboardHistoryMonths = DEFAULT_HISTORY_MONTHS }, windowAccess] =
+    await Promise.all([checkLoginItem(), readConfig(), readWindowAccess()]);
   const choice = await select({
     message: "Choose a setting",
     options: [
@@ -115,11 +134,19 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
         label: `Keep clipboard history  ${toMonthsLabel(clipboardHistoryMonths)}`,
         hint: "Older entries are deleted",
       },
+      {
+        value: WINDOW_ACCESS,
+        label: `Window actions  ${WINDOW_ACCESS_LABELS[windowAccess]}`,
+        hint: "Moves and resizes other apps' windows",
+      },
       { value: DONE, label: "Done" },
     ],
   });
   if (isCancel(choice) || choice === DONE) {
     return undefined;
+  }
+  if (choice === WINDOW_ACCESS) {
+    return fixWindowAccess(windowAccess);
   }
   return choice === CLIPBOARD_HISTORY
     ? chooseHistoryMonths(clipboardHistoryMonths)

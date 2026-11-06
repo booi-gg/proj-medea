@@ -1,6 +1,7 @@
 import { log, spinner } from "@clack/prompts";
 import { isMenuBarRunning, startMenuBar, stopMenuBar } from "./helper.ts";
 import { refreshLoginItem } from "./login-item.ts";
+import { setUpSigning, signHelper } from "./signing.ts";
 
 export const start = async (): Promise<void> => {
   const progress = spinner();
@@ -18,6 +19,13 @@ export const start = async (): Promise<void> => {
 export const stop = async (): Promise<void> => {
   await stopMenuBar();
   log.success("Menu bar item stopped");
+};
+
+/** Keeps the Accessibility permission across rebuilds. It adds a certificate to the keychain. */
+export const sign = async (): Promise<void> => {
+  await setUpSigning();
+  await signHelper();
+  log.success("Signed. Run menubar:stop then menubar:start, and allow medea-status once more");
 };
 
 export const showStatus = async (): Promise<void> => {

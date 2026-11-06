@@ -16,7 +16,7 @@ The goal is a Raycast-style launcher for macOS that runs as a CLI.
 | Start at login                    | Yes, built | Nothing to grant. macOS shows a notice, and the item can be switched off in System Settings                      |
 | Clipboard history                 | Yes, built | The helper watches the clipboard. Pasting into the previous app would need Accessibility permission              |
 | Switch windows, search menu items | Yes        | Accessibility permission                                                                                         |
-| Move and resize windows           | Yes        | Accessibility permission                                                                                         |
+| Move and resize windows           | Yes, built | Accessibility permission. `pnpm menubar:sign` keeps it across rebuilds                                           |
 | Snippet expansion                 | Yes        | Accessibility permission                                                                                         |
 
 The main limit is speed and feel. Raycast appears instantly as a floating panel, while Medea opens a terminal window each time.
@@ -27,18 +27,19 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 2. **Search launcher:** done. Type to find apps and built-in commands, then press Enter.
 3. **Commands:** started. Medea apps live in `src/medea-apps/`, with Quicklinks and Clipboard History built. Loading scripts from a user folder is still to do.
 4. **Terminal choice:** done for Terminal and Ghostty, from the menu bar. Other terminals need a tested recipe in `src/terminals/terminals.ts`.
-5. **Background features:** done. Clipboard history records in the background, and Start at login in Settings (Medea) brings the helper back after a reboot.
-6. **Permission features:** window management and snippets, packaged as a signed `.app`. A rebuilt bare binary may lose granted permissions, so a stable app identity will matter here.
+5. **Background features:** done. Clipboard history records in the background, and Start at login in Settings brings the helper back after a reboot.
+6. **Permission features:** window actions are built, and need testing by a person. Snippets are still to do. A rebuilt ad-hoc binary may lose granted permissions, so `pnpm menubar:sign` gives it a stable signature. A signed `.app` may still be needed if terminal-started and login-started helpers turn out to be treated differently.
 
 ## Later ideas
 
 - **Clipboard history:** files, pinned entries, and choosing which apps to ignore.
+- **Window actions:** pressing a hotkey again to cycle sizes, gaps between windows, and larger and smaller. Drag-to-snap needs a global mouse tap and an overlay, so it's a project of its own.
 - **Alias plus search text:** typing an alias then a query, like `gh react`. Quicklinks now take input through a prompt after Enter, so this would fill their first argument straight from the search bar.
 
 ## Decisions
 
 - **Stay in a terminal for now.** A floating panel would feel closer to Raycast but needs much more native code. Revisit it if speed becomes a problem.
-- **`Cmd+Shift+Space` for now.** Raycast currently uses `Cmd+Space`. To switch, quit Raycast, change `hotKeyModifiers` in `native/StatusItem.swift`, run `pnpm menubar:stop`, then `pnpm menubar:start`.
+- **`Cmd+Shift+Space` for now.** Raycast currently uses `Cmd+Space`. To switch, quit Raycast, change `hotKeyModifiers` in `native/main.swift`, run `pnpm menubar:stop`, then `pnpm menubar:start`.
 
 ## Not tested yet
 
@@ -47,5 +48,7 @@ These need a person, because macOS blocks synthetic input from the development s
 - A physical click on the menu bar icon. The menu items and their actions were tested from inside the process.
 - A physical `Cmd+Shift+Space` press. Registration succeeded with status `0`.
 - The Automation prompt from the real helper. Ghostty was tested from the development session, which has its own permission.
+- Moving a real window. The geometry, socket and hotkey wiring were tested, but the Accessibility calls need a grant only a person can give.
+- `pnpm menubar:sign`, and whether a grant survives a rebuild with it.
 
 Also untested: raising a minimized window. In one early test run, a CLI window went away for an unknown reason. It did not happen again in later runs, including through the real launcher, so watch for it.

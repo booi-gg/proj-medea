@@ -1,5 +1,6 @@
 import { readConfig, updateConfig } from "../config.ts";
 import type { HotkeyMap } from "../config.ts";
+import { findWindowCommand } from "../medea-apps/medea-window/actions.ts";
 import { toDisplayName } from "./aliases.ts";
 
 const MEDEA_HOTKEY = "shift+cmd+space";
@@ -82,6 +83,7 @@ const KEY_CODES: Record<string, number> = {
   space: 49,
   return: 36,
   tab: 48,
+  delete: 51,
   left: 123,
   right: 124,
   down: 125,
@@ -216,6 +218,7 @@ export interface HelperHotkey {
   keyCode: number;
   modifiers: number;
   value: string;
+  windowCommand?: string;
 }
 
 /** Converts saved hotkeys into the numbers the Swift helper registers. */
@@ -226,7 +229,13 @@ export const toHelperHotkeys = (hotkeys: HotkeyMap): HelperHotkey[] => {
     if (parsed !== undefined) {
       const flags = parsed.modifiers.map((modifier) => MODIFIERS[modifier].flag);
       const modifiers = flags.reduce((all, flag) => all + flag, 0);
-      helperHotkeys.push({ keyCode: KEY_CODES[parsed.key] ?? 0, modifiers, value });
+      const windowCommand = findWindowCommand(value);
+      helperHotkeys.push({
+        keyCode: KEY_CODES[parsed.key] ?? 0,
+        modifiers,
+        value,
+        ...(windowCommand === undefined ? {} : { windowCommand }),
+      });
     }
   }
   return helperHotkeys;

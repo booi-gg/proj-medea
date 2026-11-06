@@ -3,8 +3,6 @@ import Carbon.HIToolbox
 import UniformTypeIdentifiers
 
 private let hotKeySignature: OSType = 0x4D44_4541  // "MDEA"
-private let hotKeyKeyCode = UInt32(kVK_Space)
-private let hotKeyModifiers = UInt32(cmdKey | shiftKey)
 
 /// System-wide shortcuts. Carbon delivers them without Accessibility or Input Monitoring permission.
 final class HotKeyCenter {
@@ -82,7 +80,7 @@ final class HotKeyCenter {
   }
 
   /// Swaps the per-item hotkeys for this list.
-  func replaceItemHotKeys(_ hotKeys: [ItemHotKey], onPress: @escaping (String) -> Void) {
+  func replaceItemHotKeys(_ hotKeys: [ItemHotKey], onPress: @escaping (ItemHotKey) -> Void) {
     for hotKey in itemHotKeys {
       UnregisterEventHotKey(hotKey.ref)
       actions[hotKey.id] = nil
@@ -91,7 +89,7 @@ final class HotKeyCenter {
 
     for hotKey in hotKeys {
       let result = register(keyCode: hotKey.keyCode, modifiers: hotKey.modifiers) {
-        onPress(hotKey.value)
+        onPress(hotKey)
       }
       NSLog("Medea hotkey for \(hotKey.value) registration status: \(result.status)")
       if let ref = result.ref {
@@ -126,13 +124,9 @@ func focusRunningCli(socketPath: String) -> Bool {
   setsockopt(connection, SOL_SOCKET, SO_RCVTIMEO, &timeout, timeoutSize)
   setsockopt(connection, SOL_SOCKET, SO_SNDTIMEO, &timeout, timeoutSize)
 
-  var address = sockaddr_un()
-  address.sun_family = sa_family_t(AF_UNIX)
-  let pathBytes = Array(socketPath.utf8) + [0]
-  guard pathBytes.count <= MemoryLayout.size(ofValue: address.sun_path) else {
+  guard var address = toSocketAddress(path: socketPath) else {
     return false
   }
-  withUnsafeMutableBytes(of: &address.sun_path) { $0.copyBytes(from: pathBytes) }
   let connected = withUnsafePointer(to: &address) {
     $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
       connect(connection, $0, socklen_t(MemoryLayout<sockaddr_un>.size))
@@ -159,6 +153,8 @@ struct ItemHotKey: Decodable {
   let keyCode: UInt32
   let modifiers: UInt32
   let value: String
+  /// Set for window actions, which the helper runs itself so a press never waits for Node.
+  let windowCommand: String?
 }
 
 struct TerminalChoice: Decodable {
@@ -347,6 +343,7 @@ final class ClipboardWatcher {
 /// Owns the menu bar item and its menu. The CLI makes all the decisions.
 final class StatusItemController: NSObject, NSMenuDelegate {
   private let cliCommand: [String]
+  private let windows: WindowManager
   // The CLI's socket sits next to this binary in .build.
   private let cliSocketPath = URL(fileURLWithPath: CommandLine.arguments[0])
     .deletingLastPathComponent()
@@ -358,8 +355,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private var clipsToRecord: [Clip] = []
   private var isRecordingClip = false
 
-  init(cliCommand: [String]) {
+  init(cliCommand: [String], windows: WindowManager) {
     self.cliCommand = cliCommand
+    self.windows = windows
     super.init()
 
     statusItem.button?.image = NSImage(
@@ -426,18 +424,20 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         NSLog("Medea could not read the saved hotkeys")
         return
       }
-      hotKeys.replaceItemHotKeys(items) { [weak self] value in
-        self?.runItem(value)
+      hotKeys.replaceItemHotKeys(items) { [weak self] hotKey in
+        self?.runItem(hotKey)
       }
     }
   }
 
-  /// Apps are saved by path and open directly, which is fastest. Everything else needs the CLI.
-  private func runItem(_ value: String) {
-    if value.hasPrefix("/") {
-      openApp(at: value)
+  /// Apps and window actions run here, which is fastest. Everything else needs the CLI.
+  private func runItem(_ hotKey: ItemHotKey) {
+    if let windowCommand = hotKey.windowCommand {
+      windows.runFromHotKey(windowCommand)
+    } else if hotKey.value.hasPrefix("/") {
+      openApp(at: hotKey.value)
     } else {
-      runCli(["run", value])
+      runCli(["run", hotKey.value])
     }
   }
 
@@ -530,37 +530,3 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
   }
 }
-
-let cliCommand = Array(CommandLine.arguments.dropFirst())
-guard !cliCommand.isEmpty else {
-  FileHandle.standardError.write(Data("usage: medea-status <cli command> [arguments]\n".utf8))
-  exit(64)
-}
-
-let app = NSApplication.shared
-app.setActivationPolicy(.accessory)
-let controller = StatusItemController(cliCommand: cliCommand)
-let hotKeys = HotKeyCenter()
-NSLog("Medea hotkey handler status: \(hotKeys.installHandler())")
-let hotKeyStatus = hotKeys.registerPermanent(keyCode: hotKeyKeyCode, modifiers: hotKeyModifiers) {
-  controller.showCli()
-}
-NSLog("Medea hotkey registration status: \(hotKeyStatus)")
-controller.reloadHotKeys(into: hotKeys)
-
-// MARK: - Start
-
-// The CLI can exit before reading all the copied text, which must not end the helper.
-signal(SIGPIPE, SIG_IGN)
-let clipboardWatcher = ClipboardWatcher(pasteboard: .general) { clip in
-  controller.recordClip(clip)
-}
-clipboardWatcher.start()
-
-// The CLI sends this signal after saving a hotkey, so it works without a restart.
-signal(SIGUSR1, SIG_IGN)
-let reloadSignal = DispatchSource.makeSignalSource(signal: SIGUSR1, queue: .main)
-reloadSignal.setEventHandler { controller.reloadHotKeys(into: hotKeys) }
-reloadSignal.resume()
-
-app.run()

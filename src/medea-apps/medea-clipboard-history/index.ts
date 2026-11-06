@@ -9,6 +9,7 @@ import { rankByText } from "../../launcher/search.ts";
 import { fitToWidth, padToWidth, toSplitLayout } from "../../launcher/split-view.ts";
 import { isMenuBarRunning } from "../../menubar/helper.ts";
 import { UTF8_ENVIRONMENT, runCommand } from "../../shell.ts";
+import { toMedeaIcon } from "../icon.ts";
 import type { LauncherItem, MedeaApp } from "../types.ts";
 import { formatAge, formatSize, toPreview, toPreviewLines, toSafeText } from "./format.ts";
 import { openImageWindow } from "./image-window.ts";
@@ -27,7 +28,7 @@ import type { Highlight } from "./syntax.ts";
 
 const APP_ID = "medea-clipboard-history";
 const OPEN_ID = "open";
-const ICON = styleText("green", "≡");
+const ICON = toMedeaIcon("≡");
 const FALLBACK_COLUMNS = 80;
 // Room for the focus marker and the margins, when there's no preview beside the list.
 const ROW_MARGIN = 8;
@@ -301,7 +302,7 @@ const browseHistory = async (): Promise<string> => {
 
 const openItem: LauncherItem = {
   value: `${APP_ID}:${OPEN_ID}`,
-  name: "Clipboard (Medea)",
+  name: "Clipboard",
   icon: ICON,
   kind: "Command",
   needsWindow: true,

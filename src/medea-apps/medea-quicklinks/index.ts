@@ -1,9 +1,9 @@
-import { styleText } from "node:util";
 import { confirm } from "@clack/prompts";
 import { saveAliases } from "../../launcher/aliases.ts";
 import { saveHotkey } from "../../launcher/hotkeys.ts";
 import { drawScreen } from "../../launcher/screen.ts";
 import { reloadHotkeys } from "../../menubar/helper.ts";
+import { toMedeaIcon } from "../icon.ts";
 import type { LauncherItem, MedeaApp, SettingsAction } from "../types.ts";
 import { askForAnswers, askForQuicklink } from "./form.ts";
 import { openTarget, readClipboard } from "./open-link.ts";
@@ -14,8 +14,8 @@ import type { Quicklink } from "./store.ts";
 const APP_ID = "medea-quicklinks";
 // Reserved, so no saved link can end up with the same value as the create command.
 const CREATE_ID = "create";
-const LINK_ICON = styleText("blue", "↗");
-const CREATE_NAME = "Quicklink, Create (Medea)";
+const LINK_ICON = toMedeaIcon("↗");
+const CREATE_NAME = "Quicklink, Create";
 
 const toValue = (id: string): string => `${APP_ID}:${id}`;
 

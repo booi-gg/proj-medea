@@ -68,7 +68,7 @@ const main = async (): Promise<void> => {
   }
 
   const { intro } = await import("@clack/prompts");
-  const { showStatus, start, stop } = await import("./menubar/commands.ts");
+  const { showStatus, sign, start, stop } = await import("./menubar/commands.ts");
   intro("medea");
   if (command === "start") {
     await start();
@@ -82,7 +82,11 @@ const main = async (): Promise<void> => {
     await showStatus();
     return;
   }
-  throw new Error(`Unknown command "${command}". Use start, stop or status.`);
+  if (command === "sign") {
+    await sign();
+    return;
+  }
+  throw new Error(`Unknown command "${command}". Use start, stop, status or sign.`);
 };
 
 try {

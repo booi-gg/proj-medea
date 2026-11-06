@@ -1,11 +1,10 @@
 import { once } from "node:events";
 import { mkdir, rm } from "node:fs/promises";
-import { connect, createServer } from "node:net";
+import { createServer } from "node:net";
 import { dirname } from "node:path";
-import { addAbortSignal } from "node:stream";
-import { text } from "node:stream/consumers";
 import { socketPath } from "../paths.ts";
 import { getOwnTtyPath } from "../shell.ts";
+import { sendSocketRequest } from "../socket.ts";
 import { closeOwnWindow } from "./close-window.ts";
 import { getSelectedLauncher } from "./terminals.ts";
 
@@ -77,17 +76,8 @@ export const listenForRequests = async ({
 };
 
 /** Returns the running CLI's reply, or undefined when none answers. */
-const sendRequest = async (request: string): Promise<string | undefined> => {
-  const connection = addAbortSignal(AbortSignal.timeout(REQUEST_TIMEOUT_MS), connect(socketPath));
-  try {
-    connection.write(`${request}\n`);
-    return await text(connection);
-  } catch {
-    return undefined;
-  } finally {
-    connection.destroy();
-  }
-};
+const sendRequest = (request: string): Promise<string | undefined> =>
+  sendSocketRequest(socketPath, request, REQUEST_TIMEOUT_MS);
 
 /** Asks a running CLI to raise its window. Returns false when none runs. */
 export const focusRunningCli = async (): Promise<boolean> => {

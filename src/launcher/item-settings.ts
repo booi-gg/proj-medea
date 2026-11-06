@@ -8,8 +8,8 @@ import { recordKeys } from "./hotkey-recorder.ts";
 import { findHotkeyProblem, formatHotkey, parseRecording, saveHotkey } from "./hotkeys.ts";
 import { drawScreen } from "./screen.ts";
 
-export const ADD_ALIAS_LABEL = "Alias, Add (Medea)";
-export const CREATE_HOTKEY_LABEL = "Hotkey, Create (Medea)";
+export const ADD_ALIAS_LABEL = "Alias, Add";
+export const CREATE_HOTKEY_LABEL = "Hotkey, Create";
 
 const ADD_ALIAS = "add-alias";
 const CREATE_HOTKEY = "create-hotkey";

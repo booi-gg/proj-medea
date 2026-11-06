@@ -25,7 +25,7 @@ const main = async (): Promise<void> => {
     return;
   }
 
-  intro("supercast");
+  intro("medea");
   if (command === "start") {
     await start();
     return;

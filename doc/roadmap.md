@@ -1,4 +1,4 @@
-# Supercast roadmap
+# Medea roadmap
 
 The goal is a Raycast-style launcher for macOS that runs as a CLI.
 
@@ -15,7 +15,7 @@ The goal is a Raycast-style launcher for macOS that runs as a CLI.
 | Move and resize windows           | Yes        | Accessibility permission                                                                                         |
 | Snippet expansion                 | Yes        | Accessibility permission                                                                                         |
 
-The main limit is speed and feel. Raycast appears instantly as a floating panel, while Supercast opens a terminal window each time.
+The main limit is speed and feel. Raycast appears instantly as a floating panel, while Medea opens a terminal window each time.
 
 ## Steps
 

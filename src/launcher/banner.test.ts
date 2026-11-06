@@ -18,7 +18,7 @@ test("every logo row has the same width", () => {
 });
 
 test("falls back to the plain name in a narrow window", () => {
-  assert.deepEqual(toVisibleRows(renderBanner(20)), ["  supercast"]);
+  assert.deepEqual(toVisibleRows(renderBanner(10)), ["  medea"]);
 });
 
 test("fades from teal to cyan", () => {

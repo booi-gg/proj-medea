@@ -8,7 +8,7 @@ import { findAppPaths, toApps } from "./apps.ts";
 let root = "";
 
 before(async () => {
-  root = await mkdtemp(join(tmpdir(), "supercast-apps-"));
+  root = await mkdtemp(join(tmpdir(), "medea-apps-"));
   await mkdir(join(root, "Top.app", "Contents", "Helpers", "Helper.app"), { recursive: true });
   await mkdir(join(root, "Vendor", "Suite", "Nested.app"), { recursive: true });
   await mkdir(join(root, "Vendor", "Suite", "Deep", "TooDeep.app"), { recursive: true });

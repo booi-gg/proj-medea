@@ -1,9 +1,9 @@
 {
-  "name": "supercast",
+  "name": "medea",
   "version": "0.1.0",
   "private": true,
   "bin": {
-    "supercast": "./src/index.ts"
+    "medea": "./src/index.ts"
   },
   "type": "module",
   "scripts": {

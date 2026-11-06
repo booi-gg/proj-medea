@@ -1,7 +1,7 @@
 import AppKit
 import Carbon.HIToolbox
 
-private let hotKeySignature: OSType = 0x5350_4354  // "SPCT"
+private let hotKeySignature: OSType = 0x4D44_4541  // "MDEA"
 private let hotKeyKeyCode = UInt32(kVK_Space)
 private let hotKeyModifiers = UInt32(cmdKey | shiftKey)
 
@@ -66,13 +66,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     statusItem.button?.image = NSImage(
       systemSymbolName: "terminal",
-      accessibilityDescription: "Supercast"
+      accessibilityDescription: "Medea"
     )
     statusItem.button?.image?.isTemplate = true
-    statusItem.button?.toolTip = "Supercast"
+    statusItem.button?.toolTip = "Medea"
 
     let openItem = NSMenuItem(
-      title: "Open Supercast",
+      title: "Open Medea",
       action: #selector(handleOpen),
       keyEquivalent: ""
     )
@@ -152,14 +152,14 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     do {
       try process.run()
     } catch {
-      NSLog("Supercast could not run the CLI: \(error.localizedDescription)")
+      NSLog("Medea could not run the CLI: \(error.localizedDescription)")
     }
   }
 }
 
 let cliCommand = Array(CommandLine.arguments.dropFirst())
 guard !cliCommand.isEmpty else {
-  FileHandle.standardError.write(Data("usage: supercast-status <cli command> [arguments]\n".utf8))
+  FileHandle.standardError.write(Data("usage: medea-status <cli command> [arguments]\n".utf8))
   exit(64)
 }
 
@@ -168,5 +168,5 @@ app.setActivationPolicy(.accessory)
 let controller = StatusItemController(cliCommand: cliCommand)
 let hotKey = GlobalHotKey { controller.showCli() }
 let hotKeyStatus = hotKey.register(keyCode: hotKeyKeyCode, modifiers: hotKeyModifiers)
-NSLog("Supercast hotkey registration status: \(hotKeyStatus)")
+NSLog("Medea hotkey registration status: \(hotKeyStatus)")
 app.run()

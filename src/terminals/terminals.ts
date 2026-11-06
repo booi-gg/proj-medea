@@ -4,7 +4,7 @@ import { dirname, join } from "node:path";
 import { listApps } from "../launcher/apps.ts";
 import { quoteForShell, runCommand } from "../shell.ts";
 
-const configPath = join(homedir(), ".config", "supercast", "config.json");
+const configPath = join(homedir(), ".config", "medea", "config.json");
 
 // Ghostty keeps a window open after a "command" exits, leaving an empty window behind. So this
 // opens a normal shell and replaces it with exec: when the CLI exits, the window closes.

@@ -1,6 +1,6 @@
-# How Supercast works
+# How Medea works
 
-Supercast is a command-line launcher for macOS. It is made of two programs:
+Medea is a command-line launcher for macOS. It is made of two programs:
 
 - **The CLI** (TypeScript and clack) shows the search prompt, and stays open until you exit it.
 - **The helper** (a small Swift program) stays running. It owns the menu bar icon and the global shortcut.
@@ -11,13 +11,13 @@ TypeScript can't call macOS AppKit directly, so anything that must stay alive in
 pnpm menubar:start
    └─ the CLI builds and starts the helper, then the CLI exits
 
-supercast-status (keeps running)
+medea-status (keeps running)
    └─ owns the icon and the shortcut, waits for input
 
-Open Supercast in the menu, or Cmd+Shift+Space
+Open Medea in the menu, or Cmd+Shift+Space
    └─ node src/index.ts show
         ├─ CLI already open: raise that window
-        └─ no CLI open: start open-supercast.command in the chosen terminal
+        └─ no CLI open: start open-medea.command in the chosen terminal
              └─ node src/index.ts
                   └─ search prompt
                        └─ Enter opens the app, then search returns
@@ -35,7 +35,7 @@ src/
 ├── launcher/
 │   ├── launcher.ts       The search loop and its list of items
 │   ├── prompt.ts         Draws the search bar and results
-│   ├── banner.ts         The SUPERCAST logo
+│   ├── banner.ts         The MEDEA logo
 │   ├── search.ts         Ranks results with match-sorter
 │   └── apps.ts           Finds installed apps and opens them
 ├── menubar/
@@ -68,8 +68,8 @@ pnpm check            # format and lint
 `pnpm menubar:start` calls `startMenuBar()` in `src/menubar/helper.ts`:
 
 1. `pgrep` looks for a running helper. If there is one, nothing else happens, so you never get two icons.
-2. `swiftc` compiles `native/StatusItem.swift` to `.build/supercast-status`. This is skipped if the binary is newer than the source.
-3. It writes `.build/open-supercast.command`, a script that goes to the project folder and runs `node src/index.ts`.
+2. `swiftc` compiles `native/StatusItem.swift` to `.build/medea-status`. This is skipped if the binary is newer than the source.
+3. It writes `.build/open-medea.command`, a script that goes to the project folder and runs `node src/index.ts`.
 4. It starts the helper with `detached: true`, then `unref()`, so the CLI can exit while the helper keeps running. Helper output goes to `.build/helper.log`.
 
 If the helper is already running, `start` does nothing, even if the Swift file changed. After editing Swift, run `pnpm menubar:stop` first.
@@ -87,15 +87,15 @@ No `.app` bundle or `Info.plist` is needed. The helper runs as a bare, ad-hoc si
 
 Left or right clicking the icon opens a menu. The helper holds no logic of its own: each item runs the CLI.
 
-| Item           | What it runs                                                                                               |
-| -------------- | ---------------------------------------------------------------------------------------------------------- |
-| Open Supercast | `node src/index.ts show`                                                                                   |
-| Set Terminal   | `node src/index.ts terminals` fills the list, and picking one runs `node src/index.ts set-terminal <name>` |
-| Exit           | Quits the helper, which removes the icon and the shortcut                                                  |
+| Item         | What it runs                                                                                               |
+| ------------ | ---------------------------------------------------------------------------------------------------------- |
+| Open Medea   | `node src/index.ts show`                                                                                   |
+| Set Terminal | `node src/index.ts terminals` fills the list, and picking one runs `node src/index.ts set-terminal <name>` |
+| Exit         | Quits the helper, which removes the icon and the shortcut                                                  |
 
 ## Choosing a terminal
 
-`src/terminals/terminals.ts` lists the terminals Supercast knows how to launch, filtered to the ones installed. The choice is saved in `~/.config/supercast/config.json`. Missing or broken config falls back to Terminal.
+`src/terminals/terminals.ts` lists the terminals Medea knows how to launch, filtered to the ones installed. The choice is saved in `~/.config/medea/config.json`. Missing or broken config falls back to Terminal.
 
 Changing the terminal tells the running CLI to quit, because it lives in the old terminal. The next open uses the new one.
 
@@ -119,7 +119,7 @@ The menu and the shortcut both run `node src/index.ts show`. `showCli()` in `src
 1. Reads the chosen terminal.
 2. `focusRunningCli()` connects to `.build/cli.sock`. A running CLI answers on this socket with its tty path. A dead CLI refuses the connection, even if the socket file was left behind, so there is no stale state to clean up. It gives up after one second.
 3. **If a CLI answers,** the terminal's recipe brings it back.
-4. **If nothing answers,** the recipe opens `.build/open-supercast.command`. The launcher uses an absolute Node path because a terminal's `PATH` can differ from your shell's.
+4. **If nothing answers,** the recipe opens `.build/open-medea.command`. The launcher uses an absolute Node path because a terminal's `PATH` can differ from your shell's.
 
 The CLI has to stay open for this to work, so `runLauncher()` loops: after an action it clears the screen and shows search again. Exit and Esc end the loop.
 
@@ -127,7 +127,7 @@ If you open a second CLI, such as `pnpm start` in another terminal, the newest o
 
 ## The search prompt
 
-The window starts with the screen cleared, the SUPERCAST logo from `src/launcher/banner.ts`, a slim wordmark that fades from teal to cyan, and a bare search bar. The logo is drawn once per round, outside the prompt, so typing never redraws it. In windows under 29 columns it falls back to the plain name. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
+The window starts with the screen cleared, the MEDEA logo from `src/launcher/banner.ts`, a slim wordmark that fades from teal to cyan, and a bare search bar. The logo is drawn once per round, outside the prompt, so typing never redraws it. In windows under 17 columns it falls back to the plain name. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
 
 `promptForSelection()` in `src/launcher/prompt.ts` uses `AutocompletePrompt` from `@clack/core`, not `autocomplete` from `@clack/prompts`, because the higher-level prompt always draws its header and footer. `@clack/core` is pinned to the version `@clack/prompts` uses.
 

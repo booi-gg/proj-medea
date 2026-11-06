@@ -8,6 +8,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.ts",
+    "test": "node --test",
     "menubar:start": "node index.ts start",
     "menubar:stop": "node index.ts stop",
     "menubar:status": "node index.ts status",

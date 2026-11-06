@@ -272,10 +272,11 @@ The item value is `quicklink:<id>`. The ID comes from the name when the link is 
 | ------------------------------------- | ---------------------------------------------------------------- |
 | `{argument}`                          | Asks when the link opens. Each unnamed one is its own question   |
 | `{argument name="query" default="x"}` | The same, and arguments with one name share one value            |
-| `{query}`                             | Short for `{argument name="query"}`                              |
+| `{}`                                  | Asks when the link opens, as an unnamed argument                 |
+| `{query}`                             | Any word in braces is short for `{argument name="query"}`        |
 | `{clipboard}`                         | The clipboard text, trimmed. Empty if nothing text-like is there |
 
-A link can have up to 3 arguments. Values are percent-encoded when the link starts with a URL scheme, and left alone in paths and in a link that starts with a placeholder. Anything else in braces, like `{date}`, stays in the link as written.
+A link can have up to 3 arguments. Values are percent-encoded when the link starts with a URL scheme, and left alone in paths and in a link that starts with a placeholder. Braces that hold anything else, like `{"a":1}`, stay in the link as written.
 
 **Failures.** A link that can't open shows a red line above the search bar, and the window stays open. From a hotkey with no window, the failure is silent. If `quicklinks.json` is broken, search shows no links and saving refuses to run, so a save can't overwrite links you could still fix.
 

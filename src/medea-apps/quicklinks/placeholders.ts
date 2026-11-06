@@ -1,11 +1,11 @@
 export const MAX_ARGUMENTS = 3;
 
-const PLACEHOLDER = /\{(argument|clipboard|query)((?:\s+[a-z]+="[^"]*")*)\s*\}/g;
+// Matches {}, {query}, {clipboard} and {argument name="query" default="x"}.
+const PLACEHOLDER = /\{([a-z][a-z0-9_-]*)?((?:\s+[a-z]+="[^"]*")*)\s*\}/gi;
 const ATTRIBUTE = /([a-z]+)="([^"]*)"/g;
 const URL_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 const CLIPBOARD_PLACEHOLDER = "clipboard";
-// {query} is shorthand for {argument name="query"}.
-const QUERY_PLACEHOLDER = "query";
+const ARGUMENT_PLACEHOLDER = "argument";
 
 export interface LinkArgument {
   key: string;
@@ -16,8 +16,12 @@ export interface LinkArgument {
 const readAttributes = (attributes: string): Map<string, string> =>
   new Map([...attributes.matchAll(ATTRIBUTE)].map(([, name = "", value = ""]) => [name, value]));
 
-const readArgumentName = (type: string | undefined, values: Map<string, string>) =>
-  type === QUERY_PLACEHOLDER ? QUERY_PLACEHOLDER : values.get("name");
+// Any other word is the argument's name, so {query} means {argument name="query"}.
+const readArgumentName = (
+  type: string | undefined,
+  values: ReadonlyMap<string, string>,
+): string | undefined =>
+  type === undefined || type === ARGUMENT_PLACEHOLDER ? values.get("name") : type;
 
 // Arguments with a name share one value. Each unnamed one is its own question.
 const toArgumentKey = (name: string | undefined, unnamedCount: number): string =>
@@ -59,7 +63,7 @@ interface LinkValues {
 export const fillLink = (link: string, { answers, clipboard }: LinkValues): string => {
   const prepare = hasUrlScheme(link) ? encodeURIComponent : (value: string): string => value;
   let unnamedCount = 0;
-  return link.replaceAll(PLACEHOLDER, (_match, type: string, attributes: string) => {
+  return link.replaceAll(PLACEHOLDER, (_match, type: string | undefined, attributes: string) => {
     if (type === CLIPBOARD_PLACEHOLDER) {
       return prepare(clipboard);
     }

@@ -84,6 +84,30 @@ test("an empty clipboard drops the placeholder", () => {
   assert.equal(fillLink("https://x.dev/{clipboard}", noValues), "https://x.dev/");
 });
 
-test("leaves unknown placeholders in the link", () => {
-  assert.equal(fillLink("https://x.dev/{date}", noValues), "https://x.dev/{date}");
+test("empty braces ask a question", () => {
+  const link = "https://x.dev?q={}";
+  assert.deepEqual(findArguments(link), [{ key: "#1", label: "Argument 1" }]);
+  assert.equal(
+    fillLink(link, { answers: new Map([["#1", "a b"]]), clipboard: "" }),
+    "https://x.dev?q=a%20b",
+  );
+});
+
+test("any word in braces is a named argument", () => {
+  const link = "https://x.dev/{repo}/{tag}";
+  assert.deepEqual(
+    findArguments(link).map(({ label }) => label),
+    ["repo", "tag"],
+  );
+  const answers = new Map([
+    ["repo", "medea"],
+    ["tag", "v1"],
+  ]);
+  assert.equal(fillLink(link, { answers, clipboard: "" }), "https://x.dev/medea/v1");
+});
+
+test("leaves braces that aren't placeholders in the link", () => {
+  const link = 'https://x.dev?filter={"a":1}';
+  assert.deepEqual(findArguments(link), []);
+  assert.equal(fillLink(link, noValues), link);
 });

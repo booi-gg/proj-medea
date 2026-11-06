@@ -4,6 +4,8 @@ import { readConfigSync } from "../config.ts";
 import { start, stop } from "../menubar/commands.ts";
 import { toMedeaIcon } from "../medea-apps/icon.ts";
 import { toCalculationItem } from "../medea-apps/medea-calculator/index.ts";
+import { toConversionItems } from "../medea-apps/medea-currency/index.ts";
+import { refreshRatesIfStale } from "../medea-apps/medea-currency/rates.ts";
 import { findMedeaItem, listMedeaItems } from "../medea-apps/registry.ts";
 import type { LauncherItem } from "../medea-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
@@ -107,17 +109,18 @@ const toOptions = (items: readonly LauncherItem[]): LauncherOption[] => {
   });
 };
 
-// A sum matches no item by name, so its answer goes above whatever the text did match.
-const rankWithCalculation = (
-  query: string,
-  options: readonly LauncherOption[],
-): LauncherOption[] => {
+// Answers come from the query, so they go above ordinary search results.
+const rankWithAnswers = (query: string, options: readonly LauncherOption[]): LauncherOption[] => {
   const results = rankItems(query, options);
   const calculation = toCalculationItem(query);
-  if (calculation === undefined) {
-    return results;
-  }
-  return [{ ...calculation, aliases: [], label: formatRow(calculation, [], "") }, ...results];
+  const answers = [
+    ...(calculation === undefined ? [] : [calculation]),
+    ...toConversionItems(query),
+  ];
+  return [
+    ...answers.map((item) => ({ ...item, aliases: [], label: formatRow(item, [], "") })),
+    ...results,
+  ];
 };
 
 // A link that fails to open shouldn't take the search window down with it.
@@ -181,7 +184,7 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
   const { cancelled, value, wantsSettings, query } = await promptForSelection(
     () => toOptions(getItems()),
     SEARCH_PLACEHOLDER,
-    { rank: rankWithCalculation, replaceable: true },
+    { rank: rankWithAnswers, replaceable: true },
   );
   if (session.nextItem !== undefined) {
     return { keepRunning: true, notice: NO_NOTICE };
@@ -190,9 +193,11 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
     return { keepRunning: !(await confirmEndProgram()), notice: NO_NOTICE };
   }
   // An answer has no settings to open, so Tab copies it like Enter does.
-  const calculation = toCalculationItem(query);
-  if (calculation !== undefined && value === calculation.value) {
-    return { keepRunning: true, notice: await showErrorsAsNotice(calculation.run) };
+  const answer = [toCalculationItem(query), ...toConversionItems(query)].find(
+    (item) => item?.value === value,
+  );
+  if (answer !== undefined) {
+    return { keepRunning: true, notice: await showErrorsAsNotice(answer.run) };
   }
   if (value === EXIT_VALUE && !wantsSettings) {
     return { keepRunning: false, notice: NO_NOTICE };
@@ -249,6 +254,7 @@ const switchToSearch = (session: Session): void => {
  * passes the item it was opened for, and closes when that's done.
  */
 export const runLauncher = async (firstItem?: string): Promise<void> => {
+  void refreshRatesIfStale();
   const session: Session = {
     runningItem: undefined,
     nextItem: firstItem,

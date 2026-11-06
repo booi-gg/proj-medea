@@ -8,11 +8,11 @@ The calculator row is built on every keystroke and is synchronous, so search can
 
 This would be Medea's first network call. It only requests one fixed URL, so amounts and search text never leave the Mac. It needs no new dependencies, because Node has `fetch` built in.
 
-## Open decisions
+## Decisions
 
-1. **Should `100 usd` work without a target currency?** Recommended: yes, using a default currency set in Settings. The default currency still needs choosing.
-2. **Should symbols like `$100` work?** Recommended: start with codes only, because `$` could mean USD, CAD or AUD. `€` and `£` would be safe to add.
-3. **Order of work.** This can go before or after the work in `doc/logging-plan.md`. It is small enough to go first.
+1. An explicit target is required. Target codes autocomplete as they are typed, including substring matches such as `SD` → USD.
+2. Codes and literal symbols work. Ambiguous `$` maps to USD and `¥` maps to JPY.
+3. This work was done before `doc/logging-plan.md`.
 
 ## API
 
@@ -43,7 +43,7 @@ Everything lives in a new `src/medea-apps/medea-currency/` folder, with tests ne
 
 ### Parser
 
-- A pure function reads `100 usd to inr` and `100 usd in inr`.
+- A pure function reads `100 usd to inr`, `100 usd in inr`, and symbol forms such as `$100 to inr`.
 - It returns undefined for anything else, because most search text isn't a conversion.
 - Currency codes are case-insensitive, and are checked against the saved rates.
 
@@ -62,7 +62,7 @@ Everything lives in a new `src/medea-apps/medea-currency/` folder, with tests ne
 
 ### Search row
 
-- Add `toConversionItem(query)` beside `toCalculationItem`, with a row like `100 USD = 9,419 INR`, the rate date and `↵ copy`.
+- Add `toConversionItems(query)` beside `toCalculationItem`, with a row like `100 USD = 9,419 INR`, the rate date and `↵ copy`. An incomplete target code offers matching currencies.
 - `src/launcher/launcher.ts` calls the calculator in two places: `rankWithCalculation` and the selection handling in `runSearchRound`. Both need to check for a conversion too.
 - Enter copies the number with `copyText`.
 

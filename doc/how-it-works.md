@@ -55,6 +55,10 @@ src/
 │   ├── medea-calculator/
 │   │   ├── index.ts      The answer row shown in search
 │   │   └── calculate.ts  Parses and works out a sum
+│   ├── medea-currency/
+│   │   ├── index.ts      Conversion answers and target suggestions
+│   │   ├── convert.ts    Parses input and converts through USD
+│   │   └── rates.ts      Reads and refreshes the local rates file
 │   ├── medea-clipboard-history/
 │   │   ├── index.ts      The history list and its actions
 │   │   ├── store.ts      Reads and saves history and image files
@@ -195,6 +199,10 @@ The window starts with the screen cleared, the MEDEA logo from `src/launcher/ban
 **Rows.** Each row shows an icon, the name and a faded kind: `◆` Application or `⌘` Command. The label contains colour codes, so search uses the plain `name` field instead. Magenta icons are reserved for Medea's own apps and commands, and `toMedeaIcon()` is the only place that sets it.
 
 **Calculator.** Typing a sum like `2 * 4` puts `2 * 4 = 8` at the top of the results, and Enter or Tab copies the `8`. It takes `+ - * / % ^`, brackets and decimals, with `%` as the remainder. A bracket touching a value multiplies it, so `4(4)` is `16`, at the same level as `*` and `/`, which makes `8 / 2(2)` come to `8`. `calculate()` parses the text by hand, so search text never runs as code. A lone number isn't a sum, and neither is an unfinished one like `2 *`, so these stay ordinary searches. Neither is an answer that isn't a number, like `1 / 0`. The row comes from the search text, so it has no aliases, hotkey or settings.
+
+**Currency conversion.** Type `356 USD to INR` or `356 INR in USD` to see a conversion at the top of search. Target suggestions appear after `to` and narrow as you type: `356 INR to SD` suggests matching codes, with USD first. Enter or Tab copies the rounded number for the selected target. Literal symbols work too, including `$356 to INR`, `356₹ to $`, `€`, `£`, `¥` and `₩`; `$` means USD and `¥` means JPY. Unknown currency codes leave normal search results alone.
+
+The search path reads `~/.config/medea/medea-currency-rates.json` synchronously and never makes a network call. When a search window opens, Medea refreshes rates older than a day in the background from Frankfurter v2's fixed USD endpoint. The file is replaced atomically after a valid response, so a failed request leaves old rates usable. The row shows the date of each rate used, which can differ between currencies. These are daily reference rates, not live or bank exchange rates. On first use, a conversion query explains that rates are still unavailable until a download finishes; another keystroke updates the search results.
 
 **Four clack details matter here. Recheck them when upgrading clack:**
 

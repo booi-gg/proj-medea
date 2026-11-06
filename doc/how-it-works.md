@@ -13,6 +13,8 @@ The CLI and helper append one JSON object per line to `~/Library/Logs/Medea/mede
 
 Logs contain action types, safe item IDs, byte counts, exit codes and error categories. They never contain search text, clipboard content, link targets, command arguments or command output. Use `node src/start.js logs`, `node src/start.js logs --follow`, or `node src/start.js logs --trace <id>` to read them.
 
+Search for **Logs, Open Folder** in Medea, or choose **Open Logs Folder** in the menu bar, to open the log files in Finder.
+
 Settings offers a total log size of 10, 50, 100 or 500 MB, defaulting to 50 MB. Node rotates the active file at one tenth of the limit and deletes the oldest archives when needed. The Swift helper only appends; `.build/helper.log` is reserved for raw crash output.
 
 ```text
@@ -77,6 +79,8 @@ src/
 │   │   └── image-window.ts Runs the native window that shows images
 │   ├── medea-hotkeys/
 │   │   └── index.ts      The Hotkeys, Show All command
+│   ├── medea-logs/
+│   │   └── index.ts      Opens the log files in Finder
 │   ├── medea-settings/
 │   │   └── index.ts      The Settings screen
 │   ├── medea-window/

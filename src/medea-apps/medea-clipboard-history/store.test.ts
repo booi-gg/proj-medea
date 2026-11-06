@@ -129,9 +129,9 @@ test("keeps entries from the chosen number of months, and drops older ones", () 
 });
 
 test("a longer history keeps what a shorter one drops", () => {
-  const entry = toText("old", monthsBefore(5));
+  const entry = toText("old", monthsBefore(4));
   assert.deepEqual(keepRecentEntries([entry], 3, NOW), []);
-  assert.deepEqual(keepRecentEntries([entry], 6, NOW), [entry]);
+  assert.deepEqual(keepRecentEntries([entry], 5, NOW), [entry]);
 });
 
 test("broken history reads as empty", () => {

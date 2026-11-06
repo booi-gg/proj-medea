@@ -60,8 +60,18 @@ export interface SelectionDisplay {
   extraKey?: ExtraKey;
   /** Ends the prompt early, so the caller can show it again with fresh options. */
   signal?: AbortSignal;
+  /** True when nothing is lost by leaving, so a hotkey may switch this list for its own item. */
+  replaceable?: boolean;
   initialQuery?: string;
 }
+
+let closeOpenList: (() => void) | undefined;
+
+/** Ends a replaceable list as if Esc was pressed. Returns false when none is open. */
+export const closeReplaceableList = (): boolean => {
+  closeOpenList?.();
+  return closeOpenList !== undefined;
+};
 
 const isEmptyQuery = (query: string): boolean => query.trim() === "";
 
@@ -171,6 +181,7 @@ export const promptForSelection = async (
     onFocus,
     extraKey,
     signal,
+    replaceable = false,
     initialQuery = "",
   }: SelectionDisplay = {},
 ): Promise<Selection> => {
@@ -179,11 +190,18 @@ export const promptForSelection = async (
   let lastQuery = initialQuery;
   let wantsSettings = false;
   const input = new PassThrough();
+  const replacement = new AbortController();
+  if (replaceable) {
+    closeOpenList = () => {
+      replacement.abort();
+    };
+  }
 
   const prompt = new AutocompletePrompt<LauncherOption>({
     input,
     initialUserInput: initialQuery,
-    ...(signal === undefined ? {} : { signal }),
+    signal:
+      signal === undefined ? replacement.signal : AbortSignal.any([signal, replacement.signal]),
     // rankItems has already chosen the results, so clack's own filter must not remove any.
     filter: () => true,
     options() {
@@ -237,5 +255,8 @@ export const promptForSelection = async (
     };
   } finally {
     stopReadingKeys();
+    if (replaceable) {
+      closeOpenList = undefined;
+    }
   }
 };

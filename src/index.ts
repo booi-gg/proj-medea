@@ -38,9 +38,15 @@ const main = async (): Promise<void> => {
     return;
   }
   if (command === "run-in-window") {
-    const { runItemInWindow } = await import("./terminals/actions.ts");
+    const { runLauncher } = await import("./launcher/launcher.ts");
     const { closeOwnWindow } = await import("./terminals/close-window.ts");
-    await runItemInWindow(argument);
+    const { runInRunningCli } = await import("./terminals/running-cli.ts");
+    // Two quick presses can both find nothing open, so the later window hands over and leaves.
+    const hasHandedOver = argument !== undefined && (await runInRunningCli(argument));
+    if (!hasHandedOver) {
+      flushCompileCache();
+      await runLauncher(argument);
+    }
     await closeOwnWindow();
     return;
   }

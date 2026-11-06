@@ -233,15 +233,26 @@ Settings is a menu: **Alias, Add (Medea)**, **Hotkey, Create (Medea)**, **Remove
 
 **Pressing a hotkey.** An item saved as a path is an app, and opens directly through `open <path>` without starting Node. Anything else runs `node src/start.js run <value>`:
 
-| Command                | Hotkey does                                           |
-| ---------------------- | ----------------------------------------------------- |
-| Exit                   | Quits the open search window                          |
-| Alias, Add (Medea)     | Opens Medea                                           |
-| Hotkey, Create (Medea) | Opens Medea                                           |
-| Remove Menu Bar Item   | Stops the helper, which also ends all hotkeys         |
-| Create Quicklink       | Opens a new window with the form                      |
-| Clipboard (Medea)      | Opens a new window with the list                      |
-| A quicklink            | Opens it, through a new window if it has `{argument}` |
+| Command                   | Hotkey does                                               |
+| ------------------------- | --------------------------------------------------------- |
+| Exit                      | Quits the open search window                              |
+| Alias, Add (Medea)        | Opens Medea                                               |
+| Hotkey, Create (Medea)    | Opens Medea                                               |
+| Remove Menu Bar Item      | Stops the helper, which also ends all hotkeys             |
+| Quicklink, Create (Medea) | Shows the form in the Medea window                        |
+| Clipboard (Medea)         | Shows the list in the Medea window                        |
+| A quicklink               | Opens it, through the Medea window if it has `{argument}` |
+
+**One window.** A hotkey for an item that needs a window sends `run <item>` over the socket before opening anything, so a second press never opens a second window. What the open window does depends on what it's showing:
+
+| The window is showing            | The hotkey                                  |
+| -------------------------------- | ------------------------------------------- |
+| Nothing is open                  | Opens a window for that item                |
+| Search, a pick list or Clipboard | Switches to the item                        |
+| That same item                   | Brings it to the front                      |
+| A form, settings or an open menu | Brings it to the front, and nothing is lost |
+
+Only lists marked `replaceable` can be switched away from, because anything else could hold typing you haven't saved. A window opened for one item is the launcher with that item as its first step, so it answers the socket too. It closes when the item is done, unless `Cmd+Shift+Space` moved it on to search. Two quick presses can both find nothing open, so a window that finds another already answering hands its item over and closes.
 
 `src/launcher/hotkeys.ts` holds the key table, checked against `HIToolbox/Events.h`. It uses US keyboard positions.
 
@@ -271,7 +282,7 @@ An item with `needsWindow: true` asks for input, so its hotkey opens a new windo
 
 ## Quicklinks
 
-The first Medea app, modelled on Raycast's. `Create Quicklink` asks for a name, a link and an optional app to open it with. Links appear in search with a `↗` icon, and aliases and hotkeys work as they do for apps. Tab opens settings, which add `Edit link` and `Delete link`.
+The first Medea app, modelled on Raycast's. `Quicklink, Create (Medea)` asks for a name, a link and an optional app to open it with. Links appear in search with a `↗` icon, and aliases and hotkeys work as they do for apps. Tab opens settings, which add `Edit link` and `Delete link`.
 
 Links are stored in `~/.config/medea/medea-quicklinks.json`:
 
@@ -322,7 +333,7 @@ Images aren't drawn in the terminal, because a terminal can only draw characters
 
 **Staying current.** The list watches the history file and redraws as soon as anything is recorded, keeping what you've typed. Without this, a screen left open would show an old list, because Medea's window stays alive between uses.
 
-This screen leaves out the logo, so images and the list get those rows. The panes grow with the window.
+The logo stays on this screen like every other, which leaves an 80×24 window 11 rows for the list. The panes grow with the window.
 
 `string-width` measures rows, because characters like 日本 take two columns and a row that runs too long would wrap and break the screen.
 
@@ -354,7 +365,7 @@ Copies are recorded one at a time, so two quick copies can't overwrite each othe
 
 A password manager has to mark its copies for this to work, and an app that doesn't will be recorded like any other.
 
-**Storage.** `~/.config/medea/medea-clipboard-history.json` keeps entries for 3 months by default. Settings (Medea) offers 1, 3, 6 or 12 months, saved as `clipboardHistoryMonths` in `config.json`, and asks first if a shorter choice would delete anything. Old entries go on each copy and when the history opens. So heavy use can't fill the disk or slow every copy, history also stops at 5,000 entries, 20 million characters of text and 2 GB of images, dropping the oldest first. Images live in `~/.config/medea/medea-clipboard-history/` as `<hash>.png`. Images over 30 MB are skipped. Each save removes any image no entry mentions, so deleting an entry frees its files.
+**Storage.** `~/.config/medea/medea-clipboard-history.json` keeps entries for 3 months by default. Settings (Medea) offers 3, 4 or 5 months or 1 year, with nothing unlimited, saved as `clipboardHistoryMonths` in `config.json`, and asks first if a shorter choice would delete anything. Old entries go on each copy and when the history opens. So heavy use can't fill the disk or slow every copy, history also stops at 5,000 entries, 20 million characters of text and 2 GB of images, dropping the oldest first. Images live in `~/.config/medea/medea-clipboard-history/` as `<hash>.png`. Images over 30 MB are skipped. Each save removes any image no entry mentions, so deleting an entry frees its files.
 
 None of this is encrypted, and only your user can read it. Saving writes a temporary file and renames it, so a reader never sees half a file.
 

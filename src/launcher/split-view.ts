@@ -10,8 +10,8 @@ const LIST_SHARE = 0.38;
 const MIN_LIST_WIDTH = 24;
 const MAX_LIST_WIDTH = 44;
 const MIN_PREVIEW_WIDTH = 24;
-// The search bar, footer and spacing around the panes. Split screens leave out the logo.
-const SCREEN_CHROME_ROWS = 7;
+// The logo, title, search bar, footer and spacing around the panes.
+const SCREEN_CHROME_ROWS = 13;
 const MIN_HEIGHT = 4;
 const MAX_HEIGHT = 40;
 

@@ -6,7 +6,7 @@ import { configPath } from "./paths.ts";
 export type AliasMap = Record<string, string[]>;
 export type HotkeyMap = Record<string, string>;
 
-export const HISTORY_MONTH_CHOICES = [1, 3, 6, 12] as const;
+export const HISTORY_MONTH_CHOICES = [3, 4, 5, 12] as const;
 export type HistoryMonths = (typeof HISTORY_MONTH_CHOICES)[number];
 export const DEFAULT_HISTORY_MONTHS: HistoryMonths = 3;
 

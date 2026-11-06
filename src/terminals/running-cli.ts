@@ -12,6 +12,7 @@ import { getSelectedLauncher } from "./terminals.ts";
 const REQUEST_TIMEOUT_MS = 1000;
 const QUIT_REQUEST = "quit";
 const FOCUS_REQUEST = "focus";
+const RUN_REQUEST_PREFIX = "run ";
 // Un-minimize, then raise. Terminal honours this with no Automation permission.
 const RAISE_WINDOW_SEQUENCE = "\u001B[1t\u001B[5t";
 const SHOW_CURSOR_SEQUENCE = "\u001B[?25h";
@@ -26,8 +27,16 @@ const focusOwnWindow = async (ttyPath: string): Promise<void> => {
   }
 };
 
+export interface RequestHandlers {
+  onFocus: () => void;
+  onRunItem: (itemValue: string) => void;
+}
+
 /** While the CLI is open it answers on this socket. A dead CLI refuses the connection. */
-export const listenForRequests = async (): Promise<() => void> => {
+export const listenForRequests = async ({
+  onFocus,
+  onRunItem,
+}: RequestHandlers): Promise<() => void> => {
   await mkdir(dirname(socketPath), { recursive: true });
   await rm(socketPath, { force: true });
   const ttyPath = await getOwnTtyPath();
@@ -36,7 +45,8 @@ export const listenForRequests = async (): Promise<() => void> => {
     // A caller that disconnects early must not crash the open CLI.
     connection.on("error", () => connection.destroy());
     connection.once("data", async (request) => {
-      if (String(request).trim() === QUIT_REQUEST) {
+      const message = String(request).trim();
+      if (message === QUIT_REQUEST) {
         process.stdout.write(SHOW_CURSOR_SEQUENCE);
         // Replies first, so whoever asked isn't kept waiting while the window is found.
         connection.end();
@@ -44,8 +54,16 @@ export const listenForRequests = async (): Promise<() => void> => {
         process.exit(0);
       }
       process.stdout.write(RAISE_WINDOW_SEQUENCE);
-      // Replies first, so the helper's request is over as soon as the CLI has it.
-      connection.end();
+      // Finishes replying before acting. Starting an item can keep this thread busy past the
+      // caller's timeout, and the caller would then think nothing is open and open a second window.
+      await new Promise<void>((resolve) => {
+        connection.end(resolve);
+      });
+      if (message.startsWith(RUN_REQUEST_PREFIX)) {
+        onRunItem(message.slice(RUN_REQUEST_PREFIX.length));
+      } else {
+        onFocus();
+      }
       await focusOwnWindow(ttyPath);
     });
   });
@@ -74,6 +92,12 @@ const sendRequest = async (request: string): Promise<string | undefined> => {
 /** Asks a running CLI to raise its window. Returns false when none runs. */
 export const focusRunningCli = async (): Promise<boolean> => {
   const reply = await sendRequest(FOCUS_REQUEST);
+  return reply !== undefined;
+};
+
+/** Hands an item to the running CLI, so it needs no new window. Returns false when none runs. */
+export const runInRunningCli = async (itemValue: string): Promise<boolean> => {
+  const reply = await sendRequest(`${RUN_REQUEST_PREFIX}${itemValue}`);
   return reply !== undefined;
 };
 

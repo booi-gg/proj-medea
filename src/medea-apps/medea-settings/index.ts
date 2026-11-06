@@ -26,6 +26,7 @@ const ICON = styleText("magenta", "⚙");
 const START_AT_LOGIN = "start-at-login";
 const CLIPBOARD_HISTORY = "clipboard-history";
 const DONE = "done";
+const MONTHS_IN_YEAR = 12;
 
 const STATE_LABELS: Record<LoginItemState, string> = {
   on: styleText("green", "● On"),
@@ -60,7 +61,7 @@ const checkLoginItem = async (): Promise<LoginItemState> => {
 };
 
 const toMonthsLabel = (months: HistoryMonths): string =>
-  months === 1 ? "1 month" : `${months} months`;
+  months === MONTHS_IN_YEAR ? "1 year" : `${months} months`;
 
 const confirmRemoval = async (count: number, months: HistoryMonths): Promise<boolean> => {
   if (count === 0) {
@@ -84,7 +85,9 @@ const chooseHistoryMonths = async (current: HistoryMonths): Promise<string> => {
   if (isCancel(months) || months === current) {
     return "";
   }
-  if (!(await confirmRemoval(await countEntriesToRemove(months), months))) {
+  // Anything a longer history removes had already expired, so only a shorter one needs asking.
+  const isShorter = months < current;
+  if (isShorter && !(await confirmRemoval(await countEntriesToRemove(months), months))) {
     return "";
   }
   await updateConfig({ clipboardHistoryMonths: months });
@@ -94,13 +97,13 @@ const chooseHistoryMonths = async (current: HistoryMonths): Promise<string> => {
 
 /** Shows the menu once. Returns the line to show next, or undefined when finished. */
 const runSettingsRound = async (notice: string): Promise<string | undefined> => {
-  drawScreen(notice);
+  drawScreen({ title: "Settings", icon: ICON, notice });
   const [state, { clipboardHistoryMonths = DEFAULT_HISTORY_MONTHS }] = await Promise.all([
     checkLoginItem(),
     readConfig(),
   ]);
   const choice = await select({
-    message: NAME,
+    message: "Choose a setting",
     options: [
       {
         value: START_AT_LOGIN,

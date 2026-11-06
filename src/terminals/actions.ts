@@ -4,7 +4,7 @@ import type { LauncherItem } from "../medea-apps/types.ts";
 import { stopMenuBar } from "../menubar/helper.ts";
 import { buildDir, launcherPath } from "../paths.ts";
 import { writeLauncherScript } from "./launcher-script.ts";
-import { focusRunningCli, quitRunningCli } from "./running-cli.ts";
+import { focusRunningCli, quitRunningCli, runInRunningCli } from "./running-cli.ts";
 import { getSelectedLauncher, saveTerminal } from "./terminals.ts";
 
 /** Reuses a running CLI window, or opens a new one in the chosen terminal. */
@@ -39,15 +39,6 @@ const findItem = async (itemValue: string | undefined): Promise<LauncherItem | u
   return findMedeaItem(itemValue);
 };
 
-/** Runs an item that a hotkey opened a window for. */
-export const runItemInWindow = async (itemValue: string | undefined): Promise<void> => {
-  const item = await findItem(itemValue);
-  if (item === undefined) {
-    throw new Error(`Unknown item "${itemValue}".`);
-  }
-  await item.run();
-};
-
 /** Runs an item from its hotkey, with no search window involved. */
 export const runCommandItem = async (itemValue: string | undefined): Promise<void> => {
   if (itemValue === "command:exit") {
@@ -67,7 +58,9 @@ export const runCommandItem = async (itemValue: string | undefined): Promise<voi
     throw new Error(`Unknown command "${itemValue}".`);
   }
   if (item.needsWindow === true) {
-    await openItemWindow(item.value);
+    if (!(await runInRunningCli(item.value))) {
+      await openItemWindow(item.value);
+    }
     return;
   }
   await item.run();

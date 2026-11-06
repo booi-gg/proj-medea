@@ -2,6 +2,7 @@ import { styleText } from "node:util";
 import { confirm } from "@clack/prompts";
 import { saveAliases } from "../../launcher/aliases.ts";
 import { saveHotkey } from "../../launcher/hotkeys.ts";
+import { drawScreen } from "../../launcher/screen.ts";
 import { reloadHotkeys } from "../../menubar/helper.ts";
 import type { LauncherItem, MedeaApp, SettingsAction } from "../types.ts";
 import { askForAnswers, askForQuicklink } from "./form.ts";
@@ -11,14 +12,19 @@ import { addQuicklink, readQuicklinksSync, removeQuicklink, updateQuicklink } fr
 import type { Quicklink } from "./store.ts";
 
 const APP_ID = "medea-quicklinks";
-// Reserved, so no saved link can end up with the same value as the Create Quicklink command.
+// Reserved, so no saved link can end up with the same value as the create command.
 const CREATE_ID = "create";
 const LINK_ICON = styleText("blue", "↗");
+const CREATE_NAME = "Quicklink, Create (Medea)";
 
 const toValue = (id: string): string => `${APP_ID}:${id}`;
 
 const openQuicklink = async ({ name, link, openWith }: Quicklink): Promise<string> => {
-  const answers = await askForAnswers(name, findArguments(link));
+  const linkArguments = findArguments(link);
+  if (linkArguments.length > 0) {
+    drawScreen({ title: name, icon: LINK_ICON });
+  }
+  const answers = await askForAnswers(name, linkArguments);
   if (answers === undefined) {
     return "";
   }
@@ -28,6 +34,7 @@ const openQuicklink = async ({ name, link, openWith }: Quicklink): Promise<strin
 };
 
 const createQuicklink = async (): Promise<string> => {
+  drawScreen({ title: CREATE_NAME, icon: LINK_ICON });
   const draft = await askForQuicklink(undefined, readQuicklinksSync());
   if (draft === undefined) {
     return "";
@@ -47,7 +54,7 @@ const toItem = (quicklink: Quicklink): LauncherItem => ({
 
 const createItem: LauncherItem = {
   value: toValue(CREATE_ID),
-  name: "Create Quicklink",
+  name: CREATE_NAME,
   icon: LINK_ICON,
   kind: "Command",
   needsWindow: true,
@@ -55,6 +62,7 @@ const createItem: LauncherItem = {
 };
 
 const editQuicklink = async (quicklink: Quicklink): Promise<boolean> => {
+  drawScreen({ title: `Edit ${quicklink.name}`, icon: LINK_ICON });
   const draft = await askForQuicklink(quicklink, readQuicklinksSync());
   if (draft !== undefined) {
     await updateQuicklink(quicklink.id, draft);

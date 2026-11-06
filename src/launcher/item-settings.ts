@@ -1,11 +1,12 @@
 import { styleText } from "node:util";
-import { confirm, intro, isCancel, log, select, text } from "@clack/prompts";
+import { confirm, isCancel, log, select, text } from "@clack/prompts";
 import { readConfig } from "../config.ts";
 import { listSettingsActions } from "../medea-apps/registry.ts";
 import { reloadHotkeys } from "../menubar/helper.ts";
 import { MAX_ALIASES, findAliasProblem, parseAliasInput, saveAliases } from "./aliases.ts";
 import { recordKeys } from "./hotkey-recorder.ts";
 import { findHotkeyProblem, formatHotkey, parseRecording, saveHotkey } from "./hotkeys.ts";
+import { drawScreen } from "./screen.ts";
 
 export const ADD_ALIAS_LABEL = "Alias, Add (Medea)";
 export const CREATE_HOTKEY_LABEL = "Hotkey, Create (Medea)";
@@ -18,7 +19,9 @@ const DONE = "done";
 const withCurrentValue = (label: string, current: string): string =>
   current === "" ? label : `${label}  ${styleText("cyan", current)}`;
 
-const editAliases = async (itemValue: string): Promise<void> => {
+/** Returns the line to show when back in the menu. */
+const editAliases = async (itemValue: string, itemName: string): Promise<string> => {
+  drawScreen({ title: `Add Alias for ${itemName}` });
   const { aliases } = await readConfig();
   const input = await text({
     message: `Up to ${MAX_ALIASES} aliases, separated by commas`,
@@ -26,9 +29,11 @@ const editAliases = async (itemValue: string): Promise<void> => {
     initialValue: (aliases[itemValue] ?? []).join(", "),
     validate: (value) => findAliasProblem(parseAliasInput(value ?? ""), itemValue, aliases),
   });
-  if (!isCancel(input)) {
-    await saveAliases(itemValue, parseAliasInput(input));
+  if (isCancel(input)) {
+    return "";
   }
+  await saveAliases(itemValue, parseAliasInput(input));
+  return "Aliases saved";
 };
 
 const applyHotkey = async (itemValue: string, hotkey: string): Promise<void> => {
@@ -44,39 +49,45 @@ const confirmSystemShortcut = async (hotkey: string): Promise<boolean> => {
   return answer === true;
 };
 
-const createHotkey = async (itemValue: string): Promise<void> => {
+const toWarning = (message: string): string => styleText("yellow", message);
+
+/** Returns the line to show when back in the menu. */
+const createHotkey = async (itemValue: string, itemName: string): Promise<string> => {
+  drawScreen({ title: `Create Hotkey for ${itemName}` });
   log.info("Press your hotkey in the Record Hotkey window");
   const output = await recordKeys();
   if (output === undefined) {
-    log.info("Hotkey not changed");
-    return;
+    return "Hotkey not changed";
   }
   const recording = parseRecording(output);
   if (recording === undefined) {
-    log.warn("That key can't be used for a hotkey");
-    return;
+    return toWarning("That key can't be used for a hotkey");
   }
   if (recording.kind === "interrupted") {
-    log.warn("Another app took focus while you held the keys, so that shortcut may be in use");
-    return;
+    return toWarning(
+      "Another app took focus while you held the keys, so that shortcut may be in use",
+    );
   }
   const { hotkey, usedBySystem } = recording;
   const { hotkeys } = await readConfig();
   const problem = findHotkeyProblem(hotkey, itemValue, hotkeys);
   if (problem !== undefined) {
-    log.warn(`${formatHotkey(hotkey)}: ${problem}`);
-    return;
+    return toWarning(`${formatHotkey(hotkey)}: ${problem}`);
   }
   if (usedBySystem && !(await confirmSystemShortcut(hotkey))) {
-    log.info("Hotkey not changed");
-    return;
+    return "Hotkey not changed";
   }
   await applyHotkey(itemValue, hotkey);
-  log.success(`Hotkey set to ${formatHotkey(hotkey)}`);
+  return `Hotkey set to ${formatHotkey(hotkey)}`;
 };
 
-/** Shows the menu once. Returns false when the user is finished. */
-const runSettingsRound = async (itemValue: string): Promise<boolean> => {
+/** Shows the menu once. Returns the line to show next, or undefined when finished. */
+const runSettingsRound = async (
+  itemValue: string,
+  itemName: string,
+  notice: string,
+): Promise<string | undefined> => {
+  drawScreen({ title: `${itemName} Settings`, notice });
   const { aliases, hotkeys } = await readConfig();
   const hotkey = hotkeys[itemValue] ?? "";
   const aliasTags = (aliases[itemValue] ?? []).map((alias) => `[${alias}]`).join(" ");
@@ -94,30 +105,26 @@ const runSettingsRound = async (itemValue: string): Promise<boolean> => {
   });
 
   if (isCancel(choice) || choice === DONE) {
-    return false;
+    return undefined;
   }
   const appAction = appActions.find(({ label }) => label === choice);
   if (appAction !== undefined) {
-    return appAction.run();
+    return (await appAction.run()) ? "" : undefined;
   }
   if (choice === ADD_ALIAS) {
-    await editAliases(itemValue);
+    return editAliases(itemValue, itemName);
   }
   if (choice === CREATE_HOTKEY) {
-    await createHotkey(itemValue);
+    return createHotkey(itemValue, itemName);
   }
-  if (choice === REMOVE_HOTKEY) {
-    await applyHotkey(itemValue, "");
-    log.success("Hotkey removed");
-  }
-  return true;
+  await applyHotkey(itemValue, "");
+  return "Hotkey removed";
 };
 
 /** The settings screen for one item. It runs in the search window, then search comes back. */
 export const runItemSettings = async (itemValue: string, itemName: string): Promise<void> => {
-  intro(itemName);
-  let keepGoing = true;
-  while (keepGoing) {
-    keepGoing = await runSettingsRound(itemValue);
+  let notice = await runSettingsRound(itemValue, itemName, "");
+  while (notice !== undefined) {
+    notice = await runSettingsRound(itemValue, itemName, notice);
   }
 };

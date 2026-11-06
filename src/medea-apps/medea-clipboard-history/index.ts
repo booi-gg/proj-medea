@@ -4,7 +4,7 @@ import { styleText } from "node:util";
 import { confirm, isCancel, select } from "@clack/prompts";
 import { promptForSelection } from "../../launcher/prompt.ts";
 import type { LauncherOption } from "../../launcher/prompt.ts";
-import { clearScreen, drawScreen } from "../../launcher/screen.ts";
+import { drawScreen } from "../../launcher/screen.ts";
 import { rankByText } from "../../launcher/search.ts";
 import { fitToWidth, padToWidth, toSplitLayout } from "../../launcher/split-view.ts";
 import { isMenuBarRunning } from "../../menubar/helper.ts";
@@ -40,6 +40,7 @@ const COPY_IMAGE_SCRIPT = `on run argv
   set the clipboard to (read (POSIX file (item 1 of argv)) as «class PNGf»)
 end run`;
 const CLOSE_IMAGE_KEY = "\u0018";
+const SCREEN_TITLE = { title: "Clipboard", icon: ICON };
 const COPY = "copy";
 const VIEW = "view";
 const DELETE = "delete";
@@ -159,7 +160,7 @@ const runEntryActions = async (
   entry: ClipboardEntry,
   highlight: Highlight,
 ): Promise<string | undefined> => {
-  drawScreen();
+  drawScreen(SCREEN_TITLE);
   const choice = await select({
     message: describeEntry(entry, MENU_PREVIEW_LENGTH),
     options: [
@@ -204,7 +205,7 @@ const runHistoryRound = async (
   if (entries.length === 0) {
     return { notice: await describeEmptyHistory(), query: "" };
   }
-  clearScreen();
+  drawScreen(SCREEN_TITLE);
   const now = Date.now();
   const columns = process.stdout.columns ?? FALLBACK_COLUMNS;
   const layout = toSplitLayout(columns, process.stdout.rows);
@@ -245,6 +246,7 @@ const runHistoryRound = async (
       settingsLabel: "actions",
       renderPreview,
       signal: historyChange.signal,
+      replaceable: true,
       initialQuery,
       onFocus: (entryId) => {
         if (entryId !== focusedId) {

@@ -1,7 +1,7 @@
 import { styleText } from "node:util";
 import { readConfigSync } from "../config.ts";
 import { start, stop } from "../menubar/commands.ts";
-import { listMedeaItems } from "../medea-apps/registry.ts";
+import { findMedeaItem, listMedeaItems } from "../medea-apps/registry.ts";
 import type { LauncherItem } from "../medea-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
 import { listenForRequests } from "../terminals/running-cli.ts";
@@ -9,7 +9,7 @@ import { listApps, openApp } from "./apps.ts";
 import type { App } from "./apps.ts";
 import { formatHotkey } from "./hotkeys.ts";
 import { ADD_ALIAS_LABEL, CREATE_HOTKEY_LABEL, runItemSettings } from "./item-settings.ts";
-import { promptForSelection } from "./prompt.ts";
+import { closeReplaceableList, promptForSelection } from "./prompt.ts";
 import type { LauncherOption } from "./prompt.ts";
 import { drawScreen } from "./screen.ts";
 
@@ -28,6 +28,15 @@ type GetItems = () => LauncherItem[];
 interface RoundResult {
   keepRunning: boolean;
   notice: string;
+}
+
+/** What this window is doing, which decides how a hotkey pressed elsewhere is answered. */
+interface Session {
+  runningItem: string | undefined;
+  /** Set by a hotkey, and run once the list on screen has closed. */
+  nextItem: string | undefined;
+  /** A window opened for one item closes with it, unless you've gone on to search. */
+  closeWhenDone: boolean;
 }
 
 const NO_NOTICE = "";
@@ -101,24 +110,38 @@ const showErrorsAsNotice = async (run: () => Promise<string>): Promise<string> =
   }
 };
 
+const trackItem = async (
+  session: Session,
+  value: string,
+  run: () => Promise<string>,
+): Promise<string> => {
+  session.runningItem = value;
+  try {
+    return await run();
+  } finally {
+    session.runningItem = undefined;
+  }
+};
+
 const openSettingsFor = async (items: readonly LauncherItem[], value?: string): Promise<string> => {
   const item = items.find((candidate) => candidate.value === value);
   if (item === undefined) {
     return NO_NOTICE;
   }
-  drawScreen();
   return showErrorsAsNotice(withoutNotice(() => runItemSettings(item.value, item.name)));
 };
 
-const pickItemForSettings = async (getItems: GetItems): Promise<string> => {
-  drawScreen();
-  const { value } = await promptForSelection(() => toOptions(getItems()), PICK_ITEM_PLACEHOLDER);
+const pickItemForSettings = async (getItems: GetItems, title: string): Promise<string> => {
+  drawScreen({ title });
+  const { value } = await promptForSelection(() => toOptions(getItems()), PICK_ITEM_PLACEHOLDER, {
+    replaceable: true,
+  });
   return openSettingsFor(getItems(), value);
 };
 
 /** Shows the search bar once. */
-const runSearchRound = async (notice: string): Promise<RoundResult> => {
-  drawScreen(notice);
+const runSearchRound = async (notice: string, session: Session): Promise<RoundResult> => {
+  drawScreen({ notice });
   const [menuBarRunning, apps] = await Promise.all([isMenuBarRunning(), listApps()]);
   const fixedItems = buildCommandItems(menuBarRunning);
   const appItems = apps.map(toAppItem);
@@ -127,7 +150,11 @@ const runSearchRound = async (notice: string): Promise<RoundResult> => {
   const { cancelled, value, wantsSettings } = await promptForSelection(
     () => toOptions(getItems()),
     SEARCH_PLACEHOLDER,
+    { replaceable: true },
   );
+  if (session.nextItem !== undefined) {
+    return { keepRunning: true, notice: NO_NOTICE };
+  }
   if (cancelled || (value === EXIT_VALUE && !wantsSettings)) {
     return { keepRunning: false, notice: NO_NOTICE };
   }
@@ -135,20 +162,74 @@ const runSearchRound = async (notice: string): Promise<RoundResult> => {
     return { keepRunning: true, notice: await openSettingsFor(getItems(), value) };
   }
   if (value === SET_ALIAS_VALUE || value === CREATE_HOTKEY_VALUE) {
-    return { keepRunning: true, notice: await pickItemForSettings(getItems) };
+    const title = value === SET_ALIAS_VALUE ? "Add Alias" : "Create Hotkey";
+    return { keepRunning: true, notice: await pickItemForSettings(getItems, title) };
   }
   const item = getItems().find((candidate) => candidate.value === value);
-  const nextNotice = item === undefined ? NO_NOTICE : await showErrorsAsNotice(item.run);
+  const nextNotice =
+    item === undefined
+      ? NO_NOTICE
+      : await trackItem(session, item.value, () => showErrorsAsNotice(item.run));
   return { keepRunning: true, notice: nextNotice };
 };
 
-// Stays open after each action so the shortcut can bring this same window back.
-export const runLauncher = async (): Promise<void> => {
-  const stopListening = await listenForRequests();
+const runItemByValue = async (value: string): Promise<string> => {
+  const item = findMedeaItem(value);
+  if (item === undefined) {
+    throw new Error(`Unknown item "${value}".`);
+  }
+  return item.run();
+};
+
+/** Runs the item a hotkey asked for. A window that closes with it shows errors as it exits. */
+const runNextItem = async (value: string, session: Session): Promise<RoundResult> => {
+  session.nextItem = undefined;
+  const run = (): Promise<string> => runItemByValue(value);
+  const notice = await trackItem(session, value, () =>
+    session.closeWhenDone ? run() : showErrorsAsNotice(run),
+  );
+  return { keepRunning: !session.closeWhenDone || session.nextItem !== undefined, notice };
+};
+
+// Anything but a list could hold unsaved typing, so there the window only comes to the front.
+const switchToItem = (value: string, session: Session): void => {
+  if (value !== session.runningItem && closeReplaceableList()) {
+    session.nextItem = value;
+  }
+};
+
+// The shortcut means search, and a window opened for one item isn't showing it.
+const switchToSearch = (session: Session): void => {
+  if (session.closeWhenDone && closeReplaceableList()) {
+    session.closeWhenDone = false;
+  }
+};
+
+/**
+ * Stays open after each action so the shortcut can bring this same window back. A hotkey's window
+ * passes the item it was opened for, and closes when that's done.
+ */
+export const runLauncher = async (firstItem?: string): Promise<void> => {
+  const session: Session = {
+    runningItem: undefined,
+    nextItem: firstItem,
+    closeWhenDone: firstItem !== undefined,
+  };
+  const stopListening = await listenForRequests({
+    onFocus: () => {
+      switchToSearch(session);
+    },
+    onRunItem: (value) => {
+      switchToItem(value, session);
+    },
+  });
   try {
     let round: RoundResult = { keepRunning: true, notice: NO_NOTICE };
     while (round.keepRunning) {
-      round = await runSearchRound(round.notice);
+      round =
+        session.nextItem === undefined
+          ? await runSearchRound(round.notice, session)
+          : await runNextItem(session.nextItem, session);
     }
   } finally {
     stopListening();

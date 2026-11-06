@@ -24,7 +24,7 @@ test("padding ignores colour codes", () => {
 
 test("a normal window fits both panes on one line", () => {
   const layout = toSplitLayout(80, 24);
-  assert.deepEqual(layout, { listWidth: 30, previewWidth: 42, height: 17 });
+  assert.deepEqual(layout, { listWidth: 30, previewWidth: 42, height: 11 });
 });
 
 test("a narrow window has no preview", () => {

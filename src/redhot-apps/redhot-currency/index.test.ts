@@ -24,7 +24,7 @@ test("suggests target currencies from a partial code", () => {
   const items = toConversionItems("356 INR to SD", snapshot);
   assert.deepEqual(
     items.map(({ value }) => value),
-    ["medea-currency:answer:USD", "medea-currency:answer:SDG", "medea-currency:answer:BSD"],
+    ["redhot-currency:answer:USD", "redhot-currency:answer:SDG", "redhot-currency:answer:BSD"],
   );
 });
 

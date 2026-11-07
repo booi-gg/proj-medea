@@ -1,12 +1,12 @@
 import { readConfig, updateConfig } from "../../config.ts";
 import { reloadHotkeys } from "../../menubar/helper.ts";
 import { sendHelperRequest } from "../../menubar/helper-socket.ts";
-import { toMedeaIcon } from "../icon.ts";
-import type { LauncherItem, MedeaApp } from "../types.ts";
+import { toRedhotIcon } from "../icon.ts";
+import type { LauncherItem, RedhotApp } from "../types.ts";
 import { APP_ID, WINDOW_ACTIONS, addDefaultHotkeys, toWindowValue } from "./actions.ts";
 import type { WindowAction } from "./actions.ts";
 
-const ICON = toMedeaIcon("▣");
+const ICON = toRedhotIcon("▣");
 const OK_REPLY = "ok";
 const ADD_HOTKEYS_ID = "add-default-hotkeys";
 const SHOW_HOTKEYS_ID = "show-hotkeys";
@@ -15,11 +15,11 @@ const NO_HELPER_MESSAGE = "Window actions need the menu bar item. Use Add Menu B
 
 // The keys are the helper's replies, from WindowFailure in native/WindowManager.swift.
 const FAILURE_MESSAGES: Record<string, string> = {
-  "no-access": "Allow medea-status under Accessibility in System Settings, then try again",
+  "no-access": "Allow redhot-status under Accessibility in System Settings, then try again",
   "no-window": "No window to move",
   "full-screen": "A full-screen window can't be moved",
   "not-movable": "That window can't be moved",
-  "nothing-to-restore": "Medea hasn't moved that window",
+  "nothing-to-restore": "Redhot hasn't moved that window",
   "one-display": "There's only one display",
 };
 
@@ -36,7 +36,7 @@ const runWindowCommand = async (command: string): Promise<string> => {
 
 // Terminal rows touch, so a filled background would join every diagram into one block. The
 // brackets stop short of the row's edges, which keeps each screen apart from its neighbours.
-const toDiagram = (diagram: string): string => `[${toMedeaIcon(diagram)}]`;
+const toDiagram = (diagram: string): string => `[${toRedhotIcon(diagram)}]`;
 
 const toItem = ({ id, name, command, diagram, hint }: WindowAction): LauncherItem => ({
   value: toWindowValue(id),
@@ -71,7 +71,11 @@ const actionItems = WINDOW_ACTIONS.map(toItem);
 // Loaded late because the list needs the registry, which loads this file.
 const showWindowHotkeys = async (): Promise<string> => {
   const { runHotkeyList } = await import("../../launcher/hotkey-list.ts");
-  return runHotkeyList({ title: SHOW_HOTKEYS_NAME, icon: ICON, getEntries: () => actionItems });
+  return runHotkeyList({
+    title: SHOW_HOTKEYS_NAME,
+    icon: ICON,
+    getEntries: () => actionItems,
+  });
 };
 
 const showHotkeysItem: LauncherItem = {
@@ -85,7 +89,7 @@ const showHotkeysItem: LauncherItem = {
 
 const items: readonly LauncherItem[] = [...actionItems, showHotkeysItem, addHotkeysItem];
 
-export const windowActions: MedeaApp = {
+export const windowActions: RedhotApp = {
   id: APP_ID,
   listItems: () => [...items],
   listSettingsActions: () => [],

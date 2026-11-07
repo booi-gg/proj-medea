@@ -18,12 +18,12 @@ test("every logo row has the same width", () => {
 });
 
 test("falls back to the plain name in a narrow window", () => {
-  assert.deepEqual(toVisibleRows(renderBanner(10)), ["  medea"]);
+  assert.deepEqual(toVisibleRows(renderBanner(10)), ["  redhot"]);
 });
 
-test("fades from teal to cyan", () => {
+test("fades from deep red to coral", () => {
   const banner = renderBanner(80);
-  assert.ok(banner.indexOf("\u001B[38;5;30m") < banner.indexOf("\u001B[38;5;51m"));
+  assert.ok(banner.indexOf("\u001B[38;5;124m") < banner.indexOf("\u001B[38;5;203m"));
 });
 
 test("puts sync status beside the logo without wrapping it", () => {

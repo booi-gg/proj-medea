@@ -64,7 +64,9 @@ const readForSaving = async (): Promise<Quicklink[]> => {
     if (isMissingFileError(error)) {
       return [];
     }
-    throw new Error(`Fix ${quicklinksPath} first, it can't be read`, { cause: error });
+    throw new Error(`Fix ${quicklinksPath} first, it can't be read`, {
+      cause: error,
+    });
   }
 };
 
@@ -113,7 +115,7 @@ export const addQuicklink = async (
 };
 
 export const updateQuicklink = async (id: string, draft: QuicklinkDraft): Promise<void> => {
-  await withAction("quicklinks.update", { item: `medea-quicklinks:${id}` }, async () => {
+  await withAction("quicklinks.update", { item: `redhot-quicklinks:${id}` }, async () => {
     await withStorageLock(async () => {
       const links = await readForSaving();
       await writeQuicklinks(links.map((link) => (link.id === id ? { id, ...draft } : link)));
@@ -122,7 +124,7 @@ export const updateQuicklink = async (id: string, draft: QuicklinkDraft): Promis
 };
 
 export const removeQuicklink = async (id: string): Promise<void> => {
-  await withAction("quicklinks.remove", { item: `medea-quicklinks:${id}` }, async () => {
+  await withAction("quicklinks.remove", { item: `redhot-quicklinks:${id}` }, async () => {
     await withStorageLock(async () => {
       const links = await readForSaving();
       await writeQuicklinks(links.filter((link) => link.id !== id));

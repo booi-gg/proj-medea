@@ -3,18 +3,18 @@ import { saveAliases } from "../../launcher/aliases.ts";
 import { saveHotkey } from "../../launcher/hotkeys.ts";
 import { drawScreen } from "../../launcher/screen.ts";
 import { reloadHotkeys } from "../../menubar/helper.ts";
-import { toMedeaIcon } from "../icon.ts";
-import type { LauncherItem, MedeaApp, SettingsAction } from "../types.ts";
+import { toRedhotIcon } from "../icon.ts";
+import type { LauncherItem, RedhotApp, SettingsAction } from "../types.ts";
 import { askForAnswers, askForQuicklink } from "./form.ts";
 import { openTarget, readClipboard } from "./open-link.ts";
 import { fillLink, findArguments, usesClipboard } from "./placeholders.ts";
 import { addQuicklink, readQuicklinksSync, removeQuicklink, updateQuicklink } from "./store.ts";
 import type { Quicklink } from "./store.ts";
 
-const APP_ID = "medea-quicklinks";
+const APP_ID = "redhot-quicklinks";
 // Reserved, so no saved link can end up with the same value as the create command.
 const CREATE_ID = "create";
-const LINK_ICON = toMedeaIcon("↗");
+const LINK_ICON = toRedhotIcon("↗");
 const CREATE_NAME = "Quicklink, Create";
 
 const toValue = (id: string): string => `${APP_ID}:${id}`;
@@ -71,7 +71,10 @@ const editQuicklink = async (quicklink: Quicklink): Promise<boolean> => {
 };
 
 const deleteQuicklink = async ({ id, name }: Quicklink): Promise<boolean> => {
-  const answer = await confirm({ message: `Delete ${name}?`, initialValue: false });
+  const answer = await confirm({
+    message: `Delete ${name}?`,
+    initialValue: false,
+  });
   if (answer !== true) {
     return true;
   }
@@ -93,7 +96,7 @@ const listSettingsActions = (itemValue: string): SettingsAction[] => {
   ];
 };
 
-export const quicklinks: MedeaApp = {
+export const quicklinks: RedhotApp = {
   id: APP_ID,
   listItems: () => [createItem, ...readQuicklinksSync().map(toItem)],
   listSettingsActions,

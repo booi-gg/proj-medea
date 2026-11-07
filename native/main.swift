@@ -6,7 +6,7 @@ private let hotKeyModifiers = UInt32(cmdKey | shiftKey)
 
 let cliCommand = Array(CommandLine.arguments.dropFirst())
 guard !cliCommand.isEmpty else {
-  FileHandle.standardError.write(Data("usage: medea-status <cli command> [arguments]\n".utf8))
+  FileHandle.standardError.write(Data("usage: redhot-status <cli command> [arguments]\n".utf8))
   exit(64)
 }
 
@@ -16,11 +16,11 @@ let windows = WindowManager()
 let controller = StatusItemController(cliCommand: cliCommand, windows: windows)
 let hotKeys = HotKeyCenter()
 let handlerStatus = hotKeys.installHandler()
-MedeaLog.event("hotkey.handler", level: handlerStatus == noErr ? "info" : "warn", trace: MedeaLog.startupTrace, fields: ["status": handlerStatus])
+RedhotLog.event("hotkey.handler", level: handlerStatus == noErr ? "info" : "warn", trace: RedhotLog.startupTrace, fields: ["status": handlerStatus])
 let hotKeyStatus = hotKeys.registerPermanent(keyCode: hotKeyKeyCode, modifiers: hotKeyModifiers) {
   controller.showCli()
 }
-MedeaLog.event("hotkey.register", level: hotKeyStatus == noErr ? "info" : "warn", trace: MedeaLog.startupTrace, fields: ["kind": "launcher", "status": hotKeyStatus])
+RedhotLog.event("hotkey.register", level: hotKeyStatus == noErr ? "info" : "warn", trace: RedhotLog.startupTrace, fields: ["kind": "launcher", "status": hotKeyStatus])
 controller.reloadHotKeys(into: hotKeys)
 
 // MARK: - Start
@@ -47,6 +47,6 @@ let helperSocket = HelperSocket(
   onRequest: windows.answer
 )
 let socketStarted = helperSocket.start()
-MedeaLog.event("helper.socket", level: socketStarted ? "info" : "warn", trace: MedeaLog.startupTrace, fields: ["ok": socketStarted])
+RedhotLog.event("helper.socket", level: socketStarted ? "info" : "warn", trace: RedhotLog.startupTrace, fields: ["ok": socketStarted])
 
 app.run()

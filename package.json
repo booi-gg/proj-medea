@@ -1,32 +1,32 @@
 {
-  "name": "@booi-gg/rhasta",
+  "name": "@booi-gg/redhot",
   "version": "0.1.0",
   "description": "A keyboard launcher for macOS that runs in your terminal: apps, hotkeys, quicklinks, clipboard history and window actions",
   "keywords": [
+    "cast",
     "cli",
     "clipboard-history",
     "hotkeys",
-    "ray",
     "launcher",
     "macos",
     "quicklinks",
+    "ray",
     "raycast-alternative",
     "terminal",
-    "window-manager",
-    "cast"
+    "window-manager"
   ],
-  "homepage": "https://github.com/booi-gg/proj-medea#readme",
+  "homepage": "https://github.com/booi-gg/proj-redhot#readme",
   "bugs": {
-    "url": "https://github.com/booi-gg/proj-medea/issues"
+    "url": "https://github.com/booi-gg/proj-redhot/issues"
   },
   "license": "MIT",
   "author": "booi-gg",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/booi-gg/proj-medea.git"
+    "url": "git+https://github.com/booi-gg/proj-redhot.git"
   },
   "bin": {
-    "medea": "./dist/start.js"
+    "redhot": "./dist/start.js"
   },
   "files": [
     "dist",

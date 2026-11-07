@@ -1,9 +1,13 @@
+import { styleText } from "node:util";
+
 const LEFT_PADDING = "  ";
 const DEFAULT_COLOR = "\u001B[39m";
-// 256-colour teal to cyan, left to right. These work without full RGB colour support.
-const GRADIENT_COLORS = [30, 37, 44, 51];
+// 256-colour reds, deep to coral, left to right. It stops short of pure #ff0000 so the logo
+// stays easy on the eyes. These work without full RGB colour support.
+const GRADIENT_COLORS = [124, 160, 167, 203];
+const PLAIN_NAME_COLOR = 160;
 
-const LOGO_ROWS = ["╔╦╗╔═╗╔╦╗╔═╗╔═╗", "║║║║╣  ║║║╣ ╠═╣", "╩ ╩╚═╝═╩╝╚═╝╩ ╩"];
+const LOGO_ROWS = ["╦═╗╔═╗╔╦╗╦ ╦╔═╗╔╦╗", "╠╦╝║╣  ║║╠═╣║ ║ ║ ", "╩╚═╚═╝═╩╝╩ ╩╚═╝ ╩ "];
 const LOGO_WIDTH = Math.max(...LOGO_ROWS.map((row) => row.length));
 
 const toColorCode = (color: number): string => `\u001B[38;5;${color}m`;
@@ -17,7 +21,8 @@ const paintGradient = (row: string): string => {
   return `${LEFT_PADDING}${bands.join("")}${DEFAULT_COLOR}`;
 };
 
-const paintPlainName = (): string => `${LEFT_PADDING}${toColorCode(44)}medea${DEFAULT_COLOR}`;
+const paintPlainName = (): string =>
+  `${LEFT_PADDING}${toColorCode(PLAIN_NAME_COLOR)}redhot${DEFAULT_COLOR}`;
 
 /** The logo, or the plain name when the window is too narrow for it. */
 export const renderBanner = (columns: number, aside?: string): string => {
@@ -29,4 +34,3 @@ export const renderBanner = (columns: number, aside?: string): string => {
   }
   return `\n${rows.join("\n")}\n`;
 };
-import { styleText } from "node:util";

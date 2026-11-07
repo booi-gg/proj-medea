@@ -13,7 +13,7 @@ import {
 } from "./sync.ts";
 import type { SyncPaths } from "./sync.ts";
 
-const root = await mkdtemp(join(tmpdir(), "medea-sync-test-"));
+const root = await mkdtemp(join(tmpdir(), "redhot-sync-test-"));
 after(async () => rm(root, { recursive: true, force: true }));
 
 const pathsFor = (name: string): SyncPaths => {
@@ -40,7 +40,7 @@ test("syncs portable settings and links while preserving Mac-specific choices", 
     JSON.stringify({
       terminal: "Ghostty",
       aliases: { "command:exit": ["bye"], "/Applications/Foo.app": ["foo"] },
-      hotkeys: { "medea-logs:view": "cmd+l" },
+      hotkeys: { "redhot-logs:view": "cmd+l" },
       clipboardHistoryMonths: 4,
     }),
   );
@@ -72,7 +72,7 @@ test("syncs portable settings and links while preserving Mac-specific choices", 
   const links = JSON.parse(await readFile(second.quicklinks, "utf8"));
   assert.equal(config.terminal, "Terminal");
   assert.deepEqual(config.aliases, { "command:exit": ["bye"] });
-  assert.deepEqual(config.hotkeys, { "medea-logs:view": "cmd+l" });
+  assert.deepEqual(config.hotkeys, { "redhot-logs:view": "cmd+l" });
   assert.equal(config.clipboardHistoryMonths, 4);
   assert.deepEqual(links, [{ id: "docs", name: "Docs", link: "https://example.com" }]);
   assert.ok((await readSyncStatus(second)).lastSyncAt);
@@ -91,7 +91,7 @@ test("keeps offline edits, syncs logs by device, and reports an unavailable fold
   await mkdir(join(root, "third"), { recursive: true });
   await mkdir(join(root, "fourth"), { recursive: true });
   await mkdir(first.logs, { recursive: true });
-  await writeFile(join(first.logs, "medea.log"), '{"event":"sample"}\n');
+  await writeFile(join(first.logs, "redhot.log"), '{"event":"sample"}\n');
   await configureSync(cloud, first);
   await configureSync(cloud, second);
   await syncNow(first);

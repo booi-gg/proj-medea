@@ -1,15 +1,19 @@
-import { toMedeaIcon } from "../icon.ts";
-import type { LauncherItem, MedeaApp } from "../types.ts";
+import { toRedhotIcon } from "../icon.ts";
+import type { LauncherItem, RedhotApp } from "../types.ts";
 
-const APP_ID = "medea-hotkeys";
+const APP_ID = "redhot-hotkeys";
 const SHOW_ALL_ID = "show-all";
 const NAME = "Hotkeys, Show All";
-const ICON = toMedeaIcon("⌘");
+const ICON = toRedhotIcon("⌘");
 
 // Loaded late because the list needs the registry, which loads this file.
 const showAllHotkeys = async (): Promise<string> => {
   const { listSavedHotkeys, runHotkeyList } = await import("../../launcher/hotkey-list.ts");
-  return runHotkeyList({ title: NAME, icon: ICON, getEntries: listSavedHotkeys });
+  return runHotkeyList({
+    title: NAME,
+    icon: ICON,
+    getEntries: listSavedHotkeys,
+  });
 };
 
 const showAllItem: LauncherItem = {
@@ -21,7 +25,7 @@ const showAllItem: LauncherItem = {
   run: showAllHotkeys,
 };
 
-export const hotkeyList: MedeaApp = {
+export const hotkeyList: RedhotApp = {
   id: APP_ID,
   listItems: () => [showAllItem],
   listSettingsActions: () => [],

@@ -1,9 +1,9 @@
 import { readConfig, updateConfig } from "../config.ts";
 import type { HotkeyMap } from "../config.ts";
-import { findWindowCommand } from "../medea-apps/medea-window/actions.ts";
+import { findWindowCommand } from "../redhot-apps/redhot-window/actions.ts";
 import { toDisplayName } from "./aliases.ts";
 
-const MEDEA_HOTKEY = "shift+cmd+space";
+const REDHOT_HOTKEY = "shift+cmd+space";
 const MIN_MODIFIERS = 2;
 const FORMAT_HINT = "Use a format like cmd+shift+k";
 const MODIFIER_HINT = "Use at least two modifiers, including cmd or ctrl";
@@ -131,7 +131,10 @@ const parseHotkey = (input: string): ParsedHotkey | undefined => {
     return undefined;
   }
   const chosen = new Set(modifierParts.map((part) => MODIFIER_NAMES[part]));
-  return { modifiers: MODIFIER_ORDER.filter((modifier) => chosen.has(modifier)), key };
+  return {
+    modifiers: MODIFIER_ORDER.filter((modifier) => chosen.has(modifier)),
+    key,
+  };
 };
 
 const toCanonical = ({ modifiers, key }: ParsedHotkey): string => [...modifiers, key].join("+");
@@ -172,8 +175,8 @@ export const findHotkeyProblem = (
     return MODIFIER_HINT;
   }
   const hotkey = toCanonical(parsed);
-  if (hotkey === MEDEA_HOTKEY) {
-    return "That hotkey already opens Medea";
+  if (hotkey === REDHOT_HOTKEY) {
+    return "That hotkey already opens Redhot";
   }
   for (const [otherValue, otherHotkey] of Object.entries(allHotkeys)) {
     if (otherValue !== itemValue && otherHotkey === hotkey) {
@@ -190,7 +193,7 @@ export type Recording =
   | { kind: "keys"; hotkey: string; usedBySystem: boolean }
   | { kind: "interrupted" };
 
-/** Reads the recorder's JSON. Returns undefined when it isn't a key Medea can register. */
+/** Reads the recorder's JSON. Returns undefined when it isn't a key Redhot can register. */
 export const parseRecording = (recording: string): Recording | undefined => {
   try {
     const parsed: unknown = JSON.parse(recording);

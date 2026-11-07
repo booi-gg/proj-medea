@@ -4,7 +4,7 @@ import { runCommand } from "../shell.ts";
 import { compileSwift } from "../swift-build.ts";
 
 const source = join(projectDir, "native", "SyncBridge.swift");
-const binary = join(buildDir, "medea-sync-bridge");
+const binary = join(buildDir, "redhot-sync-bridge");
 
 const prepare = (): Promise<void> => compileSwift([source], binary);
 

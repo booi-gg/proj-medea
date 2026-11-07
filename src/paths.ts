@@ -21,24 +21,24 @@ export const imagePreviewSourcePath = join(projectDir, "native", "ImagePreview.s
 // start.js repeats this, because it can't import a .ts file.
 const isInstalled = projectDir.split(sep).includes("node_modules");
 export const buildDir = isInstalled
-  ? join(homedir(), "Library", "Application Support", "Medea")
+  ? join(homedir(), "Library", "Application Support", "Redhot")
   : join(projectDir, ".build");
-export const helperPath = join(buildDir, "medea-status");
-export const recorderPath = join(buildDir, "medea-record");
-export const imagePreviewPath = join(buildDir, "medea-image-preview");
+export const helperPath = join(buildDir, "redhot-status");
+export const recorderPath = join(buildDir, "redhot-record");
+export const imagePreviewPath = join(buildDir, "redhot-image-preview");
 export const helperLogPath = join(buildDir, "helper.log");
-export const launcherPath = join(buildDir, "open-medea.command");
+export const launcherPath = join(buildDir, "open-redhot.command");
 export const socketPath = join(buildDir, "cli.sock");
 export const helperSocketPath = join(buildDir, "helper.sock");
 
-export const configDir = join(homedir(), ".config", "medea");
+export const configDir = join(homedir(), ".config", "redhot");
 export const configPath = join(configDir, "config.json");
-export const quicklinksPath = join(configDir, "medea-quicklinks.json");
+export const quicklinksPath = join(configDir, "redhot-quicklinks.json");
 export const syncStatePath = join(configDir, "sync-state.json");
 export const syncOutboxDir = join(configDir, "sync-outbox");
-export const loginItemPath = join(homedir(), "Library", "LaunchAgents", "medea.menu-bar.plist");
-export const clipboardHistoryPath = join(configDir, "medea-clipboard-history.json");
-export const clipboardImagesDir = join(configDir, "medea-clipboard-history");
-export const currencyRatesPath = join(configDir, "medea-currency-rates.json");
-export const logDir = join(homedir(), "Library", "Logs", "Medea");
-export const logPath = join(logDir, "medea.log");
+export const loginItemPath = join(homedir(), "Library", "LaunchAgents", "redhot.menu-bar.plist");
+export const clipboardHistoryPath = join(configDir, "redhot-clipboard-history.json");
+export const clipboardImagesDir = join(configDir, "redhot-clipboard-history");
+export const currencyRatesPath = join(configDir, "redhot-currency-rates.json");
+export const logDir = join(homedir(), "Library", "Logs", "Redhot");
+export const logPath = join(logDir, "redhot.log");

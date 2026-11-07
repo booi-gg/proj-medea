@@ -108,7 +108,7 @@ export const updateConfig = async (changes: Partial<Config>): Promise<void> => {
       await writeAtomic(configPath, `${JSON.stringify(merged, null, 2)}\n`);
     });
     if (changes.logMaxSizeMb !== undefined) {
-      rotateLogs(process.env.MEDEA_LOG_DIR ?? logDir, changes.logMaxSizeMb, true);
+      rotateLogs(process.env.REDHOT_LOG_DIR ?? logDir, changes.logMaxSizeMb, true);
     }
   });
 };

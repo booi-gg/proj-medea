@@ -65,9 +65,9 @@ export const startMenuBar = async (): Promise<void> => {
     spawn(helperPath, [process.execPath, cliEntryPath], {
       detached: true,
       stdio: ["ignore", helperLog, helperLog],
-      env: { ...process.env, MEDEA_TRACE: currentTrace() },
+      env: { ...process.env, REDHOT_TRACE: currentTrace() },
     }),
-    "medea-status",
+    "redhot-status",
   );
   await once(helper, "spawn");
   helper.unref();

@@ -1,10 +1,10 @@
-# Contributing to Medea
+# Contributing to Redhot
 
 Thanks for helping. This guide covers setting up a clone, the checks a change must pass, and how to send it.
 
 ## Before you start
 
-- For a bug, open an issue with your macOS version, Node version, terminal, and the steps to reproduce it. `medea logs` output helps, and it never contains your search text or clipboard.
+- For a bug, open an issue with your macOS version, Node version, terminal, and the steps to reproduce it. `redhot logs` output helps, and it never contains your search text or clipboard.
 - For a new feature, open an issue first so we can agree on the shape before you write it. Check [doc/roadmap.md](doc/roadmap.md) for what's already planned.
 
 ## Set up a clone
@@ -12,8 +12,8 @@ Thanks for helping. This guide covers setting up a clone, the checks a change mu
 You need macOS, Node.js 22.1 or later, [pnpm](https://pnpm.io) and the Xcode Command Line Tools (`xcode-select --install`).
 
 ```sh
-git clone https://github.com/booi-gg/proj-medea.git
-cd proj-medea
+git clone https://github.com/booi-gg/proj-redhot.git
+cd proj-redhot
 pnpm install
 pnpm menubar:start   # build and start the helper from this checkout
 pnpm start           # open search in the current terminal
@@ -42,7 +42,7 @@ pnpm check      # format and lint with Oxfmt and Oxlint
 [doc/how-it-works.md](doc/how-it-works.md) explains the helper, the CLI, and each feature, and has a map of every file. In short:
 
 - `src/launcher/` is the search window.
-- `src/medea-apps/` holds the built-in features. Each one has an ID starting with `medea-`, its own folder and is listed in `registry.ts`.
+- `src/redhot-apps/` holds the built-in features. Each one has an ID starting with `redhot-`, its own folder and is listed in `registry.ts`.
 - `src/menubar/` and `src/terminals/` start the helper and open terminal windows.
 - `native/` is the Swift helper.
 

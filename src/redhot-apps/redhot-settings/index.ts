@@ -32,14 +32,14 @@ import {
   readLoginItemState,
 } from "../../menubar/login-item.ts";
 import type { LoginItemState } from "../../menubar/login-item.ts";
-import { countEntriesToRemove, removeExpiredEntries } from "../medea-clipboard-history/store.ts";
-import { toMedeaIcon } from "../icon.ts";
-import type { LauncherItem, MedeaApp } from "../types.ts";
+import { countEntriesToRemove, removeExpiredEntries } from "../redhot-clipboard-history/store.ts";
+import { toRedhotIcon } from "../icon.ts";
+import type { LauncherItem, RedhotApp } from "../types.ts";
 
-const APP_ID = "medea-settings";
+const APP_ID = "redhot-settings";
 const OPEN_ID = "open";
 const NAME = "Settings";
-const ICON = toMedeaIcon("⚙");
+const ICON = toRedhotIcon("⚙");
 const START_AT_LOGIN = "start-at-login";
 const CLIPBOARD_HISTORY = "clipboard-history";
 const LOG_SIZE = "log-size";
@@ -96,12 +96,27 @@ const runSyncSettings = async (): Promise<string> => {
         ...(!status.enabled ? [{ value: "setup", label: "Choose iCloud Drive Folder" }] : []),
         ...(status.enabled
           ? [
-              { value: "now", label: "Sync Now", hint: `${status.pending} pending files` },
-              { value: "pause", label: status.paused ? "Resume Sync" : "Pause Sync" },
-              { value: "logs", label: `Sync logs  ${status.logsEnabled ? "● On" : "○ Off"}` },
+              {
+                value: "now",
+                label: "Sync Now",
+                hint: `${status.pending} pending files`,
+              },
+              {
+                value: "pause",
+                label: status.paused ? "Resume Sync" : "Pause Sync",
+              },
+              {
+                value: "logs",
+                label: `Sync logs  ${status.logsEnabled ? "● On" : "○ Off"}`,
+              },
               { value: "remove-logs", label: "Remove This Mac's Synced Logs" },
               ...(status.conflicts > 0
-                ? [{ value: "conflicts", label: `Review conflicts  ${status.conflicts}` }]
+                ? [
+                    {
+                      value: "conflicts",
+                      label: `Review conflicts  ${status.conflicts}`,
+                    },
+                  ]
                 : []),
               { value: "open", label: "Open Sync Folder" },
               { value: "disconnect", label: "Disconnect This Mac" },
@@ -182,13 +197,13 @@ const fixWindowAccess = async (access: WindowAccess): Promise<string> => {
     return "Use Add Menu Bar Item first, then come back";
   }
   await askForWindowAccess();
-  return "Turn on medea-status under Accessibility, then come back";
+  return "Turn on redhot-status under Accessibility, then come back";
 };
 
 const chooseStartAtLogin = async (state: LoginItemState): Promise<string> => {
   if (state === "blocked") {
     await openLoginItemsSettings();
-    return 'Turn on medea-status under "Allow in the Background", then come back';
+    return 'Turn on redhot-status under "Allow in the Background", then come back';
   }
   const choice = await select({
     message: "Start at login",
@@ -203,10 +218,10 @@ const chooseStartAtLogin = async (state: LoginItemState): Promise<string> => {
   }
   if (choice === "off") {
     await disableLoginItem();
-    return "Medea won't start at login";
+    return "Redhot won't start at login";
   }
   await enableLoginItem();
-  return 'Medea will start at login. macOS may show a "Background Items Added" notice';
+  return 'Redhot will start at login. macOS may show a "Background Items Added" notice';
 };
 
 const checkLoginItem = async (): Promise<LoginItemState> => {
@@ -242,7 +257,10 @@ const chooseHistoryMonths = async (current: HistoryMonths): Promise<string> => {
   const months = await select({
     message: "Keep clipboard history for",
     initialValue: current,
-    options: HISTORY_MONTH_CHOICES.map((value) => ({ value, label: toMonthsLabel(value) })),
+    options: HISTORY_MONTH_CHOICES.map((value) => ({
+      value,
+      label: toMonthsLabel(value),
+    })),
   });
   if (isCancel(months) || months === current) {
     return "";
@@ -285,7 +303,7 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
       {
         value: START_AT_LOGIN,
         label: `Start at login  ${STATE_LABELS[state]}`,
-        hint: "Keeps Medea in the menu bar",
+        hint: "Keeps Redhot in the menu bar",
       },
       {
         value: CLIPBOARD_HISTORY,
@@ -344,7 +362,7 @@ const openItem: LauncherItem = {
   run: openSettings,
 };
 
-export const medeaSettings: MedeaApp = {
+export const redhotSettings: RedhotApp = {
   id: APP_ID,
   listItems: () => [openItem],
   listSettingsActions: () => [],

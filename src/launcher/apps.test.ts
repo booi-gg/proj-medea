@@ -8,10 +8,14 @@ import { findAppPaths, toApps } from "./apps.ts";
 let root = "";
 
 before(async () => {
-  root = await mkdtemp(join(tmpdir(), "medea-apps-"));
-  await mkdir(join(root, "Top.app", "Contents", "Helpers", "Helper.app"), { recursive: true });
+  root = await mkdtemp(join(tmpdir(), "redhot-apps-"));
+  await mkdir(join(root, "Top.app", "Contents", "Helpers", "Helper.app"), {
+    recursive: true,
+  });
   await mkdir(join(root, "Vendor", "Suite", "Nested.app"), { recursive: true });
-  await mkdir(join(root, "Vendor", "Suite", "Deep", "TooDeep.app"), { recursive: true });
+  await mkdir(join(root, "Vendor", "Suite", "Deep", "TooDeep.app"), {
+    recursive: true,
+  });
   await mkdir(join(root, ".Hidden.app"));
   await mkdir(join(root, "Target.app"));
   await symlink(join(root, "Target.app"), join(root, "Linked.app"));

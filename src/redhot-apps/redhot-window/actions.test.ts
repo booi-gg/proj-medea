@@ -46,7 +46,7 @@ test("every placement stays inside the display", () => {
 test("finds the command for a window item and nothing else", () => {
   assert.equal(findWindowCommand(toWindowValue("center")), "center");
   assert.equal(findWindowCommand("/Applications/Safari.app"), undefined);
-  assert.equal(findWindowCommand("medea-window:add-default-hotkeys"), undefined);
+  assert.equal(findWindowCommand("redhot-window:add-default-hotkeys"), undefined);
 });
 
 test("hands the helper a window action's command, so a press skips Node", () => {
@@ -54,7 +54,7 @@ test("hands the helper a window action's command, so a press skips Node", () => 
     {
       keyCode: 123,
       modifiers: 6144,
-      value: "medea-window:left-half",
+      value: "redhot-window:left-half",
       windowCommand: "place 0 0 0.5 1",
     },
   ]);
@@ -65,7 +65,7 @@ test("delete can be a hotkey", () => {
     {
       keyCode: 51,
       modifiers: 6144,
-      value: "medea-window:restore",
+      value: "redhot-window:restore",
       windowCommand: "restore",
     },
   ]);
@@ -74,19 +74,21 @@ test("delete can be a hotkey", () => {
 test("adds every default to empty settings", () => {
   const { hotkeys, added } = addDefaultHotkeys({});
   assert.equal(added, WINDOW_ACTIONS.length);
-  assert.equal(hotkeys["medea-window:left-half"], "ctrl+option+left");
+  assert.equal(hotkeys["redhot-window:left-half"], "ctrl+option+left");
 });
 
 test("keeps a window hotkey you already chose", () => {
-  const { hotkeys, added } = addDefaultHotkeys({ "medea-window:left-half": "ctrl+cmd+h" });
-  assert.equal(hotkeys["medea-window:left-half"], "ctrl+cmd+h");
+  const { hotkeys, added } = addDefaultHotkeys({
+    "redhot-window:left-half": "ctrl+cmd+h",
+  });
+  assert.equal(hotkeys["redhot-window:left-half"], "ctrl+cmd+h");
   assert.equal(added, WINDOW_ACTIONS.length - 1);
 });
 
 test("skips a default that another item already uses", () => {
   const { hotkeys, added } = addDefaultHotkeys({ "/a.app": "ctrl+option+c" });
   assert.equal(hotkeys["/a.app"], "ctrl+option+c");
-  assert.equal(hotkeys["medea-window:center"], undefined);
+  assert.equal(hotkeys["redhot-window:center"], undefined);
   assert.equal(added, WINDOW_ACTIONS.length - 1);
 });
 

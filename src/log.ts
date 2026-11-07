@@ -15,7 +15,7 @@ import {
 import { basename, join } from "node:path";
 import { configPath, logDir } from "./paths.ts";
 
-const LOG_FILE = "medea.log";
+const LOG_FILE = "redhot.log";
 const MEGABYTE = 1024 * 1024;
 const DEFAULT_LIMIT_MB = 50;
 const SIZE_CHOICES = new Set([10, 50, 100, 500]);
@@ -23,7 +23,7 @@ const SIZE_REFRESH_MS = 1000;
 const MAX_LINE_BYTES = 2048;
 const MAX_LABEL_LENGTH = 96;
 const SAFE_LABEL = /[^a-zA-Z0-9._:-]/g;
-const SAFE_ITEM = /^(?:command|medea-[a-z-]+):[a-z0-9-]+$/i;
+const SAFE_ITEM = /^(?:command|redhot-[a-z-]+):[a-z0-9-]+$/i;
 const SAFE_TRACE = /^[a-f0-9-]{6,64}$/i;
 const SAFE_ERROR_CODES = new Set([
   "ENOENT",
@@ -55,7 +55,7 @@ const SAFE_ERROR_NAMES = new Set([
   "AbortError",
   "TimeoutError",
 ]);
-const LOG_FILE_NAME = /^medea(?:\.\d{8}T\d{9}Z-\d+-[a-f0-9]+)?\.log$/;
+const LOG_FILE_NAME = /^redhot(?:\.\d{8}T\d{9}Z-\d+-[a-f0-9]+)?\.log$/;
 
 export type LogLevel = "info" | "warn" | "error";
 
@@ -83,8 +83,8 @@ interface Action {
 }
 
 const actionContext = new AsyncLocalStorage<Action>();
-const processTrace = SAFE_TRACE.test(process.env.MEDEA_TRACE ?? "")
-  ? (process.env.MEDEA_TRACE ?? randomUUID())
+const processTrace = SAFE_TRACE.test(process.env.REDHOT_TRACE ?? "")
+  ? (process.env.REDHOT_TRACE ?? randomUUID())
   : randomUUID();
 let cachedLimitMb = DEFAULT_LIMIT_MB;
 let lastSizeRead = 0;
@@ -171,7 +171,7 @@ export const rotateLogs = (directory: string, maxSizeMb: number, forcePrune = fa
       const stamp = new Date().toISOString().replaceAll(/[-:.]/g, "");
       renameSync(
         active,
-        join(directory, `medea.${stamp}-${process.pid}-${randomUUID().slice(0, 8)}.log`),
+        join(directory, `redhot.${stamp}-${process.pid}-${randomUUID().slice(0, 8)}.log`),
       );
       shouldPrune = true;
     }
@@ -229,7 +229,7 @@ export const writeLog = (
   } = {},
 ): void => {
   try {
-    const directory = options.directory ?? process.env.MEDEA_LOG_DIR ?? logDir;
+    const directory = options.directory ?? process.env.REDHOT_LOG_DIR ?? logDir;
     const parentAction = actionContext.getStore();
     const parentId =
       parentAction !== undefined && options.id === parentAction.id

@@ -13,10 +13,13 @@ import {
 
 const fetchedAt = "2026-11-07T00:00:00.000Z";
 const validRows = [{ date: "2026-11-06", base: "USD", quote: "INR", rate: 94.19 }];
-const saved = JSON.stringify({ fetchedAt, rates: { INR: { date: "2026-11-06", rate: 94.19 } } });
+const saved = JSON.stringify({
+  fetchedAt,
+  rates: { INR: { date: "2026-11-06", rate: 94.19 } },
+});
 
 test("reads a valid snapshot and treats missing or broken files as unavailable", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "medea-currency-test-"));
+  const directory = await mkdtemp(join(tmpdir(), "redhot-currency-test-"));
   const path = join(directory, "rates.json");
   try {
     assert.equal(readRatesSync(path), undefined);
@@ -52,7 +55,7 @@ test("keeps the longer crypto codes in the API response", () => {
 });
 
 test("failed refresh keeps the saved file, while a good refresh replaces it", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "medea-currency-test-"));
+  const directory = await mkdtemp(join(tmpdir(), "redhot-currency-test-"));
   const path = join(directory, "rates.json");
   try {
     await writeFile(path, saved);

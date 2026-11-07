@@ -1,5 +1,5 @@
 name: Bug report
-description: Something in Medea doesn't work as expected
+description: Something in Redhot doesn't work as expected
 labels: [bug]
 body:
   - type: textarea
@@ -19,9 +19,9 @@ body:
     validations:
       required: true
   - type: input
-    id: medea
+    id: redhot
     attributes:
-      label: Medea version
+      label: Redhot version
       placeholder: 0.1.0
     validations:
       required: true
@@ -50,5 +50,5 @@ body:
     id: logs
     attributes:
       label: Logs
-      description: Output of `medea logs` around the problem. Logs never contain search text or clipboard content.
+      description: Output of `redhot logs` around the problem. Logs never contain search text or clipboard content.
       render: text

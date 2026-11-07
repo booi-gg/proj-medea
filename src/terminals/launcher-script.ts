@@ -16,8 +16,8 @@ export const writeLauncherScript = async (
   const script = [
     "#!/bin/zsh",
     CLEAR_WINDOW,
-    // Marks the window as Medea's, so Medea may close it.
-    "export MEDEA_WINDOW=1",
+    // Marks the window as Redhot's, so Redhot may close it.
+    "export REDHOT_WINDOW=1",
     `cd ${quoteForShell(projectDir)}`,
     `exec ${command}`,
     "",

@@ -1,4 +1,4 @@
-# Medea currency converter
+# Redhot currency converter
 
 ## Context
 
@@ -6,7 +6,7 @@ Typing a conversion like `100 usd to inr` into search should show the answer as 
 
 The calculator row is built on every keystroke and is synchronous, so search can't wait on the network. Rates have to come from a local file that is refreshed in the background.
 
-This would be Medea's first network call. It only requests one fixed URL, so amounts and search text never leave the Mac. It needs no new dependencies, because Node has `fetch` built in.
+This would be Redhot's first network call. It only requests one fixed URL, so amounts and search text never leave the Mac. It needs no new dependencies, because Node has `fetch` built in.
 
 ## Decisions
 
@@ -39,7 +39,7 @@ Tested on 2026-11-07: 181 rows, 11 KB, 31 ms. The docs say 239 currencies, so no
 
 ## Approach
 
-Everything lives in a new `src/medea-apps/medea-currency/` folder, with tests next to the files they cover.
+Everything lives in a new `src/redhot-apps/redhot-currency/` folder, with tests next to the files they cover.
 
 ### Parser
 
@@ -49,7 +49,7 @@ Everything lives in a new `src/medea-apps/medea-currency/` folder, with tests ne
 
 ### Rates file
 
-- Save the rates to `~/.config/medea/medea-currency-rates.json`, with its path in `paths.ts`.
+- Save the rates to `~/.config/redhot/redhot-currency-rates.json`, with its path in `paths.ts`.
 - Read it synchronously, so search can use it on every keystroke.
 - Pairs are worked out through the USD rates, so `eur to inr` is the INR rate divided by the EUR rate.
 

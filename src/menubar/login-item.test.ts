@@ -7,7 +7,7 @@ import {
   toLaunchAgentPlist,
 } from "./login-item.ts";
 
-const plist = toLaunchAgentPlist(["/a/medea-status", "/b/node", "/c/index.ts"], "/a/helper.log");
+const plist = toLaunchAgentPlist(["/a/redhot-status", "/b/node", "/c/index.ts"], "/a/helper.log");
 
 test("names the item and starts it at login", () => {
   assert.ok(plist.includes(`<string>${LOGIN_ITEM_LABEL}</string>`));
@@ -19,7 +19,7 @@ test("doesn't relaunch after Exit", () => {
 });
 
 test("runs the helper first, then the CLI it should call", () => {
-  assert.match(plist, /medea-status.*\n.*node.*\n.*index\.ts/);
+  assert.match(plist, /redhot-status.*\n.*node.*\n.*index\.ts/);
 });
 
 test("escapes special characters in paths", () => {
@@ -36,7 +36,7 @@ test("spots this item in the disabled list", () => {
 const toRecord = (number: number, disposition: string, identifier: string): string => `
  #${number}:
                  UUID: B64B49F4-2A8B-4E00-AC8E-26FF7AE9FF3A
-                 Name: medea-status
+                 Name: redhot-status
                  Type: legacy agent (0x10008)
           Disposition: [${disposition}] (0xb)
            Identifier: ${identifier}

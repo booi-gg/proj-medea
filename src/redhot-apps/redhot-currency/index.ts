@@ -1,12 +1,12 @@
 import { copyText } from "../../shell.ts";
-import { toMedeaIcon } from "../icon.ts";
+import { toRedhotIcon } from "../icon.ts";
 import type { LauncherItem } from "../types.ts";
 import { convertCurrency, parseConversion } from "./convert.ts";
 import { readRatesSync } from "./rates.ts";
 import type { RatesSnapshot } from "./rates.ts";
 
-const VALUE = "medea-currency:answer";
-const ICON = toMedeaIcon("¤");
+const VALUE = "redhot-currency:answer";
+const ICON = toRedhotIcon("¤");
 const MAX_SUGGESTIONS = 8;
 const COMMON_CODES = ["USD", "INR", "EUR", "GBP", "JPY", "CAD", "AUD"];
 

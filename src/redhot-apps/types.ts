@@ -23,8 +23,8 @@ export interface SettingsAction {
 }
 
 /** A feature that adds its own items to search and its own actions to their settings. */
-export interface MedeaApp {
-  /** Built-in apps start with "medea-", so a third-party app can't clash with one. */
+export interface RedhotApp {
+  /** Built-in apps start with "redhot-", so a third-party app can't clash with one. */
   id: string;
   /** Called on every keystroke, so anything saved in another window shows straight away. */
   listItems: () => LauncherItem[];

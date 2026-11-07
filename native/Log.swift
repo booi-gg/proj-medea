@@ -1,7 +1,7 @@
 import Foundation
 import Darwin
 
-struct MedeaSpan {
+struct RedhotSpan {
   let event: String
   let id: String
   let trace: String
@@ -11,13 +11,13 @@ struct MedeaSpan {
 }
 
 /// Writes one metadata-only JSON line per call. Node owns rotation; the helper only appends.
-enum MedeaLog {
-  static let startupTrace = ProcessInfo.processInfo.environment["MEDEA_TRACE"]
-  static let directory = ProcessInfo.processInfo.environment["MEDEA_LOG_DIR"]
+enum RedhotLog {
+  static let startupTrace = ProcessInfo.processInfo.environment["REDHOT_TRACE"]
+  static let directory = ProcessInfo.processInfo.environment["REDHOT_LOG_DIR"]
     .map { URL(fileURLWithPath: $0, isDirectory: true) }
     ?? FileManager.default.homeDirectoryForCurrentUser
-      .appendingPathComponent("Library/Logs/Medea", isDirectory: true)
-  private static let file = directory.appendingPathComponent("medea.log")
+      .appendingPathComponent("Library/Logs/Redhot", isDirectory: true)
+  private static let file = directory.appendingPathComponent("redhot.log")
   private static let maxLineBytes = 2048
 
   static func newTrace() -> String { UUID().uuidString.lowercased() }
@@ -30,7 +30,7 @@ enum MedeaLog {
     if item.hasPrefix("/") {
       return "app:" + String(URL(fileURLWithPath: item).lastPathComponent.prefix(96))
     }
-    let allowed = item.range(of: "^(command|medea-[a-z-]+):[a-z0-9-]+$", options: .regularExpression)
+    let allowed = item.range(of: "^(command|redhot-[a-z-]+):[a-z0-9-]+$", options: .regularExpression)
     return allowed == nil ? "other" : String(item.prefix(96))
   }
 
@@ -49,8 +49,8 @@ enum MedeaLog {
     trace: String? = nil,
     parent: String? = nil,
     fields: [String: Any] = [:]
-  ) -> MedeaSpan {
-    let span = MedeaSpan(
+  ) -> RedhotSpan {
+    let span = RedhotSpan(
       event: event,
       id: newId(),
       trace: trace ?? newTrace(),
@@ -62,7 +62,7 @@ enum MedeaLog {
     return span
   }
 
-  static func end(_ span: MedeaSpan, ok: Bool, fields: [String: Any] = [:]) {
+  static func end(_ span: RedhotSpan, ok: Bool, fields: [String: Any] = [:]) {
     let duration = DispatchTime.now().uptimeNanoseconds - span.startedAt
     write(
       span.event,

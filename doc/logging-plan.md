@@ -1,12 +1,12 @@
-# Medea logging
+# Redhot logging
 
 ## Context
 
-Medea should record every action and process, with process ids, date, time and duration, and the total size of the logs should be configurable.
+Redhot should record every action and process, with process ids, date, time and duration, and the total size of the logs should be configurable.
 
 Today the only logging is a few `NSLog` calls in the helper, written to `.build/helper.log`. The CLI logs nothing, and its 16 empty `catch` blocks hide failures completely. That log also has no size limit when the helper starts at login, because launchd appends to it forever.
 
-Medea is many processes, not one. The helper stays running, a CLI window can stay open, and a new Node process starts on every copy and hotkey. All of them have to share one log safely, and logging must not slow down that short-lived Node start.
+Redhot is many processes, not one. The helper stays running, a CLI window can stay open, and a new Node process starts on every copy and hotkey. All of them have to share one log safely, and logging must not slow down that short-lived Node start.
 
 ## Open decisions
 
@@ -14,14 +14,28 @@ The recommendations below are what the rest of this plan assumes.
 
 1. **What "everything" includes.** Recommended: log every action but no content. That means byte counts and types, not clipboard text, search text, filled-in links or command arguments. Logging keystrokes or copied text would create a plaintext file of passwords and tokens, and the helper already keeps copied content out of its log on purpose. The catch is that the log says "quicklink X opened", not the URL.
 2. **Default size.** Recommended: 50 MB. That is about 30,000 copies of history at an estimated 1.5 KB per copy. The estimate comes from line size and has not been measured.
-3. **Location.** Recommended: `~/Library/Logs/Medea/`, which Console.app lists automatically. The alternative is `~/.config/medea/logs`, next to the other settings.
+3. **Location.** Recommended: `~/Library/Logs/Redhot/`, which Console.app lists automatically. The alternative is `~/.config/redhot/logs`, next to the other settings.
 
 ## Log format
 
-Each process appends one JSON object per line to `~/Library/Logs/Medea/medea.log`:
+Each process appends one JSON object per line to `~/Library/Logs/Redhot/redhot.log`:
 
 ```jsonl
-{"ts":"2026-11-07T01:14:22.318+05:30","level":"info","source":"cli","pid":48213,"ppid":48190,"trace":"a1b2c3","id":"d4e5f6","parent":"9f8e7d","event":"item.run","phase":"end","item":"medea-quicklinks:open","durationMs":142,"ok":true}
+{
+  "ts": "2026-11-07T01:14:22.318+05:30",
+  "level": "info",
+  "source": "cli",
+  "pid": 48213,
+  "ppid": 48190,
+  "trace": "a1b2c3",
+  "id": "d4e5f6",
+  "parent": "9f8e7d",
+  "event": "item.run",
+  "phase": "end",
+  "item": "redhot-quicklinks:open",
+  "durationMs": 142,
+  "ok": true
+}
 ```
 
 - `ts` holds the date and time, with the local offset.
@@ -80,7 +94,7 @@ These shared points cover most of the activity:
 
 - Add `native/Log.swift` to `helperSourcePaths`. It only appends, using the same line format.
 - Log hotkeys, window actions and clipboard detection, with types and byte counts only.
-- Log `runCli` with the child pid, exit status and duration, and pass `trace` through its existing `environment` parameter as `MEDEA_TRACE`.
+- Log `runCli` with the child pid, exit status and duration, and pass `trace` through its existing `environment` parameter as `REDHOT_TRACE`.
 - Replace the `NSLog` calls, and keep `helper.log` for raw crash output only.
 - Test Swift and Node writing at the same time.
 
@@ -89,7 +103,7 @@ This stage rebuilds the helper, so window actions need a quick retest afterwards
 ### 5. Settings and viewing
 
 - Add the size setting to the Settings app.
-- Add a `medea logs` command that prints readable rows, with `--follow` and `--trace <id>`.
+- Add a `redhot logs` command that prints readable rows, with `--follow` and `--trace <id>`.
 - Update `doc/how-it-works.md`.
 
 ## Known problems to handle

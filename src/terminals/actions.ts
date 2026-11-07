@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { withAction } from "../log.ts";
-import type { LauncherItem } from "../medea-apps/types.ts";
+import type { LauncherItem } from "../redhot-apps/types.ts";
 import { stopMenuBar } from "../menubar/helper.ts";
 import { buildDir, launcherPath } from "../paths.ts";
 import { writeLauncherScript } from "./launcher-script.ts";
@@ -34,10 +34,10 @@ const openItemWindow = async (itemValue: string): Promise<void> => {
   await launcher.open(scriptPath);
 };
 
-// Loads every Medea app, so it stays out of commands that never run one.
+// Loads every Redhot app, so it stays out of commands that never run one.
 const findItem = async (itemValue: string | undefined): Promise<LauncherItem | undefined> => {
-  const { findMedeaItem } = await import("../medea-apps/registry.ts");
-  return findMedeaItem(itemValue);
+  const { findRedhotItem } = await import("../redhot-apps/registry.ts");
+  return findRedhotItem(itemValue);
 };
 
 /** Runs an item from its hotkey, with no search window involved. */

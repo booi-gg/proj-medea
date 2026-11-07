@@ -36,5 +36,5 @@ test("rejects an alias over the maximum length", () => {
 test("names an app, a command and a quicklink", () => {
   assert.equal(toDisplayName("/Applications/Visual Studio Code.app"), "Visual Studio Code");
   assert.equal(toDisplayName("command:exit"), "exit");
-  assert.equal(toDisplayName("medea-quicklinks:github-search"), "github-search");
+  assert.equal(toDisplayName("redhot-quicklinks:github-search"), "github-search");
 });

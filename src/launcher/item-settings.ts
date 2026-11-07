@@ -1,7 +1,7 @@
 import { styleText } from "node:util";
 import { confirm, isCancel, log, select, text } from "@clack/prompts";
 import { readConfig } from "../config.ts";
-import { listSettingsActions } from "../medea-apps/registry.ts";
+import { listSettingsActions } from "../redhot-apps/registry.ts";
 import { reloadHotkeys } from "../menubar/helper.ts";
 import { MAX_ALIASES, findAliasProblem, parseAliasInput, saveAliases } from "./aliases.ts";
 import { recordKeys } from "./hotkey-recorder.ts";
@@ -97,7 +97,10 @@ const runSettingsRound = async (
     message: "What do you want to change?",
     options: [
       { value: ADD_ALIAS, label: withCurrentValue(ADD_ALIAS_LABEL, aliasTags) },
-      { value: CREATE_HOTKEY, label: withCurrentValue(CREATE_HOTKEY_LABEL, formatHotkey(hotkey)) },
+      {
+        value: CREATE_HOTKEY,
+        label: withCurrentValue(CREATE_HOTKEY_LABEL, formatHotkey(hotkey)),
+      },
       ...(hotkey === "" ? [] : [{ value: REMOVE_HOTKEY, label: "Remove hotkey" }]),
       ...appActions.map(({ label }) => ({ value: label, label })),
       { value: DONE, label: "Done" },

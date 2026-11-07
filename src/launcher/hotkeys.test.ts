@@ -43,10 +43,10 @@ test("needs two modifiers including cmd or ctrl", () => {
   assert.equal(findHotkeyProblem("ctrl+option+k", "/a.app", {}), undefined);
 });
 
-test("refuses Medea's own hotkey", () => {
+test("refuses Redhot's own hotkey", () => {
   assert.equal(
     findHotkeyProblem("cmd+shift+space", "/a.app", {}),
-    "That hotkey already opens Medea",
+    "That hotkey already opens Redhot",
   );
 });
 
@@ -90,7 +90,9 @@ test("reads a macOS shortcut warning", () => {
 });
 
 test("reads an interrupted recording", () => {
-  assert.deepEqual(parseRecording('{"interrupted":true}'), { kind: "interrupted" });
+  assert.deepEqual(parseRecording('{"interrupted":true}'), {
+    kind: "interrupted",
+  });
 });
 
 test("rejects a recording of an unknown key or bad data", () => {
@@ -113,7 +115,9 @@ test("a command can have a hotkey", () => {
 
 test("names a command that already uses a hotkey", () => {
   assert.equal(
-    findHotkeyProblem("shift+cmd+e", "/a.app", { "command:exit": "shift+cmd+e" }),
+    findHotkeyProblem("shift+cmd+e", "/a.app", {
+      "command:exit": "shift+cmd+e",
+    }),
     "That hotkey is already used by exit",
   );
 });

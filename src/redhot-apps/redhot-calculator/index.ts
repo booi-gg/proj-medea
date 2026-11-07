@@ -1,10 +1,10 @@
 import { copyText } from "../../shell.ts";
-import { toMedeaIcon } from "../icon.ts";
+import { toRedhotIcon } from "../icon.ts";
 import type { LauncherItem } from "../types.ts";
 import { calculate } from "./calculate.ts";
 
-const VALUE = "medea-calculator:answer";
-const ICON = toMedeaIcon("±");
+const VALUE = "redhot-calculator:answer";
+const ICON = toRedhotIcon("±");
 
 const copyAnswer = async (answer: string): Promise<string> => {
   await copyText(answer);

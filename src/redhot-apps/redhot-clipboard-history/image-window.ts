@@ -28,10 +28,10 @@ export const openImageWindow = async (): Promise<ImageWindow> => {
   }
   const window = trackSpawn(
     spawn(imagePreviewPath, { stdio: ["pipe", "ignore", "ignore"] }),
-    "medea-image-preview",
+    "redhot-image-preview",
   );
   window.on("error", () => {});
-  // The window can close first, and writing to it then must not end Medea.
+  // The window can close first, and writing to it then must not end Redhot.
   window.stdin.on("error", () => {});
   window.unref();
 

@@ -7,14 +7,18 @@ import { writeLog } from "../log.ts";
 import { runCommand } from "../shell.ts";
 import { prepareMenuBar } from "./helper.ts";
 
-export const LOGIN_ITEM_LABEL = "medea.menu-bar";
+export const LOGIN_ITEM_LABEL = "redhot.menu-bar";
 const LOGIN_ITEMS_SETTINGS_URL =
   "x-apple.systempreferences:com.apple.LoginItems-Settings.extension";
 
 const BTM_RECORD_START = /^\s*#\d+:/m;
 const BTM_DISABLED = /Disposition: \[disabled/;
 
-const XML_ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;" };
+const XML_ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+};
 const XML_SPECIAL_CHARACTERS = /[&<>]/g;
 
 export type LoginItemState = "on" | "off" | "blocked";
@@ -120,7 +124,7 @@ export const refreshLoginItem = async (): Promise<void> => {
   }
 };
 
-/** macOS has no command for this switch, so all Medea can do is open the page. */
+/** macOS has no command for this switch, so all Redhot can do is open the page. */
 export const openLoginItemsSettings = async (): Promise<void> => {
   await runCommand("open", [LOGIN_ITEMS_SETTINGS_URL]);
 };

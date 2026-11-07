@@ -4,14 +4,14 @@ import { join } from "node:path";
 import { helperPath } from "../paths.ts";
 import { runCommand } from "../shell.ts";
 
-const IDENTITY_NAME = "Medea Local Signing";
-const HELPER_IDENTIFIER = "medea.status";
+const IDENTITY_NAME = "Redhot Local Signing";
+const HELPER_IDENTIFIER = "redhot.status";
 const CERTIFICATE_DAYS = "3650";
 // The key file only exists for a moment, in a folder only you can read.
-const BUNDLE_PASSWORD = "medea";
+const BUNDLE_PASSWORD = "redhot";
 // Homebrew's OpenSSL writes bundles that the macOS keychain can't import.
 const SYSTEM_OPENSSL = "/usr/bin/openssl";
-const IDENTITY_LINE = /^\s*\d+\)\s+([0-9A-F]{40})\s+"Medea Local Signing"/m;
+const IDENTITY_LINE = /^\s*\d+\)\s+([0-9A-F]{40})\s+"Redhot Local Signing"/m;
 
 const CERTIFICATE_CONFIG = `[req]
 distinguished_name = dn
@@ -35,7 +35,7 @@ const findSigningIdentity = async (): Promise<string | undefined> => {
 };
 
 const createSigningIdentity = async (): Promise<void> => {
-  const folder = await mkdtemp(join(tmpdir(), "medea-signing-"));
+  const folder = await mkdtemp(join(tmpdir(), "redhot-signing-"));
   const configPath = join(folder, "certificate.cnf");
   const keyPath = join(folder, "key.pem");
   const certificatePath = join(folder, "certificate.pem");

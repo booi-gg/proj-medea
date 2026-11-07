@@ -7,7 +7,7 @@ const HASH = "0123456789ABCDEF0123456789ABCDEF01234567";
 test("finds the identity, even when macOS doesn't trust it", () => {
   const listing = `Policy: Code Signing
   Matching identities
-  1) ${HASH} "Medea Local Signing" (CSSMERR_TP_NOT_TRUSTED)
+  1) ${HASH} "Redhot Local Signing" (CSSMERR_TP_NOT_TRUSTED)
      1 identities found
 `;
   assert.equal(parseSigningIdentity(listing), HASH);

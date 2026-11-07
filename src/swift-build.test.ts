@@ -9,7 +9,7 @@ import { isBuildCurrent, markBuilt } from "./swift-build.ts";
 const NPM_PACKAGE_DATE = new Date("1985-10-26T08:15:00Z");
 
 const withFolder = async (run: (folder: string) => Promise<void>): Promise<void> => {
-  const folder = await mkdtemp(join(tmpdir(), "medea-swift-build-"));
+  const folder = await mkdtemp(join(tmpdir(), "redhot-swift-build-"));
   try {
     await run(folder);
   } finally {

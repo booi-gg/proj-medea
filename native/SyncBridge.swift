@@ -14,7 +14,7 @@ private func coordinateRead(_ source: URL, into destination: URL) throws {
     do {
       let values = try readable.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey])
       if values.ubiquitousItemDownloadingStatus == .notDownloaded {
-        throw NSError(domain: "MedeaSync", code: 1, userInfo: [NSLocalizedDescriptionKey: "File is not downloaded yet"])
+        throw NSError(domain: "RedhotSync", code: 1, userInfo: [NSLocalizedDescriptionKey: "File is not downloaded yet"])
       }
       try FileManager.default.createDirectory(
         at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -48,7 +48,7 @@ private func coordinateWrite(_ source: URL, into destination: URL) throws {
 }
 
 let arguments = CommandLine.arguments
-guard arguments.count >= 2 else { fail("Usage: medea-sync-bridge choose|read|write") }
+guard arguments.count >= 2 else { fail("Usage: redhot-sync-bridge choose|read|write") }
 do {
   switch arguments[1] {
   case "choose":
@@ -61,7 +61,7 @@ do {
     panel.canChooseFiles = false
     panel.canCreateDirectories = true
     panel.allowsMultipleSelection = false
-    panel.message = "Choose or create a Medea Sync folder in iCloud Drive"
+    panel.message = "Choose or create a Redhot Sync folder in iCloud Drive"
     guard panel.runModal() == .OK, let folder = panel.url else { exit(2) }
     guard FileManager.default.isUbiquitousItem(at: folder) else {
       fail("Choose a folder inside iCloud Drive")

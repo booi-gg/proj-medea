@@ -20,4 +20,4 @@ First public release.
 - Window actions with optional Rectangle-style hotkeys.
 - Settings for Start at login, clipboard history length, log size and window permission.
 - Experimental iCloud Drive sync for settings and quicklinks.
-- Metadata-only logs, with `medea logs`.
+- Metadata-only logs, with `redhot logs`.

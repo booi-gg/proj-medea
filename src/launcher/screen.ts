@@ -8,7 +8,7 @@ export interface ScreenTitle {
   icon?: string | undefined;
 }
 
-const APP_NAME = "Medea";
+const APP_NAME = "Redhot";
 const CONTROL_CHARACTERS = /\p{Cc}/gu;
 
 const CLEAR_SCREEN_SEQUENCE = "\u001B[2J\u001B[H";
@@ -16,13 +16,13 @@ const CLEAR_SCROLLBACK_SEQUENCE = "\u001B[3J";
 
 /**
  * Terminal moves a cleared screen into its scrollback, blank rows included, which would leave a gap
- * above the logo on every redraw. Only a window Medea opened can lose that: in your own terminal
+ * above the logo on every redraw. Only a window Redhot opened can lose that: in your own terminal
  * the scrollback is your earlier work.
  */
-export const toClearSequence = (isMedeaWindow: boolean): string =>
-  isMedeaWindow ? `${CLEAR_SCREEN_SEQUENCE}${CLEAR_SCROLLBACK_SEQUENCE}` : CLEAR_SCREEN_SEQUENCE;
+export const toClearSequence = (isRedhotWindow: boolean): string =>
+  isRedhotWindow ? `${CLEAR_SCREEN_SEQUENCE}${CLEAR_SCROLLBACK_SEQUENCE}` : CLEAR_SCREEN_SEQUENCE;
 
-const isMedeaWindow = (): boolean => process.env.MEDEA_WINDOW === "1";
+const isRedhotWindow = (): boolean => process.env.REDHOT_WINDOW === "1";
 
 /** The name in the title bar. Item names come from disk, so nothing in them may run. */
 export const toWindowTitleSequence = (title: string | undefined): string => {
@@ -30,9 +30,9 @@ export const toWindowTitleSequence = (title: string | undefined): string => {
   return `\u001B]0;${parts.join(" — ").replaceAll(CONTROL_CHARACTERS, "")}\u0007`;
 };
 
-// Your own terminal's title bar isn't Medea's to change.
+// Your own terminal's title bar isn't Redhot's to change.
 const prepareWindow = (title: string | undefined): string =>
-  isMedeaWindow()
+  isRedhotWindow()
     ? `${toClearSequence(true)}${toWindowTitleSequence(title)}`
     : toClearSequence(false);
 

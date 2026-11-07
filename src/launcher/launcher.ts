@@ -2,14 +2,14 @@ import { styleText } from "node:util";
 import { select } from "@clack/prompts";
 import { readConfigSync } from "../config.ts";
 import { start, stop } from "../menubar/commands.ts";
-import { toMedeaIcon } from "../medea-apps/icon.ts";
-import { toCalculationItem } from "../medea-apps/medea-calculator/index.ts";
-import { calculate } from "../medea-apps/medea-calculator/calculate.ts";
-import { parseConversion } from "../medea-apps/medea-currency/convert.ts";
-import { toConversionItems } from "../medea-apps/medea-currency/index.ts";
-import { refreshRatesIfStale } from "../medea-apps/medea-currency/rates.ts";
-import { findMedeaItem, listMedeaItems } from "../medea-apps/registry.ts";
-import type { LauncherItem } from "../medea-apps/types.ts";
+import { toRedhotIcon } from "../redhot-apps/icon.ts";
+import { toCalculationItem } from "../redhot-apps/redhot-calculator/index.ts";
+import { calculate } from "../redhot-apps/redhot-calculator/calculate.ts";
+import { parseConversion } from "../redhot-apps/redhot-currency/convert.ts";
+import { toConversionItems } from "../redhot-apps/redhot-currency/index.ts";
+import { refreshRatesIfStale } from "../redhot-apps/redhot-currency/rates.ts";
+import { findRedhotItem, listRedhotItems } from "../redhot-apps/registry.ts";
+import type { LauncherItem } from "../redhot-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
 import { withAction, writeLog } from "../log.ts";
 import { listenForRequests } from "../terminals/running-cli.ts";
@@ -32,8 +32,8 @@ const CANCEL_CHOICE = "cancel";
 const SEARCH_PLACEHOLDER = "Cast actions";
 const PICK_ITEM_PLACEHOLDER = "Choose an app or command";
 const APP_ICON = styleText("cyan", "◆");
-const COMMAND_ICON = toMedeaIcon("⌘");
-const ACTIVE_SEARCH_ICON = toMedeaIcon("❯");
+const COMMAND_ICON = toRedhotIcon("⌘");
+const ACTIVE_SEARCH_ICON = toRedhotIcon("❯");
 
 type GetItems = () => LauncherItem[];
 
@@ -122,7 +122,11 @@ const rankWithAnswers = (query: string, options: readonly LauncherOption[]): Lau
     ...toConversionItems(query),
   ];
   return [
-    ...answers.map((item) => ({ ...item, aliases: [], label: formatRow(item, [], "") })),
+    ...answers.map((item) => ({
+      ...item,
+      aliases: [],
+      label: formatRow(item, [], ""),
+    })),
     ...results,
   ];
 };
@@ -172,10 +176,10 @@ const pickItemForSettings = async (getItems: GetItems, title: string): Promise<s
   return openSettingsFor(getItems(), value);
 };
 
-// Esc here also backs out of the question, so it can't end Medea by being pressed twice.
+// Esc here also backs out of the question, so it can't end Redhot by being pressed twice.
 const confirmEndProgram = async (): Promise<boolean> => {
   const choice = await select({
-    message: "End Medea?",
+    message: "End Redhot?",
     options: [
       { value: END_PROGRAM_CHOICE, label: "End program" },
       { value: CANCEL_CHOICE, label: "Cancel" },
@@ -190,12 +194,16 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
   const [menuBarRunning, apps] = await Promise.all([isMenuBarRunning(), listApps()]);
   const fixedItems = buildCommandItems(menuBarRunning);
   const appItems = apps.map(toAppItem);
-  const getItems: GetItems = () => [...fixedItems, ...listMedeaItems(), ...appItems];
+  const getItems: GetItems = () => [...fixedItems, ...listRedhotItems(), ...appItems];
 
   const { cancelled, value, wantsSettings, query } = await promptForSelection(
     () => toOptions(getItems()),
     SEARCH_PLACEHOLDER,
-    { rank: rankWithAnswers, replaceable: true, getSearchIcon: getActionSearchIcon },
+    {
+      rank: rankWithAnswers,
+      replaceable: true,
+      getSearchIcon: getActionSearchIcon,
+    },
   );
   if (session.nextItem !== undefined) {
     return { keepRunning: true, notice: NO_NOTICE };
@@ -217,11 +225,17 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
     return { keepRunning: false, notice: NO_NOTICE };
   }
   if (wantsSettings) {
-    return { keepRunning: true, notice: await openSettingsFor(getItems(), value) };
+    return {
+      keepRunning: true,
+      notice: await openSettingsFor(getItems(), value),
+    };
   }
   if (value === SET_ALIAS_VALUE || value === CREATE_HOTKEY_VALUE) {
     const title = value === SET_ALIAS_VALUE ? "Add Alias" : "Create Hotkey";
-    return { keepRunning: true, notice: await pickItemForSettings(getItems, title) };
+    return {
+      keepRunning: true,
+      notice: await pickItemForSettings(getItems, title),
+    };
   }
   const item = getItems().find((candidate) => candidate.value === value);
   const nextNotice =
@@ -232,7 +246,7 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
 };
 
 const runItemByValue = async (value: string): Promise<string> => {
-  const item = findMedeaItem(value);
+  const item = findRedhotItem(value);
   if (item === undefined) {
     throw new Error(`Unknown item "${value}".`);
   }
@@ -243,10 +257,13 @@ const runItemByValue = async (value: string): Promise<string> => {
 const runNextItem = async (value: string, session: Session): Promise<RoundResult> => {
   session.nextItem = undefined;
   const run = (): Promise<string> => runItemByValue(value);
-  const item = findMedeaItem(value);
+  const item = findRedhotItem(value);
   const tracked = (): Promise<string> => trackItem(session, value, run, item?.needsWindow);
   const notice = session.closeWhenDone ? await tracked() : await showErrorsAsNotice(tracked);
-  return { keepRunning: !session.closeWhenDone || session.nextItem !== undefined, notice };
+  return {
+    keepRunning: !session.closeWhenDone || session.nextItem !== undefined,
+    notice,
+  };
 };
 
 // Anything but a list could hold unsaved typing, so there the window only comes to the front.

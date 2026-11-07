@@ -9,15 +9,15 @@ import { reloadHotkeys } from "../menubar/helper.ts";
 import { configPath, logDir, quicklinksPath, syncOutboxDir, syncStatePath } from "../paths.ts";
 import { runCommand } from "../shell.ts";
 import { readTextIfPresent, withStorageLock, writeAtomic } from "../storage.ts";
-import { parseQuicklinks } from "../medea-apps/medea-quicklinks/store.ts";
-import type { Quicklink } from "../medea-apps/medea-quicklinks/store.ts";
+import { parseQuicklinks } from "../redhot-apps/redhot-quicklinks/store.ts";
+import type { Quicklink } from "../redhot-apps/redhot-quicklinks/store.ts";
 import { coordinatedCopy } from "./bridge.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOG_RETENTION_MS = 30 * DAY_MS;
 const LOG_LIMIT_BYTES = 50 * 1024 * 1024;
 const MAX_OPERATION_BYTES = 64 * 1024;
-const LOG_NAME = /^medea(?:\..+)?\.log$/;
+const LOG_NAME = /^redhot(?:\..+)?\.log$/;
 const SAFE_FILE_NAME = /^[a-zA-Z0-9-]+\.(?:json|jsonl)$/;
 
 const readDirectory = async (path: string): Promise<string[]> => {
@@ -112,7 +112,7 @@ const emptyState = (): SyncState => ({
 const parseState = (text: string): SyncState => {
   const value: unknown = JSON.parse(text);
   if (!isObject(value) || typeof value.deviceId !== "string" || !isObject(value.observed)) {
-    throw new Error("The Medea sync state is damaged. Fix it before syncing.");
+    throw new Error("The Redhot sync state is damaged. Fix it before syncing.");
   }
   return {
     deviceId: value.deviceId,
@@ -164,7 +164,13 @@ export const readSyncStatusSync = (paths: SyncPaths = defaultPaths): SyncStatus 
       pending: 0,
     };
   } catch {
-    return { enabled: false, paused: false, logsEnabled: true, conflicts: 0, pending: 0 };
+    return {
+      enabled: false,
+      paused: false,
+      logsEnabled: true,
+      conflicts: 0,
+      pending: 0,
+    };
   }
 };
 
@@ -206,7 +212,7 @@ const readLocal = async (paths: SyncPaths): Promise<{ config: Config; links: Qui
       (rawConfig.aliases !== undefined && !isObject(rawConfig.aliases)) ||
       (rawConfig.hotkeys !== undefined && !isObject(rawConfig.hotkeys))
     ) {
-      throw new Error("The local Medea config is damaged. Fix it before syncing.");
+      throw new Error("The local Redhot config is damaged. Fix it before syncing.");
     }
   }
   const config = parseConfig(configText ?? "{}");
@@ -534,7 +540,7 @@ export const configureSync = async (
   paths: SyncPaths = defaultPaths,
 ): Promise<void> => {
   const info = await stat(folder);
-  if (!info.isDirectory()) throw new Error("Choose a folder for Medea Sync");
+  if (!info.isDirectory()) throw new Error("Choose a folder for Redhot Sync");
   await withSyncLock(paths, async () => {
     const state = await readState(paths);
     if (state.folder !== folder) {
@@ -608,7 +614,7 @@ export const syncNow = async (paths: SyncPaths = defaultPaths): Promise<SyncStat
     const folderInfo = await stat(initial.folder);
     if (!folderInfo.isDirectory()) throw new Error("The iCloud Drive sync folder is unavailable");
     await mkdir(join(initial.folder, "devices"), { recursive: true });
-    staging = await mkdtemp(join(tmpdir(), "medea-sync-"));
+    staging = await mkdtemp(join(tmpdir(), "redhot-sync-"));
     await withSyncLock(paths, async () => {
       const state = await readState(paths);
       await recordLocalChanges(paths, state);

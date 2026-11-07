@@ -1,4 +1,4 @@
-# Medea roadmap
+# Redhot roadmap
 
 The goal is a Raycast-style launcher for macOS that runs as a CLI.
 
@@ -21,13 +21,13 @@ The goal is a Raycast-style launcher for macOS that runs as a CLI.
 | Move and resize windows           | Yes, built | Accessibility permission. `pnpm menubar:sign` keeps it across rebuilds                                           |
 | Snippet expansion                 | Yes        | Accessibility permission                                                                                         |
 
-The main limit is speed and feel. Raycast appears instantly as a floating panel, while Medea opens a terminal window each time.
+The main limit is speed and feel. Raycast appears instantly as a floating panel, while Redhot opens a terminal window each time.
 
 ## Steps
 
 1. **Shortcut:** done. The helper listens for `Cmd+Shift+Space` and opens the CLI.
 2. **Search launcher:** done. Type to find apps and built-in commands, then press Enter.
-3. **Commands:** started. Medea apps live in `src/medea-apps/`, with Quicklinks and Clipboard History built. Loading scripts from a user folder is still to do.
+3. **Commands:** started. Redhot apps live in `src/redhot-apps/`, with Quicklinks and Clipboard History built. Loading scripts from a user folder is still to do.
 4. **Terminal choice:** done for Terminal and Ghostty, from the menu bar. Other terminals need a tested recipe in `src/terminals/terminals.ts`.
 5. **Background features:** done. Clipboard history records in the background, and Start at login in Settings brings the helper back after a reboot.
 6. **Permission features:** window actions are built, and need testing by a person. Snippets are still to do. A rebuilt ad-hoc binary may lose granted permissions, so `pnpm menubar:sign` gives it a stable signature. A signed `.app` may still be needed if terminal-started and login-started helpers turn out to be treated differently.

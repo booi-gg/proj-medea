@@ -11,7 +11,7 @@ const code = {
   typescript: "export const add = (a: number, b: number): number => {\n  return a + b;\n};",
   python: 'def greet(name):\n    print(f"hello {name}")\n    return True\n',
   swift: "guard let text = pasteboard.string(forType: .string) else {\n  return\n}",
-  json: '{\n  "name": "medea",\n  "version": "0.1.0",\n  "private": true\n}',
+  json: '{\n  "name": "redhot",\n  "version": "0.1.0",\n  "private": true\n}',
   bash: 'for f in *.png; do\n  sips -Z 96 "$f" --out "thumb-$f"\ndone',
   html: '<div class="row">\n  <a href="/x">link</a>\n</div>',
   css: ".row {\n  display: flex;\n  color: #fff;\n}",
@@ -35,7 +35,7 @@ const notCode = {
   log: "INFO 2026-11-06 server started on port 3000\nWARN slow request took 2301ms",
   "sentence with SQL words": "We need to update the table where the users are listed.",
   "sentence with brackets": "Send the report (the long one) to the team by Friday.",
-  "menu text": " ● Start at login  ○ Off (Puts Medea in the menu bar when you log in)",
+  "menu text": " ● Start at login  ○ Off (Puts Redhot in the menu bar when you log in)",
   "markdown table": "| Quicklinks | Yes, built | Nothing special |\n| Aliases | Yes | None |",
 };
 

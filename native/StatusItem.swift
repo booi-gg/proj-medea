@@ -91,8 +91,8 @@ final class HotKeyCenter {
       let result = register(keyCode: hotKey.keyCode, modifiers: hotKey.modifiers) {
         onPress(hotKey)
       }
-      MedeaLog.event("hotkey.register", level: result.status == noErr ? "info" : "warn", fields: [
-        "item": MedeaLog.safeItem(hotKey.value), "status": result.status,
+      RedhotLog.event("hotkey.register", level: result.status == noErr ? "info" : "warn", fields: [
+        "item": RedhotLog.safeItem(hotKey.value), "status": result.status,
       ])
       if let ref = result.ref {
         itemHotKeys.append((id: result.id, ref: ref))
@@ -103,16 +103,16 @@ final class HotKeyCenter {
 
 @discardableResult
 func openApp(at path: String) -> Bool {
-  let span = MedeaLog.start("app.open", fields: ["item": MedeaLog.safeItem(path)])
+  let span = RedhotLog.start("app.open", fields: ["item": RedhotLog.safeItem(path)])
   let process = Process()
   process.executableURL = URL(fileURLWithPath: "/usr/bin/open")
   process.arguments = [path]
   do {
     try process.run()
-    MedeaLog.end(span, ok: true, fields: ["childPid": process.processIdentifier])
+    RedhotLog.end(span, ok: true, fields: ["childPid": process.processIdentifier])
     return true
   } catch {
-    MedeaLog.end(span, ok: false, fields: ["error": String(describing: type(of: error))])
+    RedhotLog.end(span, ok: false, fields: ["error": String(describing: type(of: error))])
     return false
   }
 }
@@ -258,7 +258,7 @@ final class ClipboardWatcher {
 
   /// Type names only, so copied content never reaches the log.
   private func logSkip(_ reason: String, _ types: [NSPasteboard.PasteboardType]) {
-    MedeaLog.event("clipboard.skip", fields: ["reason": reason, "typeCount": types.count])
+    RedhotLog.event("clipboard.skip", fields: ["reason": reason, "typeCount": types.count])
   }
 
   private static func isOnlyAddress(_ text: String) -> Bool {
@@ -327,7 +327,7 @@ final class ClipboardWatcher {
   private func recordImage(_ image: Data, name: String?) {
     DispatchQueue.global(qos: .utility).async { [onCopy] in
       guard let png = Self.toPng(image) else {
-        MedeaLog.event("clipboard.skip", level: "warn", fields: ["reason": "invalid image", "bytes": image.count])
+        RedhotLog.event("clipboard.skip", level: "warn", fields: ["reason": "invalid image", "bytes": image.count])
         return
       }
       DispatchQueue.main.async { onCopy(.image(png, name: name)) }
@@ -369,10 +369,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     statusItem.button?.image = NSImage(
       systemSymbolName: "terminal",
-      accessibilityDescription: "Medea"
+      accessibilityDescription: "Redhot"
     )
     statusItem.button?.image?.isTemplate = true
-    statusItem.button?.toolTip = "Medea"
+    statusItem.button?.toolTip = "Redhot"
     // A checkout builds into .build and an installed copy doesn't, so both can run side by side.
     let isCheckout = URL(fileURLWithPath: CommandLine.arguments[0])
       .deletingLastPathComponent()
@@ -380,11 +380,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     if isCheckout {
       statusItem.button?.title = "dev"
       statusItem.button?.imagePosition = .imageLeading
-      statusItem.button?.toolTip = "Medea (dev checkout)"
+      statusItem.button?.toolTip = "Redhot (dev checkout)"
     }
 
     let openItem = NSMenuItem(
-      title: "Open Medea",
+      title: "Open Redhot",
       action: #selector(handleOpen),
       keyEquivalent: ""
     )
@@ -423,7 +423,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   }
 
   func menuWillOpen(_ menu: NSMenu) {
-    MedeaLog.event("menu.open")
+    RedhotLog.event("menu.open")
     reloadTerminals()
   }
 
@@ -432,44 +432,44 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   }
 
   @objc private func handleOpenLogsFolder() {
-    let span = MedeaLog.start("menu.open-logs-folder")
+    let span = RedhotLog.start("menu.open-logs-folder")
     do {
       try FileManager.default.createDirectory(
-        at: MedeaLog.directory,
+        at: RedhotLog.directory,
         withIntermediateDirectories: true,
         attributes: [.posixPermissions: 0o700]
       )
-      let opened = NSWorkspace.shared.open(MedeaLog.directory)
-      MedeaLog.end(span, ok: opened)
+      let opened = NSWorkspace.shared.open(RedhotLog.directory)
+      RedhotLog.end(span, ok: opened)
       if !opened { NSSound.beep() }
     } catch {
-      MedeaLog.end(span, ok: false, fields: ["error": String(describing: type(of: error))])
+      RedhotLog.end(span, ok: false, fields: ["error": String(describing: type(of: error))])
       NSSound.beep()
     }
   }
 
   @objc private func handleTerminalChoice(_ sender: NSMenuItem) {
-    MedeaLog.event("terminal.select")
+    RedhotLog.event("terminal.select")
     runCli(["set-terminal", sender.title]) { [weak self] _, _ in
       self?.reloadTerminals()
     }
   }
 
   func showCli() {
-    let span = MedeaLog.start("launcher.show")
+    let span = RedhotLog.start("launcher.show")
     let socketPath = cliSocketPath
     DispatchQueue.global(qos: .userInteractive).async { [weak self] in
       guard !focusRunningCli(socketPath: socketPath) else {
-        MedeaLog.end(span, ok: true, fields: ["kind": "focus"])
+        RedhotLog.end(span, ok: true, fields: ["kind": "focus"])
         return
       }
       DispatchQueue.main.async {
         guard let self else {
-          MedeaLog.end(span, ok: false)
+          RedhotLog.end(span, ok: false)
           return
         }
         self.runCli(["show"], trace: span.trace, parent: span.id) { _, ok in
-          MedeaLog.end(span, ok: ok, fields: ["kind": "launch"])
+          RedhotLog.end(span, ok: ok, fields: ["kind": "launch"])
         }
       }
     }
@@ -478,7 +478,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   func reloadHotKeys(into hotKeys: HotKeyCenter) {
     runCli(["hotkeys"]) { output, _ in
       guard let items = try? JSONDecoder().decode([ItemHotKey].self, from: output) else {
-        MedeaLog.event("hotkey.load", level: "warn", fields: ["error": "decode"])
+        RedhotLog.event("hotkey.load", level: "warn", fields: ["error": "decode"])
         return
       }
       hotKeys.replaceItemHotKeys(items) { [weak self] hotKey in
@@ -489,27 +489,27 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
   /// Apps and window actions run here, which is fastest. Everything else needs the CLI.
   private func runItem(_ hotKey: ItemHotKey) {
-    let span = MedeaLog.start("hotkey.press", fields: ["item": MedeaLog.safeItem(hotKey.value)])
+    let span = RedhotLog.start("hotkey.press", fields: ["item": RedhotLog.safeItem(hotKey.value)])
     if let windowCommand = hotKey.windowCommand {
       windows.runFromHotKey(windowCommand, trace: span.trace, parent: span.id)
-      MedeaLog.end(span, ok: true)
+      RedhotLog.end(span, ok: true)
     } else if hotKey.value.hasPrefix("/") {
-      MedeaLog.end(span, ok: openApp(at: hotKey.value))
+      RedhotLog.end(span, ok: openApp(at: hotKey.value))
     } else {
       runCli(["run", hotKey.value], trace: span.trace, parent: span.id) { _, ok in
-        MedeaLog.end(span, ok: ok)
+        RedhotLog.end(span, ok: ok)
       }
     }
   }
 
   /// One at a time, so two quick copies can't overwrite each other in the history file.
   func recordClip(_ clip: Clip) {
-    let trace = MedeaLog.newTrace()
+    let trace = RedhotLog.newTrace()
     switch clip {
     case .text(let text):
-      MedeaLog.event("clipboard.detect", trace: trace, fields: ["kind": "text", "bytes": text.utf8.count])
+      RedhotLog.event("clipboard.detect", trace: trace, fields: ["kind": "text", "bytes": text.utf8.count])
     case .image(let data, _):
-      MedeaLog.event("clipboard.detect", trace: trace, fields: ["kind": "image", "bytes": data.count])
+      RedhotLog.event("clipboard.detect", trace: trace, fields: ["kind": "image", "bytes": data.count])
     }
     clipsToRecord.append((clip: clip, trace: trace))
     recordNextClip()
@@ -532,13 +532,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
       command = "record-clipboard-image"
       input = png
       // Stdin holds the image, and arguments can be read by anyone running "ps".
-      environment["MEDEA_IMAGE_NAME"] = name
+      environment["REDHOT_IMAGE_NAME"] = name
     }
-    let span = MedeaLog.start("clipboard.record", trace: next.trace, fields: [
+    let span = RedhotLog.start("clipboard.record", trace: next.trace, fields: [
       "kind": command == "record-clipboard" ? "text" : "image", "bytes": input.count,
     ])
     runCli([command], input: input, environment: environment, trace: span.trace, parent: span.id) { [weak self] _, ok in
-      MedeaLog.end(span, ok: ok)
+      RedhotLog.end(span, ok: ok)
       self?.isRecordingClip = false
       self?.recordNextClip()
     }
@@ -576,7 +576,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     onFinish: ((Data, Bool) -> Void)? = nil
   ) {
     let kind = arguments.first ?? "unknown"
-    let span = MedeaLog.start("cli.run", trace: trace, parent: parent, fields: ["kind": kind])
+    let span = RedhotLog.start("cli.run", trace: trace, parent: parent, fields: ["kind": kind])
     let process = Process()
     let output = Pipe()
     let inputPipe = Pipe()
@@ -584,13 +584,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     process.arguments = Array(cliCommand.dropFirst()) + arguments
     process.standardOutput = output
     process.environment = ProcessInfo.processInfo.environment.merging(environment) { $1 }
-      .merging(["MEDEA_TRACE": span.trace]) { $1 }
+      .merging(["REDHOT_TRACE": span.trace]) { $1 }
     if input != nil {
       process.standardInput = inputPipe
     }
     process.terminationHandler = { _ in
       let data = output.fileHandleForReading.readDataToEndOfFile()
-      MedeaLog.end(span, ok: process.terminationStatus == 0, fields: [
+      RedhotLog.end(span, ok: process.terminationStatus == 0, fields: [
         "childPid": process.processIdentifier, "exitCode": process.terminationStatus,
       ])
       DispatchQueue.main.async { onFinish?(data, process.terminationStatus == 0) }
@@ -598,7 +598,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     do {
       try process.run()
     } catch {
-      MedeaLog.end(span, ok: false, fields: ["error": String(describing: type(of: error))])
+      RedhotLog.end(span, ok: false, fields: ["error": String(describing: type(of: error))])
       onFinish?(Data(), false)
       return
     }

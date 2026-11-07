@@ -59,5 +59,5 @@ export const withStorageLock = async <Result>(
       await setTimeout(LOCK_WAIT_MS);
     }
   }
-  throw new Error("Medea storage is busy. Try again in a moment.");
+  throw new Error("Redhot storage is busy. Try again in a moment.");
 };

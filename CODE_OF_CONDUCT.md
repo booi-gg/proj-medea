@@ -1,6 +1,6 @@
 # Code of Conduct
 
-Medea follows the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+Redhot follows the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
 In short: be respectful and patient, assume good intent, and keep criticism about the work, not the person. Harassment, insults, and personal or political attacks aren't accepted in issues, pull requests, discussions or any other project space.
 

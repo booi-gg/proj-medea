@@ -25,7 +25,7 @@ export const stop = async (): Promise<void> => {
 export const sign = async (): Promise<void> => {
   await setUpSigning();
   await signHelper();
-  log.success("Signed. Run menubar:stop then menubar:start, and allow medea-status once more");
+  log.success("Signed. Run menubar:stop then menubar:start, and allow redhot-status once more");
 };
 
 export const showStatus = async (): Promise<void> => {

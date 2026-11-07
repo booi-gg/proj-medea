@@ -66,7 +66,7 @@ final class WindowManager {
   private static let okReply = "ok"
 
   // Accessibility calls wait on the other app, and the main thread also answers hotkeys.
-  private let queue = DispatchQueue(label: "medea.windows", qos: .userInteractive)
+  private let queue = DispatchQueue(label: "redhot.windows", qos: .userInteractive)
   /// Only touched on the queue.
   private var savedFrames: [AXUIElement: SavedFrame] = [:]
 
@@ -84,9 +84,9 @@ final class WindowManager {
       reply(Self.okReply)
     } else if commandRequest.hasPrefix("window ") {
       let command = String(commandRequest.dropFirst("window ".count))
-      let span = MedeaLog.start("window.run", trace: trace, fields: ["kind": Self.safeCommand(command), "sourceKind": "socket"])
+      let span = RedhotLog.start("window.run", trace: trace, fields: ["kind": Self.safeCommand(command), "sourceKind": "socket"])
       run(command, on: .behindFocused) { failure in
-        MedeaLog.end(span, ok: failure == nil, fields: ["result": failure?.rawValue ?? "ok"])
+        RedhotLog.end(span, ok: failure == nil, fields: ["result": failure?.rawValue ?? "ok"])
         reply(failure?.rawValue ?? Self.okReply)
       }
     } else {
@@ -96,11 +96,11 @@ final class WindowManager {
 
   /// A hotkey has nowhere to show a message, so a failure is a beep.
   func runFromHotKey(_ command: String, trace: String? = nil, parent: String? = nil) {
-    let span = MedeaLog.start("window.run", trace: trace, parent: parent, fields: [
+    let span = RedhotLog.start("window.run", trace: trace, parent: parent, fields: [
       "kind": Self.safeCommand(command), "sourceKind": "hotkey",
     ])
     run(command, on: .focused) { failure in
-      MedeaLog.end(span, ok: failure == nil, fields: ["result": failure?.rawValue ?? "ok"])
+      RedhotLog.end(span, ok: failure == nil, fields: ["result": failure?.rawValue ?? "ok"])
       if failure != nil {
         DispatchQueue.main.async { NSSound.beep() }
       }

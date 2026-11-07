@@ -3,7 +3,7 @@ import { open, readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { logDir } from "./paths.ts";
 
-const LOG_NAME = /^medea(?:\.\d{8}T\d{9}Z-\d+-[a-f0-9]+)?\.log$/;
+const LOG_NAME = /^redhot(?:\.\d{8}T\d{9}Z-\d+-[a-f0-9]+)?\.log$/;
 const TRACE_ID = /^[a-f0-9-]{6,64}$/i;
 const READ_BYTES = 64 * 1024;
 const FOLLOW_INTERVAL_MS = 350;
@@ -100,17 +100,22 @@ const listLogPaths = async (directory: string): Promise<LogFile[]> => {
   try {
     const names = (await readdir(directory)).filter((name) => LOG_NAME.test(name));
     names.sort((first, second) => {
-      if (first === "medea.log") return 1;
-      if (second === "medea.log") return -1;
+      if (first === "redhot.log") return 1;
+      if (second === "redhot.log") return -1;
       return first.localeCompare(second);
     });
-    const files: LogFile[] = names.map((name) => ({ path: join(directory, name) }));
+    const files: LogFile[] = names.map((name) => ({
+      path: join(directory, name),
+    }));
     const synced = join(directory, "synced");
     for (const device of await readdir(synced).catch(() => [])) {
       if (!/^[a-f0-9-]{36}$/i.test(device)) continue;
       for (const name of await readdir(join(synced, device)).catch(() => [])) {
         if (/^[a-f0-9-]{36}\.jsonl$/i.test(name)) {
-          files.push({ path: join(synced, device, name), device: device.slice(0, 8) });
+          files.push({
+            path: join(synced, device, name),
+            device: device.slice(0, 8),
+          });
         }
       }
     }
@@ -166,10 +171,10 @@ export const showLogs = async (args: string[]): Promise<void> => {
       trace = args[index + 1];
       index += 1;
     } else {
-      throw new Error("Usage: medea logs [--follow] [--trace <id>]");
+      throw new Error("Usage: redhot logs [--follow] [--trace <id>]");
     }
   }
-  const directory = process.env.MEDEA_LOG_DIR ?? logDir;
+  const directory = process.env.REDHOT_LOG_DIR ?? logDir;
   const states = new Map<string, ReadState>();
   do {
     const current = new Set<string>();

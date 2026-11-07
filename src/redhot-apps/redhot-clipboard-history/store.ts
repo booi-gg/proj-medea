@@ -63,7 +63,15 @@ const toEntry = (value: unknown): ClipboardEntry | undefined => {
   if (!isImage) {
     return undefined;
   }
-  const image: ImageEntry = { kind: "image", id, hash, width, height, bytes, copiedAt };
+  const image: ImageEntry = {
+    kind: "image",
+    id,
+    hash,
+    width,
+    height,
+    bytes,
+    copiedAt,
+  };
   return typeof name === "string" ? { ...image, name } : image;
 };
 
@@ -119,7 +127,9 @@ const removeUnusedImages = async (entries: readonly ClipboardEntry[]): Promise<v
 const writeEntries = async (entries: readonly ClipboardEntry[]): Promise<void> => {
   await mkdir(dirname(clipboardHistoryPath), { recursive: true });
   const temporaryPath = `${clipboardHistoryPath}.tmp`;
-  await writeFile(temporaryPath, JSON.stringify(entries), { mode: OWNER_ONLY_FILE });
+  await writeFile(temporaryPath, JSON.stringify(entries), {
+    mode: OWNER_ONLY_FILE,
+  });
   await rename(temporaryPath, clipboardHistoryPath);
   await removeUnusedImages(entries);
 };
@@ -148,7 +158,7 @@ const keepWithinLimits = (entries: readonly ClipboardEntry[]): ClipboardEntry[] 
   return kept.slice(0, MAX_ENTRIES);
 };
 
-// Copying an image back out of Medea leaves only its pixels, which must not lose the name it had.
+// Copying an image back out of Redhot leaves only its pixels, which must not lose the name it had.
 const keepKnownName = (
   entry: ClipboardEntry,
   others: readonly ClipboardEntry[],
@@ -217,7 +227,12 @@ export const recordText = async (text: string): Promise<void> => {
     "clipboard.record",
     { kind: "text", bytes: Buffer.byteLength(text) },
     async () => {
-      await saveEntry({ kind: "text", id: randomUUID(), text, copiedAt: Date.now() });
+      await saveEntry({
+        kind: "text",
+        id: randomUUID(),
+        text,
+        copiedAt: Date.now(),
+      });
     },
   );
 };
@@ -245,7 +260,10 @@ export const recordImage = async (png: Buffer, copiedName?: string): Promise<voi
   }
   await withAction("clipboard.record", { kind: "image", bytes: png.length }, async () => {
     const hash = createHash("sha256").update(png).digest("hex").slice(0, HASH_LENGTH);
-    await mkdir(clipboardImagesDir, { recursive: true, mode: OWNER_ONLY_FOLDER });
+    await mkdir(clipboardImagesDir, {
+      recursive: true,
+      mode: OWNER_ONLY_FOLDER,
+    });
     await writeFile(getImagePath(hash), png, { mode: OWNER_ONLY_FILE });
     const name = toImageName(copiedName);
     await saveEntry({

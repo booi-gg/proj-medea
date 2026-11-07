@@ -10,8 +10,8 @@ import { rankByText } from "../../launcher/search.ts";
 import { fitToWidth, padToWidth, toSplitLayout } from "../../launcher/split-view.ts";
 import { isMenuBarRunning } from "../../menubar/helper.ts";
 import { UTF8_ENVIRONMENT, copyText, runCommand } from "../../shell.ts";
-import { toMedeaIcon } from "../icon.ts";
-import type { LauncherItem, MedeaApp } from "../types.ts";
+import { toRedhotIcon } from "../icon.ts";
+import type { LauncherItem, RedhotApp } from "../types.ts";
 import { formatAge, formatSize, toPreview, toPreviewLines, toSafeText } from "./format.ts";
 import { openImageWindow } from "./image-window.ts";
 import type { ImageWindow } from "./image-window.ts";
@@ -27,9 +27,9 @@ import type { ClipboardEntry, ImageEntry } from "./store.ts";
 import { createHighlighter } from "./syntax.ts";
 import type { Highlight } from "./syntax.ts";
 
-const APP_ID = "medea-clipboard-history";
+const APP_ID = "redhot-clipboard-history";
 const OPEN_ID = "open";
-const ICON = toMedeaIcon("≡");
+const ICON = toRedhotIcon("≡");
 const FALLBACK_COLUMNS = 80;
 // Room for the focus marker and the margins, when there's no preview beside the list.
 const ROW_MARGIN = 8;
@@ -148,7 +148,10 @@ const viewEntry = async (entry: ClipboardEntry, highlight: Highlight): Promise<v
 };
 
 const confirmDeleteAll = async (): Promise<boolean> => {
-  const answer = await confirm({ message: "Delete all clipboard history?", initialValue: false });
+  const answer = await confirm({
+    message: "Delete all clipboard history?",
+    initialValue: false,
+  });
   return answer === true;
 };
 
@@ -162,7 +165,10 @@ const runEntryActions = async (
     message: describeEntry(entry, MENU_PREVIEW_LENGTH),
     options: [
       { value: COPY, label: "Copy" },
-      { value: VIEW, label: entry.kind === "text" ? "View full text" : "Open image" },
+      {
+        value: VIEW,
+        label: entry.kind === "text" ? "View full text" : "Open image",
+      },
       { value: DELETE, label: "Delete" },
       { value: DELETE_ALL, label: "Delete all" },
     ],
@@ -304,7 +310,7 @@ const openItem: LauncherItem = {
   run: browseHistory,
 };
 
-export const clipboardHistory: MedeaApp = {
+export const clipboardHistory: RedhotApp = {
   id: APP_ID,
   listItems: () => [openItem],
   listSettingsActions: () => [],

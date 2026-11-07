@@ -17,7 +17,7 @@ const FIND_WINDOW_SCRIPT = `on run argv
   return ""
 end run`;
 
-// Waits for Medea to exit first: closing a window with Node running would ask for confirmation.
+// Waits for Redhot to exit first: closing a window with Node running would ask for confirmation.
 const CLOSE_WINDOW_SCRIPT = `on run argv
   set windowId to (item 1 of argv) as integer
   delay 0.6
@@ -26,12 +26,12 @@ end run`;
 
 /**
  * Terminal keeps a dead window open after a program exits, and Ghostty closes its own. Windows
- * Medea didn't open are left alone, so "pnpm start" can't close the window you ran it from.
+ * Redhot didn't open are left alone, so "pnpm start" can't close the window you ran it from.
  */
 const canCloseOwnWindow = (): boolean =>
-  process.env.TERM_PROGRAM === TERMINAL_APP_PROGRAM && process.env.MEDEA_WINDOW === "1";
+  process.env.TERM_PROGRAM === TERMINAL_APP_PROGRAM && process.env.REDHOT_WINDOW === "1";
 
-/** Closes this window just after Medea exits. If that isn't allowed, the window stays open. */
+/** Closes this window just after Redhot exits. If that isn't allowed, the window stays open. */
 export const closeOwnWindow = async (): Promise<void> => {
   if (!canCloseOwnWindow()) {
     return;

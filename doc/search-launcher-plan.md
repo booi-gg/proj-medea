@@ -1,8 +1,8 @@
-# Medea search launcher
+# Redhot search launcher
 
 ## Context
 
-Medea is a CLI take on a Raycast-style launcher. The menu bar item and the global shortcut (`Cmd+Shift+Space`) already open the CLI in Terminal, but the CLI only offers add/remove for the menu bar item. This step makes it a real launcher: press the shortcut, type, press Enter, and an app opens or a built-in command runs.
+Redhot is a CLI take on a Raycast-style launcher. The menu bar item and the global shortcut (`Cmd+Shift+Space`) already open the CLI in Terminal, but the CLI only offers add/remove for the menu bar item. This step makes it a real launcher: press the shortcut, type, press Enter, and an app opens or a built-in command runs.
 
 Choosing the terminal (e.g. Ghostty) is explicitly later. It stays out of this change, and this change must not make it harder.
 

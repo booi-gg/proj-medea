@@ -10,7 +10,7 @@ import { rotateLogs, scrubError, scrubItem, writeLog } from "./log.ts";
 const runFile = promisify(execFile);
 
 test("writes JSON lines with process metadata and no private content", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "medea-log-test-"));
+  const directory = await mkdtemp(join(tmpdir(), "redhot-log-test-"));
   try {
     writeLog(
       "item.run",
@@ -21,7 +21,7 @@ test("writes JSON lines with process metadata and no private content", async () 
       },
       { directory },
     );
-    const line = await readFile(join(directory, "medea.log"), "utf8");
+    const line = await readFile(join(directory, "redhot.log"), "utf8");
     const entry = JSON.parse(line);
     assert.match(entry.ts, /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}[+-]\d\d:\d\d$/);
     assert.equal(entry.pid, process.pid);
@@ -42,14 +42,17 @@ test("writes JSON lines with process metadata and no private content", async () 
 });
 
 test("rotation keeps a unique archive and prunes oldest files to the limit", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "medea-log-rotate-"));
+  const directory = await mkdtemp(join(tmpdir(), "redhot-log-rotate-"));
   try {
-    await writeFile(join(directory, "medea.20260101T000000000Z-1-aaaaaaaa.log"), "x".repeat(8_000));
-    await writeFile(join(directory, "medea.log"), "y".repeat(2_000));
+    await writeFile(
+      join(directory, "redhot.20260101T000000000Z-1-aaaaaaaa.log"),
+      "x".repeat(8_000),
+    );
+    await writeFile(join(directory, "redhot.log"), "y".repeat(2_000));
     rotateLogs(directory, 0.005);
     const names = await readdir(directory);
-    assert.equal(names.includes("medea.log"), false);
-    assert.equal(names.includes("medea.20260101T000000000Z-1-aaaaaaaa.log"), false);
+    assert.equal(names.includes("redhot.log"), false);
+    assert.equal(names.includes("redhot.20260101T000000000Z-1-aaaaaaaa.log"), false);
     assert.equal(names.filter((name) => name.endsWith(".log")).length, 1);
     const size = (await stat(join(directory, names[0]))).size;
     assert.ok(size <= 0.005 * 1024 * 1024);
@@ -59,19 +62,22 @@ test("rotation keeps a unique archive and prunes oldest files to the limit", asy
 });
 
 test("lowering the limit prunes archives before the active file reaches rotation size", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "medea-log-limit-"));
+  const directory = await mkdtemp(join(tmpdir(), "redhot-log-limit-"));
   try {
-    await writeFile(join(directory, "medea.20260101T000000000Z-1-aaaaaaaa.log"), "x".repeat(8_000));
-    await writeFile(join(directory, "medea.log"), "y".repeat(100));
+    await writeFile(
+      join(directory, "redhot.20260101T000000000Z-1-aaaaaaaa.log"),
+      "x".repeat(8_000),
+    );
+    await writeFile(join(directory, "redhot.log"), "y".repeat(100));
     rotateLogs(directory, 0.005, true);
-    assert.deepEqual(await readdir(directory), ["medea.log"]);
+    assert.deepEqual(await readdir(directory), ["redhot.log"]);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
 });
 
 test("concurrent processes append complete, distinct lines", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "medea-log-concurrent-"));
+  const directory = await mkdtemp(join(tmpdir(), "redhot-log-concurrent-"));
   try {
     const script =
       "import { writeLog } from './src/log.ts'; for (let i = 0; i < 100; i++) writeLog('stress.write', { count: i });";
@@ -79,11 +85,11 @@ test("concurrent processes append complete, distinct lines", async () => {
       Array.from({ length: 4 }, () =>
         runFile(process.execPath, ["--input-type=module", "-e", script], {
           cwd: join(import.meta.dirname, ".."),
-          env: { ...process.env, MEDEA_LOG_DIR: directory },
+          env: { ...process.env, REDHOT_LOG_DIR: directory },
         }),
       ),
     );
-    const lines = (await readFile(join(directory, "medea.log"), "utf8")).trim().split("\n");
+    const lines = (await readFile(join(directory, "redhot.log"), "utf8")).trim().split("\n");
     assert.equal(lines.length, 400);
     const ids = new Set(lines.map((line) => JSON.parse(line).id));
     assert.equal(ids.size, 400);

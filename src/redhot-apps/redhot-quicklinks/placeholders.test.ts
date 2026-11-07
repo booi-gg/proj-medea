@@ -100,10 +100,10 @@ test("any word in braces is a named argument", () => {
     ["repo", "tag"],
   );
   const answers = new Map([
-    ["repo", "medea"],
+    ["repo", "redhot"],
     ["tag", "v1"],
   ]);
-  assert.equal(fillLink(link, { answers, clipboard: "" }), "https://x.dev/medea/v1");
+  assert.equal(fillLink(link, { answers, clipboard: "" }), "https://x.dev/redhot/v1");
 });
 
 test("leaves braces that aren't placeholders in the link", () => {

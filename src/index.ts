@@ -66,13 +66,13 @@ const main = async (): Promise<void> => {
   }
   // Text comes through stdin because arguments can be read by anyone running "ps".
   if (command === "record-clipboard") {
-    const { recordText } = await import("./medea-apps/medea-clipboard-history/store.ts");
+    const { recordText } = await import("./redhot-apps/redhot-clipboard-history/store.ts");
     await recordText(await text(process.stdin));
     return;
   }
   if (command === "record-clipboard-image") {
-    const { recordImage } = await import("./medea-apps/medea-clipboard-history/store.ts");
-    await recordImage(await buffer(process.stdin), process.env.MEDEA_IMAGE_NAME);
+    const { recordImage } = await import("./redhot-apps/redhot-clipboard-history/store.ts");
+    await recordImage(await buffer(process.stdin), process.env.REDHOT_IMAGE_NAME);
     return;
   }
   if (command === "set-terminal") {
@@ -94,14 +94,14 @@ const main = async (): Promise<void> => {
     } else if (argument === "open") {
       await openSyncFolder();
     } else {
-      throw new Error("Usage: medea sync [now|status|open]");
+      throw new Error("Usage: redhot sync [now|status|open]");
     }
     return;
   }
 
   const { intro } = await import("@clack/prompts");
   const { showStatus, sign, start, stop } = await import("./menubar/commands.ts");
-  intro("medea");
+  intro("redhot");
   if (command === "start") {
     await start();
     return;

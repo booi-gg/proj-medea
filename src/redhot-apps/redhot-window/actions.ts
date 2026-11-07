@@ -1,6 +1,6 @@
 import type { HotkeyMap } from "../../config.ts";
 
-export const APP_ID = "medea-window";
+export const APP_ID = "redhot-window";
 
 const THIRD = 1 / 3;
 const TWO_THIRDS = 2 / 3;

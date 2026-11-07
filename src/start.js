@@ -8,7 +8,7 @@ import { join, sep } from "node:path";
 // Mirrors buildDir in paths.ts.
 const projectDir = join(import.meta.dirname, "..");
 const buildDir = projectDir.split(sep).includes("node_modules")
-  ? join(homedir(), "Library", "Application Support", "Medea")
+  ? join(homedir(), "Library", "Application Support", "Redhot")
   : join(projectDir, ".build");
 enableCompileCache(join(buildDir, "compile-cache"));
 

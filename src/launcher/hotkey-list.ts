@@ -1,9 +1,9 @@
 import { styleText } from "node:util";
 import { readConfig } from "../config.ts";
 import type { AliasMap, HotkeyMap } from "../config.ts";
-import { toMedeaIcon } from "../medea-apps/icon.ts";
-import { listMedeaItems } from "../medea-apps/registry.ts";
-import type { LauncherItem } from "../medea-apps/types.ts";
+import { toRedhotIcon } from "../redhot-apps/icon.ts";
+import { listRedhotItems } from "../redhot-apps/registry.ts";
+import type { LauncherItem } from "../redhot-apps/types.ts";
 import { runCommandItem } from "../terminals/actions.ts";
 import { toDisplayName } from "./aliases.ts";
 import { openApp } from "./apps.ts";
@@ -21,7 +21,7 @@ const MIN_VISIBLE_ROWS = 8;
 const ROWS_AROUND_LIST = 16;
 const FALLBACK_WINDOW_ROWS = 24;
 const APP_ICON = styleText("cyan", "◆");
-const COMMAND_ICON = toMedeaIcon("⌘");
+const COMMAND_ICON = toRedhotIcon("⌘");
 const NOT_SET = "not set";
 
 export type HotkeyEntry = Pick<
@@ -98,7 +98,7 @@ const toEntry = (value: string, items: readonly LauncherItem[]): HotkeyEntry | u
 
 /** Everything with a saved hotkey, by name. A hotkey for something now gone is left out. */
 export const listSavedHotkeys = (hotkeys: HotkeyMap): HotkeyEntry[] => {
-  const items = listMedeaItems();
+  const items = listRedhotItems();
   return Object.keys(hotkeys)
     .flatMap((value) => toEntry(value, items) ?? [])
     .toSorted((first, second) => first.name.localeCompare(second.name));

@@ -32,15 +32,15 @@ test("uses the room in a tall window, and never shrinks below the usual list", (
   assert.equal(toVisibleRows(10), 8);
 });
 
-test("lists apps, commands and Medea items by name", () => {
+test("lists apps, commands and Redhot items by name", () => {
   const names = listSavedHotkeys({
     "/Applications/Zed.app": "ctrl+cmd+z",
     "command:exit": "ctrl+cmd+e",
-    "medea-window:left-half": "ctrl+option+left",
+    "redhot-window:left-half": "ctrl+option+left",
   }).map(({ name }) => name);
   assert.deepEqual(names, ["exit", "Left Half", "Zed"]);
 });
 
 test("leaves out a hotkey whose item is gone", () => {
-  assert.deepEqual(listSavedHotkeys({ "medea-quicklinks:deleted": "ctrl+cmd+d" }), []);
+  assert.deepEqual(listSavedHotkeys({ "redhot-quicklinks:deleted": "ctrl+cmd+d" }), []);
 });

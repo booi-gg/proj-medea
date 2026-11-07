@@ -1,5 +1,5 @@
 {
-  "name": "@booi-dev/medea",
+  "name": "@booi-gg/medea",
   "version": "0.1.0",
   "bin": {
     "medea": "./dist/start.js"

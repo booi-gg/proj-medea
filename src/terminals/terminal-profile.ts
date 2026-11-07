@@ -8,7 +8,7 @@ const PROFILE_FILE = `${PROFILE_NAME}.terminal`;
 const TERMINAL_PREFERENCES = "com.apple.Terminal";
 // Short enough to sit out of the way, tall enough for the logo, search bar and a page of results.
 const WINDOW_COLUMNS = 80;
-const WINDOW_ROWS = 14;
+const WINDOW_ROWS = 18;
 
 /** A profile with only what Redhot needs, for when Terminal's own settings can't be read. */
 export const toMinimalProfile = (launcherPath: string): string =>
@@ -47,26 +47,27 @@ const extractProfile = async (
 };
 
 /**
- * Copies the Redhot profile, or the default one the first time, so the window keeps the person's
- * colours and font. Terminal adds a second profile when an opened file differs from the saved one,
- * so starting from the saved Redhot profile keeps it to one, and edits to it in Terminal stick.
- * Returns true when the Redhot profile didn't exist yet.
+ * Copies the default profile, so the window keeps the person's colours and font. Terminal adds a
+ * second profile, "Redhot 1", whenever an opened file differs from the saved Redhot profile, so
+ * the file must come out the same every time. Terminal also writes its settings late, so a saved
+ * Redhot profile read back here can be out of date, which is why it's never the starting point.
  */
-const copySavedProfile = async (preferencesPath: string, profilePath: string): Promise<boolean> => {
-  await runCommand("defaults", ["export", TERMINAL_PREFERENCES, preferencesPath]);
-  try {
-    await extractProfile(preferencesPath, PROFILE_NAME, profilePath);
-    return false;
-  } catch {
-    const { stdout } = await runCommand("plutil", [
-      "-extract",
-      "Default Window Settings",
-      "raw",
-      preferencesPath,
-    ]);
-    await extractProfile(preferencesPath, stdout.trim(), profilePath);
-    return true;
-  }
+const copyDefaultProfile = async (
+  preferencesPath: string,
+  profilePath: string,
+): Promise<void> => {
+  await runCommand("defaults", [
+    "export",
+    TERMINAL_PREFERENCES,
+    preferencesPath,
+  ]);
+  const { stdout } = await runCommand("plutil", [
+    "-extract",
+    "Default Window Settings",
+    "raw",
+    preferencesPath,
+  ]);
+  await extractProfile(preferencesPath, stdout.trim(), profilePath);
 };
 
 const setProfileValue = async (
@@ -83,21 +84,39 @@ const setProfileValue = async (
  * .command file starts a login shell first, which prints "Last login" and types the launcher's
  * path before Redhot can clear the screen. Returns the profile's path.
  */
-export const writeTerminalProfile = async (launcherPath: string): Promise<string> => {
+export const writeTerminalProfile = async (
+  launcherPath: string,
+): Promise<string> => {
   // One folder per launcher, so two windows opening at once never share a file.
-  const profileDir = join(dirname(launcherPath), "terminal", basename(launcherPath, ".command"));
+  const profileDir = join(
+    dirname(launcherPath),
+    "terminal",
+    basename(launcherPath, ".command"),
+  );
   const profilePath = join(profileDir, PROFILE_FILE);
   const preferencesPath = join(profileDir, "preferences.plist");
   await mkdir(profileDir, { recursive: true });
   try {
-    const isNewProfile = await copySavedProfile(preferencesPath, profilePath);
-    // Only a new profile gets the size, so a size changed in Terminal's settings is kept.
-    if (isNewProfile) {
-      await setProfileValue(profilePath, "columnCount", "-integer", String(WINDOW_COLUMNS));
-      await setProfileValue(profilePath, "rowCount", "-integer", String(WINDOW_ROWS));
-    }
+    await copyDefaultProfile(preferencesPath, profilePath);
+    await setProfileValue(
+      profilePath,
+      "columnCount",
+      "-integer",
+      String(WINDOW_COLUMNS),
+    );
+    await setProfileValue(
+      profilePath,
+      "rowCount",
+      "-integer",
+      String(WINDOW_ROWS),
+    );
     await setProfileValue(profilePath, "name", "-string", PROFILE_NAME);
-    await setProfileValue(profilePath, "CommandString", "-string", launcherPath);
+    await setProfileValue(
+      profilePath,
+      "CommandString",
+      "-string",
+      launcherPath,
+    );
     await setProfileValue(profilePath, "RunCommandAsShell", "-bool", "YES");
   } catch {
     await writeFile(profilePath, toMinimalProfile(launcherPath));

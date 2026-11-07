@@ -7,7 +7,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Changed
 
 - Several items can now share an alias.
-- Terminal.app windows open straight into Redhot, without the `Last login` line or the launcher path flashing first. Redhot's window uses its own Redhot profile, so its font can be changed on its own.
+- In Terminal.app, the search window opens straight into Redhot at 80×14, without the `Last login` line or the launcher path flashing first.
 
 ## 0.1.0
 

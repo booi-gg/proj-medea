@@ -4,9 +4,11 @@ const LEFT_PADDING = "  ";
 const DEFAULT_COLOR = "\u001B[39m";
 const PLAIN_NAME_COLOR = 160;
 
-const LOGO_ROWS = ["╦═╗╔═╗╦═╗╦ ╦╔═╗╔╦╗", "╠╦╝║╣ ║ ║╠═╣║ ║ ║ ", "╩╚═╚═╝╩═╝╩ ╩╚═╝ ╩ "];
+// Two rows, so it leaves room for results in a short window.
+const LOGO_ROWS = ["█▀█ █▀▀ █▀▄ █ █ █▀█ ▀█▀", "█▀▄ ██▄ █▄▀ █▀█ █▄█  █ "];
 const LOGO_WIDTH = Math.max(...LOGO_ROWS.map((row) => row.length));
-const LETTER_WIDTH = 3;
+// Each letter is three columns and the space after it.
+const LETTER_WIDTH = 4;
 
 type Rgb = readonly [red: number, green: number, blue: number];
 // A mild red heating up to a hot red, left to right.

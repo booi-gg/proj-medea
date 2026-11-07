@@ -8,7 +8,7 @@ const toVisibleRows = (banner: string): string[] =>
 
 test("draws the logo when the window is wide enough", () => {
   const rows = toVisibleRows(renderBanner(80));
-  assert.equal(rows.length, 3);
+  assert.equal(rows.length, 2);
   assert.ok(rows.every((row) => row.length <= 80));
 });
 
@@ -31,7 +31,7 @@ test("gives each letter one colour without full RGB colour", () => {
   const [, ...bands] = firstRow.split("\u001B[38;5;");
   const colors = bands.map((band) => Number.parseInt(band, 10));
   const letters = bands.map((band) => stripVTControlCharacters(`\u001B[38;5;${band}`));
-  assert.deepEqual(letters, ["╦═╗", "╔═╗", "╦═╗", "╦ ╦", "╔═╗", "╔╦╗"]);
+  assert.deepEqual(letters, ["█▀█ ", "█▀▀ ", "█▀▄ ", "█ █ ", "█▀█ ", "▀█▀"]);
   assert.equal(colors[0], 210);
   assert.equal(colors.at(-1), 196);
 });

@@ -185,12 +185,12 @@ If AppleScript is refused, Ghostty falls back to `open -a Ghostty <launcher>`, w
 
 Ghostty uses `initial input` and not `command` because it keeps a window open after a `command` exits, even with `wait after command` set to false. With `exec`, the CLI replaces the shell, so the window closes when the CLI exits. A new Ghostty session takes about 1.5 seconds, because the shell starts first.
 
-**Terminal's profile.** Opening a `.command` file starts a login shell, which prints `Last login` and types the launcher's path before Redhot can clear the screen. So `writeTerminalProfile()` writes a `Redhot.terminal` profile with `RunCommandAsShell` set, which makes the launcher the window's only process, and opens that instead. Terminal names the profile after the file and saves it, so a "Redhot" profile appears in Terminal's settings after the first window.
+**Terminal's profile.** Opening a `.command` file starts a login shell, which prints `Last login` and types the launcher's path before Redhot can clear the screen. So the search window opens from a `Redhot.terminal` profile instead, written by `writeTerminalProfile()`. It sets `RunCommandAsShell`, which makes the launcher the window's only process, and an 80×14 window. Terminal names the profile after the file and saves it, so a "Redhot" profile appears in Terminal's settings after the first window.
 
-- The file is copied from the saved Redhot profile, or the default profile the first time, so the window keeps the person's colours and font. Changes made to the Redhot profile in Terminal's settings, like a bigger font, apply to Redhot's windows only.
-- Terminal saves a second profile, "Redhot 1", when an opened file differs from the saved one. Copying the saved profile keeps it to one.
-- The window takes its settings from the file, not the saved profile, so the file is written on every open. It takes about 30 ms.
-- Each launcher gets its own folder, `terminal/<launcher>/`, so two windows opening at once never share a file. If Terminal's settings can't be read, a minimal profile is written instead, and if that fails, the `.command` file is opened as before.
+- The file is a copy of the default profile, so the window keeps the person's colours and font.
+- Terminal saves a second profile, "Redhot 1", whenever an opened file differs from the saved Redhot profile. So the file comes out the same every time, and editing the Redhot profile in Terminal's settings would only make copies. The saved profile is never read back, because Terminal writes its settings late and it can be out of date.
+- Item windows, opened by hotkeys for items that need input, each run their own `run-*.command` script. A profile's command has to stay the same, so they open the script directly and still show the shell's lines briefly.
+- The file is written on every open, which takes about 30 ms. If Terminal's settings can't be read, a minimal profile is written instead, and if that fails, the `.command` file is opened as before.
 
 To add a terminal, add a recipe to `launchers` and test both open and bring back.
 
@@ -216,7 +216,7 @@ The helper starts the CLI on every copy and on most hotkeys, so start time matte
 
 ## The search prompt
 
-The window starts with the screen cleared, the REDHOT logo from `src/launcher/banner.ts`, a slim wordmark that fades from mild red on the left to hot red on the right, and a bare search bar. The logo is drawn once per round, outside the prompt, so typing never redraws it. In windows under 20 columns it falls back to the plain name. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
+The window starts with the screen cleared, the REDHOT logo from `src/launcher/banner.ts`, a two-row block wordmark that fades from mild red on the left to hot red on the right, and a bare search bar. The logo is drawn once per round, outside the prompt, so typing never redraws it. In windows under 25 columns it falls back to the plain name. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
 
 `promptForSelection()` in `src/launcher/prompt.ts` uses `AutocompletePrompt` from `@clack/core`, not `autocomplete` from `@clack/prompts`, because the higher-level prompt always draws its header and footer. `@clack/core` is pinned to the version `@clack/prompts` uses.
 

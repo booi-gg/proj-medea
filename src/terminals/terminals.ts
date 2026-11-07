@@ -1,6 +1,7 @@
 import { readConfig, updateConfig } from "../config.ts";
 import { listApps } from "../launcher/apps.ts";
 import { writeLog } from "../log.ts";
+import { launcherPath } from "../paths.ts";
 import { quoteForShell, runCommand } from "../shell.ts";
 import { writeTerminalProfile } from "./terminal-profile.ts";
 
@@ -36,14 +37,19 @@ interface TerminalLauncher {
 // Every terminal starts programs differently, so each one needs a tested recipe here.
 const launchers = {
   Terminal: {
-    // A profile runs the launcher with no login shell, so nothing shows before Redhot draws.
-    // Terminal also runs .command files directly, which is the fallback. Neither needs permission.
-    open: async (launcherPath) => {
+    // The search window opens from a profile, with no login shell, so nothing shows before Redhot
+    // draws. Item windows each run their own script, and a profile's command must stay the same or
+    // Terminal saves a copy of it, so those open the .command file. Neither needs permission.
+    open: async (scriptPath) => {
+      if (scriptPath !== launcherPath) {
+        await openWithApp("Terminal", scriptPath);
+        return;
+      }
       try {
-        await openWithApp("Terminal", await writeTerminalProfile(launcherPath));
+        await openWithApp("Terminal", await writeTerminalProfile(scriptPath));
       } catch (error) {
         writeLog("terminal.open-fallback", { error }, { level: "warn" });
-        await openWithApp("Terminal", launcherPath);
+        await openWithApp("Terminal", scriptPath);
       }
     },
     // The CLI has already raised its own window with an escape sequence.

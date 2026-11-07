@@ -24,9 +24,11 @@ export const launcherPath = join(buildDir, "open-medea.command");
 export const socketPath = join(buildDir, "cli.sock");
 export const helperSocketPath = join(buildDir, "helper.sock");
 
-const configDir = join(homedir(), ".config", "medea");
+export const configDir = join(homedir(), ".config", "medea");
 export const configPath = join(configDir, "config.json");
 export const quicklinksPath = join(configDir, "medea-quicklinks.json");
+export const syncStatePath = join(configDir, "sync-state.json");
+export const syncOutboxDir = join(configDir, "sync-outbox");
 export const loginItemPath = join(homedir(), "Library", "LaunchAgents", "medea.menu-bar.plist");
 export const clipboardHistoryPath = join(configDir, "medea-clipboard-history.json");
 export const clipboardImagesDir = join(configDir, "medea-clipboard-history");

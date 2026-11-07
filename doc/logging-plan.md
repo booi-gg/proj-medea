@@ -20,7 +20,7 @@ The recommendations below are what the rest of this plan assumes.
 
 Each process appends one JSON object per line to `~/Library/Logs/Medea/medea.log`:
 
-```json
+```jsonl
 {"ts":"2026-11-07T01:14:22.318+05:30","level":"info","source":"cli","pid":48213,"ppid":48190,"trace":"a1b2c3","id":"d4e5f6","parent":"9f8e7d","event":"item.run","phase":"end","item":"medea-quicklinks:open","durationMs":142,"ok":true}
 ```
 

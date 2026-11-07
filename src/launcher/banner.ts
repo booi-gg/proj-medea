@@ -20,8 +20,13 @@ const paintGradient = (row: string): string => {
 const paintPlainName = (): string => `${LEFT_PADDING}${toColorCode(44)}medea${DEFAULT_COLOR}`;
 
 /** The logo, or the plain name when the window is too narrow for it. */
-export const renderBanner = (columns: number): string => {
+export const renderBanner = (columns: number, aside?: string): string => {
   const fitsWindow = LEFT_PADDING.length + LOGO_WIDTH <= columns;
   const rows = fitsWindow ? LOGO_ROWS.map(paintGradient) : [paintPlainName()];
+  if (fitsWindow && aside !== undefined) {
+    const gap = columns - LEFT_PADDING.length - LOGO_WIDTH - aside.length;
+    if (gap >= 4) rows[0] += `${" ".repeat(gap)}${styleText("gray", aside)}`;
+  }
   return `\n${rows.join("\n")}\n`;
 };
+import { styleText } from "node:util";

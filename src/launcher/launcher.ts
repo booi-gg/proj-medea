@@ -269,6 +269,7 @@ const switchToSearch = (session: Session): void => {
  */
 export const runLauncher = async (firstItem?: string): Promise<void> => {
   void refreshRatesIfStale();
+  void import("../sync/sync.ts").then(({ syncNow }) => syncNow()).catch(() => {});
   const session: Session = {
     runningItem: undefined,
     nextItem: firstItem,

@@ -1,9 +1,9 @@
 import { readFileSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { readFile } from "node:fs/promises";
 import { isObject } from "../../config.ts";
 import { quicklinksPath } from "../../paths.ts";
 import { withAction, writeLog } from "../../log.ts";
+import { withStorageLock, writeAtomic } from "../../storage.ts";
 
 const FALLBACK_ID = "link";
 const NOT_SLUG_CHARACTERS = /[^a-z0-9]+/g;
@@ -69,8 +69,7 @@ const readForSaving = async (): Promise<Quicklink[]> => {
 };
 
 const writeQuicklinks = async (links: readonly Quicklink[]): Promise<void> => {
-  await mkdir(dirname(quicklinksPath), { recursive: true });
-  await writeFile(quicklinksPath, `${JSON.stringify(links, null, 2)}\n`);
+  await writeAtomic(quicklinksPath, `${JSON.stringify(links, null, 2)}\n`);
 };
 
 /** "GitHub Search" becomes "github-search". It never changes, so a rename keeps aliases working. */
@@ -105,22 +104,28 @@ export const addQuicklink = async (
   reservedIds: readonly string[],
 ): Promise<void> => {
   await withAction("quicklinks.add", {}, async () => {
-    const links = await readForSaving();
-    const id = toQuicklinkId(draft.name, [...reservedIds, ...links.map((link) => link.id)]);
-    await writeQuicklinks([...links, { id, ...draft }]);
+    await withStorageLock(async () => {
+      const links = await readForSaving();
+      const id = toQuicklinkId(draft.name, [...reservedIds, ...links.map((link) => link.id)]);
+      await writeQuicklinks([...links, { id, ...draft }]);
+    });
   });
 };
 
 export const updateQuicklink = async (id: string, draft: QuicklinkDraft): Promise<void> => {
   await withAction("quicklinks.update", { item: `medea-quicklinks:${id}` }, async () => {
-    const links = await readForSaving();
-    await writeQuicklinks(links.map((link) => (link.id === id ? { id, ...draft } : link)));
+    await withStorageLock(async () => {
+      const links = await readForSaving();
+      await writeQuicklinks(links.map((link) => (link.id === id ? { id, ...draft } : link)));
+    });
   });
 };
 
 export const removeQuicklink = async (id: string): Promise<void> => {
   await withAction("quicklinks.remove", { item: `medea-quicklinks:${id}` }, async () => {
-    const links = await readForSaving();
-    await writeQuicklinks(links.filter((link) => link.id !== id));
+    await withStorageLock(async () => {
+      const links = await readForSaving();
+      await writeQuicklinks(links.filter((link) => link.id !== id));
+    });
   });
 };

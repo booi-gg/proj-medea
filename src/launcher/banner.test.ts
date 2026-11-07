@@ -25,3 +25,10 @@ test("fades from teal to cyan", () => {
   const banner = renderBanner(80);
   assert.ok(banner.indexOf("\u001B[38;5;30m") < banner.indexOf("\u001B[38;5;51m"));
 });
+
+test("puts sync status beside the logo without wrapping it", () => {
+  const rows = toVisibleRows(renderBanner(80, "Last sync 4m ago"));
+  assert.equal(rows[0]?.trimEnd().endsWith("Last sync 4m ago"), true);
+  assert.ok(rows.every((row) => row.length <= 80));
+  assert.ok(!toVisibleRows(renderBanner(20, "Last sync 4m ago")).join(" ").includes("Last sync"));
+});

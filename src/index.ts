@@ -17,6 +17,7 @@ const PROCESS_COMMANDS = new Set([
   "status",
   "sign",
   "logs",
+  "sync",
 ]);
 
 // Each command loads only what it uses, because the helper starts this on every copy and hotkey.
@@ -82,6 +83,19 @@ const main = async (): Promise<void> => {
   if (command === "logs") {
     const { showLogs } = await import("./log-viewer.ts");
     await showLogs(process.argv.slice(3));
+    return;
+  }
+  if (command === "sync") {
+    const { openSyncFolder, readSyncStatus, syncNow } = await import("./sync/sync.ts");
+    if (argument === "now") {
+      process.stdout.write(`${JSON.stringify(await syncNow())}\n`);
+    } else if (argument === "status" || argument === undefined) {
+      process.stdout.write(`${JSON.stringify(await readSyncStatus(), null, 2)}\n`);
+    } else if (argument === "open") {
+      await openSyncFolder();
+    } else {
+      throw new Error("Usage: medea sync [now|status|open]");
+    }
     return;
   }
 

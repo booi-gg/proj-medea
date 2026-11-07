@@ -47,7 +47,7 @@ const printable = (value: unknown): string => {
   return typeof value === "string" ? value.replaceAll(/[\r\n\t]/g, " ").slice(0, 96) : "";
 };
 
-const printLine = (line: string, trace: string | undefined): void => {
+const printLine = (line: string, trace: string | undefined, device?: string): void => {
   try {
     const row: LogRow = JSON.parse(line);
     if (trace !== undefined && row.trace !== trace) {
@@ -59,6 +59,7 @@ const printLine = (line: string, trace: string | undefined): void => {
       printable(row.source),
       `pid=${printable(row.pid)}`,
       printable(row.event) + (row.phase ? `:${printable(row.phase)}` : ""),
+      ...(device === undefined ? [] : [`device=${device}`]),
     ];
     for (const key of [
       "id",
@@ -90,7 +91,12 @@ const printLine = (line: string, trace: string | undefined): void => {
   }
 };
 
-const listLogPaths = async (directory: string): Promise<string[]> => {
+interface LogFile {
+  path: string;
+  device?: string;
+}
+
+const listLogPaths = async (directory: string): Promise<LogFile[]> => {
   try {
     const names = (await readdir(directory)).filter((name) => LOG_NAME.test(name));
     names.sort((first, second) => {
@@ -98,7 +104,17 @@ const listLogPaths = async (directory: string): Promise<string[]> => {
       if (second === "medea.log") return -1;
       return first.localeCompare(second);
     });
-    return names.map((name) => join(directory, name));
+    const files: LogFile[] = names.map((name) => ({ path: join(directory, name) }));
+    const synced = join(directory, "synced");
+    for (const device of await readdir(synced).catch(() => [])) {
+      if (!/^[a-f0-9-]{36}$/i.test(device)) continue;
+      for (const name of await readdir(join(synced, device)).catch(() => [])) {
+        if (/^[a-f0-9-]{36}\.jsonl$/i.test(name)) {
+          files.push({ path: join(synced, device, name), device: device.slice(0, 8) });
+        }
+      }
+    }
+    return files;
   } catch {
     return [];
   }
@@ -108,6 +124,7 @@ const readNewLines = async (
   path: string,
   state: ReadState,
   trace: string | undefined,
+  device?: string,
 ): Promise<void> => {
   const file = await open(path, "r");
   try {
@@ -130,7 +147,7 @@ const readNewLines = async (
       const lines = text.split("\n");
       state.remainder = lines.pop() ?? "";
       for (const line of lines) {
-        printLine(line, trace);
+        printLine(line, trace, device);
       }
     }
   } finally {
@@ -156,13 +173,13 @@ export const showLogs = async (args: string[]): Promise<void> => {
   const states = new Map<string, ReadState>();
   do {
     const current = new Set<string>();
-    for (const path of await listLogPaths(directory)) {
+    for (const { path, device } of await listLogPaths(directory)) {
       try {
         const info = await stat(path);
         const key = `${info.dev}:${info.ino}`;
         current.add(key);
         const state = states.get(key) ?? { offset: 0, remainder: "" };
-        await readNewLines(path, state, trace);
+        await readNewLines(path, state, trace, device);
         states.set(key, state);
       } catch {
         // Rotation or pruning may remove a file between listing and opening it.

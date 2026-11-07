@@ -360,6 +360,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private let terminalMenu = NSMenu()
   private var clipsToRecord: [(clip: Clip, trace: String)] = []
   private var isRecordingClip = false
+  private var syncTimer: Timer?
 
   init(cliCommand: [String], windows: WindowManager) {
     self.cliCommand = cliCommand
@@ -406,6 +407,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     menu.delegate = self
     statusItem.menu = menu
     reloadTerminals()
+    syncTimer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
+      self?.runCli(["sync", "now"])
+    }
+    runCli(["sync", "now"])
   }
 
   func menuWillOpen(_ menu: NSMenu) {

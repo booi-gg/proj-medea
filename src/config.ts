@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname } from "node:path";
+import { readFile } from "node:fs/promises";
 import { configPath, logDir } from "./paths.ts";
 import { rotateLogs, withAction } from "./log.ts";
+import { withStorageLock, writeAtomic } from "./storage.ts";
 
 export type AliasMap = Record<string, string[]>;
 export type HotkeyMap = Record<string, string>;
@@ -103,9 +103,10 @@ export const readConfigSync = (): Config => {
 /** Merges into the saved settings, so changing one setting never wipes another. */
 export const updateConfig = async (changes: Partial<Config>): Promise<void> => {
   await withAction("config.update", { count: Object.keys(changes).length }, async () => {
-    const merged = { ...(await readConfig()), ...changes };
-    await mkdir(dirname(configPath), { recursive: true });
-    await writeFile(configPath, `${JSON.stringify(merged, null, 2)}\n`);
+    await withStorageLock(async () => {
+      const merged = { ...(await readConfig()), ...changes };
+      await writeAtomic(configPath, `${JSON.stringify(merged, null, 2)}\n`);
+    });
     if (changes.logMaxSizeMb !== undefined) {
       rotateLogs(process.env.MEDEA_LOG_DIR ?? logDir, changes.logMaxSizeMb, true);
     }

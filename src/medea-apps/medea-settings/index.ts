@@ -11,6 +11,18 @@ import {
 import type { HistoryMonths, LogMaxSizeMb } from "../../config.ts";
 import { drawScreen } from "../../launcher/screen.ts";
 import { askForWindowAccess, readWindowAccess } from "../../menubar/helper-socket.ts";
+import { chooseICloudFolder } from "../../sync/bridge.ts";
+import {
+  changeSyncSettings,
+  configureSync,
+  listSyncConflicts,
+  openSyncFolder,
+  readSyncStatus,
+  removeThisDevicesSyncedLogs,
+  resolveSyncConflict,
+  syncNow,
+} from "../../sync/sync.ts";
+import type { SyncStatus } from "../../sync/sync.ts";
 import type { WindowAccess } from "../../menubar/helper-socket.ts";
 import {
   disableLoginItem,
@@ -32,8 +44,123 @@ const START_AT_LOGIN = "start-at-login";
 const CLIPBOARD_HISTORY = "clipboard-history";
 const LOG_SIZE = "log-size";
 const WINDOW_ACCESS = "window-access";
+const SYNC = "sync";
 const DONE = "done";
 const MONTHS_IN_YEAR = 12;
+
+const syncLabel = (status: SyncStatus): string => {
+  if (!status.enabled) return "○ Off";
+  if (status.paused) return "◌ Paused";
+  if (status.error) return "▲ Needs attention";
+  return "● On";
+};
+
+const syncDetails = (status: SyncStatus): string => {
+  if (!status.enabled) return "Choose a folder in iCloud Drive";
+  if (status.error) return status.error;
+  if (status.lastSyncAt === undefined) return "Waiting for first sync";
+  return `Last sync ${new Date(status.lastSyncAt).toLocaleString()}`;
+};
+
+const reviewSyncConflict = async (): Promise<string> => {
+  const conflicts = await listSyncConflicts();
+  const selected = await select({
+    message: "Choose a conflicting setting or Quicklink",
+    options: [
+      ...conflicts.map(({ key }) => ({ value: key, label: key })),
+      { value: "back", label: "Back" },
+    ],
+  });
+  if (isCancel(selected) || selected === "back") return "";
+  const choice = await select({
+    message: `Resolve ${selected}`,
+    options: [
+      { value: "current", label: "Keep current version" },
+      { value: "other", label: "Restore other version" },
+      { value: "back", label: "Back" },
+    ],
+  });
+  if (isCancel(choice) || choice === "back") return "";
+  await resolveSyncConflict(selected, choice === "other");
+  return `Resolved ${selected}`;
+};
+
+const runSyncSettings = async (): Promise<string> => {
+  let notice = "";
+  while (true) {
+    const status = await readSyncStatus();
+    drawScreen({ title: "iCloud Drive Sync", icon: ICON, notice });
+    const choice = await select({
+      message: syncDetails(status),
+      options: [
+        ...(!status.enabled ? [{ value: "setup", label: "Choose iCloud Drive Folder" }] : []),
+        ...(status.enabled
+          ? [
+              { value: "now", label: "Sync Now", hint: `${status.pending} pending files` },
+              { value: "pause", label: status.paused ? "Resume Sync" : "Pause Sync" },
+              { value: "logs", label: `Sync logs  ${status.logsEnabled ? "● On" : "○ Off"}` },
+              { value: "remove-logs", label: "Remove This Mac's Synced Logs" },
+              ...(status.conflicts > 0
+                ? [{ value: "conflicts", label: `Review conflicts  ${status.conflicts}` }]
+                : []),
+              { value: "open", label: "Open Sync Folder" },
+              { value: "disconnect", label: "Disconnect This Mac" },
+            ]
+          : []),
+        { value: "back", label: "Back" },
+      ],
+    });
+    if (isCancel(choice) || choice === "back") return notice;
+    try {
+      if (choice === "setup") {
+        const accepted = await confirm({
+          message: "Sync settings, Quicklink URLs, and metadata logs to iCloud Drive?",
+          initialValue: true,
+        });
+        if (accepted !== true) continue;
+        const folder = await chooseICloudFolder();
+        if (folder === undefined) continue;
+        await configureSync(folder);
+        await syncNow();
+        notice = "iCloud Drive sync is on";
+      } else if (choice === "now") {
+        await syncNow();
+        notice = "Sync finished";
+      } else if (choice === "pause") {
+        await changeSyncSettings({ paused: !status.paused });
+        notice = status.paused ? "Sync resumed" : "Sync paused";
+      } else if (choice === "logs") {
+        await changeSyncSettings({ logsEnabled: !status.logsEnabled });
+        notice = status.logsEnabled ? "Log sync turned off" : "Log sync turned on";
+      } else if (choice === "conflicts") {
+        notice = await reviewSyncConflict();
+      } else if (choice === "remove-logs") {
+        const confirmed = await confirm({
+          message: "Remove this Mac's uploaded logs from iCloud Drive?",
+          initialValue: false,
+        });
+        if (confirmed === true) {
+          await removeThisDevicesSyncedLogs();
+          notice = "This Mac's synced logs were removed";
+        }
+      } else if (choice === "open") {
+        await openSyncFolder();
+        notice = "Opened sync folder";
+      } else if (choice === "disconnect") {
+        const confirmed = await confirm({
+          message: "Disconnect this Mac? Local settings and links will stay.",
+          initialValue: false,
+        });
+        if (confirmed === true) {
+          await changeSyncSettings({ disconnect: true });
+          notice = "Sync disconnected";
+        }
+      }
+    } catch (error) {
+      notice = error instanceof Error ? error.message : String(error);
+    }
+  }
+};
 
 const STATE_LABELS: Record<LoginItemState, string> = {
   on: styleText("green", "● On"),
@@ -58,12 +185,23 @@ const fixWindowAccess = async (access: WindowAccess): Promise<string> => {
   return "Turn on medea-status under Accessibility, then come back";
 };
 
-const toggleStartAtLogin = async (state: LoginItemState): Promise<string> => {
+const chooseStartAtLogin = async (state: LoginItemState): Promise<string> => {
   if (state === "blocked") {
     await openLoginItemsSettings();
     return 'Turn on medea-status under "Allow in the Background", then come back';
   }
-  if (state === "on") {
+  const choice = await select({
+    message: "Start at login",
+    initialValue: state,
+    options: [
+      { value: "off", label: "Off" },
+      { value: "on", label: "On" },
+    ],
+  });
+  if (isCancel(choice) || choice === state) {
+    return "";
+  }
+  if (choice === "off") {
     await disableLoginItem();
     return "Medea won't start at login";
   }
@@ -139,7 +277,8 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
     state,
     { clipboardHistoryMonths = DEFAULT_HISTORY_MONTHS, logMaxSizeMb = DEFAULT_LOG_MAX_SIZE_MB },
     windowAccess,
-  ] = await Promise.all([checkLoginItem(), readConfig(), readWindowAccess()]);
+    syncStatus,
+  ] = await Promise.all([checkLoginItem(), readConfig(), readWindowAccess(), readSyncStatus()]);
   const choice = await select({
     message: "Choose a setting",
     options: [
@@ -163,6 +302,11 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
         label: `Window actions  ${WINDOW_ACCESS_LABELS[windowAccess]}`,
         hint: "Moves and resizes other apps' windows",
       },
+      {
+        value: SYNC,
+        label: `iCloud Drive Sync  ${syncLabel(syncStatus)}`,
+        hint: syncDetails(syncStatus),
+      },
       { value: DONE, label: "Done" },
     ],
   });
@@ -172,12 +316,15 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
   if (choice === WINDOW_ACCESS) {
     return fixWindowAccess(windowAccess);
   }
+  if (choice === SYNC) {
+    return runSyncSettings();
+  }
   if (choice === LOG_SIZE) {
     return chooseLogSize(logMaxSizeMb);
   }
   return choice === CLIPBOARD_HISTORY
     ? chooseHistoryMonths(clipboardHistoryMonths)
-    : toggleStartAtLogin(state);
+    : chooseStartAtLogin(state);
 };
 
 const openSettings = async (): Promise<string> => {

@@ -1,5 +1,7 @@
 import { styleText } from "node:util";
 import { renderBanner } from "./banner.ts";
+import { readSyncStatusSync } from "../sync/sync.ts";
+import type { SyncStatus } from "../sync/sync.ts";
 
 export interface ScreenTitle {
   title: string;
@@ -39,11 +41,26 @@ const renderTitle = ({ title, icon }: ScreenTitle): string => {
   return `  ${[...parts, styleText("bold", title)].join(" ")}\n`;
 };
 
+export const formatSyncLabel = (status: SyncStatus, now = Date.now()): string => {
+  if (!status.enabled) return "Sync off";
+  if (status.paused) return "Sync paused";
+  if (status.error) return "Sync issue";
+  if (status.lastSyncAt === undefined) return "Sync pending";
+  const elapsed = Math.max(0, now - new Date(status.lastSyncAt).getTime());
+  if (!Number.isFinite(elapsed)) return "Sync pending";
+  const minutes = Math.floor(elapsed / 60_000);
+  if (minutes < 1) return "Last sync just now";
+  if (minutes < 60) return `Last sync ${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Last sync ${hours}h ago`;
+  return `Last sync ${Math.floor(hours / 24)}d ago`;
+};
+
 /** Clears the window and draws the logo, with what this screen is and an optional line under it. */
 export const drawScreen = (screen: Partial<ScreenTitle> & { notice?: string } = {}): void => {
   const { title, icon, notice = "" } = screen;
   const titleLine = title === undefined ? "" : `\n${renderTitle({ title, icon })}`;
   const noticeLine = notice === "" ? "" : `\n  ${notice}\n`;
-  const banner = renderBanner(process.stdout.columns);
+  const banner = renderBanner(process.stdout.columns, formatSyncLabel(readSyncStatusSync()));
   process.stdout.write(`${prepareWindow(title)}${banner}${titleLine}${noticeLine}`);
 };

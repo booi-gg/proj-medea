@@ -1,8 +1,9 @@
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { join, sep } from "node:path";
 
+// The same folder runs from src/ in a checkout and from dist/ once published.
 export const projectDir = join(import.meta.dirname, "..");
-export const cliEntryPath = join(projectDir, "src", "start.js");
+export const cliEntryPath = join(import.meta.dirname, "start.js");
 // swiftc only allows top-level code in a file named main.swift.
 export const helperSourcePaths = [
   "main.swift",
@@ -15,7 +16,13 @@ export const helperSourcePaths = [
 export const recorderSourcePath = join(projectDir, "native", "HotkeyRecorder.swift");
 export const imagePreviewSourcePath = join(projectDir, "native", "ImagePreview.swift");
 
-export const buildDir = join(projectDir, ".build");
+// An installed copy can't write to its own folder, which may be root-owned and is replaced on every
+// upgrade. A checkout keeps its own .build, so testing it never touches the installed copy.
+// start.js repeats this, because it can't import a .ts file.
+const isInstalled = projectDir.split(sep).includes("node_modules");
+export const buildDir = isInstalled
+  ? join(homedir(), "Library", "Application Support", "Medea")
+  : join(projectDir, ".build");
 export const helperPath = join(buildDir, "medea-status");
 export const recorderPath = join(buildDir, "medea-record");
 export const imagePreviewPath = join(buildDir, "medea-image-preview");

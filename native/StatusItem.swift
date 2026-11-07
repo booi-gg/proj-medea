@@ -350,7 +350,7 @@ final class ClipboardWatcher {
 final class StatusItemController: NSObject, NSMenuDelegate {
   private let cliCommand: [String]
   private let windows: WindowManager
-  // The CLI's socket sits next to this binary in .build.
+  // The CLI's socket sits next to this binary in the build folder.
   private let cliSocketPath = URL(fileURLWithPath: CommandLine.arguments[0])
     .deletingLastPathComponent()
     .appendingPathComponent("cli.sock")
@@ -373,6 +373,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     )
     statusItem.button?.image?.isTemplate = true
     statusItem.button?.toolTip = "Medea"
+    // A checkout builds into .build and an installed copy doesn't, so both can run side by side.
+    let isCheckout = URL(fileURLWithPath: CommandLine.arguments[0])
+      .deletingLastPathComponent()
+      .lastPathComponent == ".build"
+    if isCheckout {
+      statusItem.button?.title = "dev"
+      statusItem.button?.imagePosition = .imageLeading
+      statusItem.button?.toolTip = "Medea (dev checkout)"
+    }
 
     let openItem = NSMenuItem(
       title: "Open Medea",

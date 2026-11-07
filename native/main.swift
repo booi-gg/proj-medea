@@ -38,7 +38,7 @@ let reloadSignal = DispatchSource.makeSignalSource(signal: SIGUSR1, queue: .main
 reloadSignal.setEventHandler { controller.reloadHotKeys(into: hotKeys) }
 reloadSignal.resume()
 
-// Search asks for window actions here. The socket sits next to this binary in .build.
+// Search asks for window actions here. The socket sits next to this binary in the build folder.
 let helperSocket = HelperSocket(
   path: URL(fileURLWithPath: CommandLine.arguments[0])
     .deletingLastPathComponent()

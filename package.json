@@ -1,13 +1,24 @@
 {
-  "name": "medea",
+  "name": "@booi-dev/medea",
   "version": "0.1.0",
-  "private": true,
   "bin": {
-    "medea": "./src/start.js"
+    "medea": "./dist/start.js"
   },
+  "files": [
+    "dist",
+    "native"
+  ],
+  "os": [
+    "darwin"
+  ],
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "start": "node src/start.js",
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "prepublishOnly": "pnpm typecheck && pnpm test && pnpm build",
     "test": "node --test",
     "menubar:start": "node src/start.js start",
     "menubar:stop": "node src/start.js stop",
@@ -29,5 +40,8 @@
   "devDependencies": {
     "@types/node": "^26.6.6",
     "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=22.1"
   }
 }

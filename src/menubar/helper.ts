@@ -1,10 +1,7 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
-import { existsSync, openSync } from "node:fs";
-import { mkdir, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { openSync } from "node:fs";
 import {
-  buildDir,
   cliEntryPath,
   helperLogPath,
   helperPath,
@@ -16,13 +13,12 @@ import {
   recorderSourcePath,
 } from "../paths.ts";
 import { runCommand } from "../shell.ts";
+import { compileSwift } from "../swift-build.ts";
 import { currentTrace, trackSpawn } from "../log.ts";
 import { writeLauncherScript } from "../terminals/launcher-script.ts";
 import { signHelper } from "./signing.ts";
 
 const PGREP_NO_MATCH_EXIT_CODE = 1;
-// Some CLT installations pair the default 26.x SDK with an older Swift compiler.
-const COMPATIBLE_SDK = "/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk";
 
 const isNoMatchError = (error: unknown): boolean =>
   error instanceof Error && "code" in error && error.code === PGREP_NO_MATCH_EXIT_CODE;
@@ -37,34 +33,6 @@ const findHelperPids = async (): Promise<number[]> => {
     }
     throw error;
   }
-};
-
-const isBuildCurrent = async (
-  sourcePaths: readonly string[],
-  binaryPath: string,
-): Promise<boolean> => {
-  if (!existsSync(binaryPath)) {
-    return false;
-  }
-  const [binary, sources] = await Promise.all([
-    stat(binaryPath),
-    Promise.all(sourcePaths.map((sourcePath) => stat(sourcePath))),
-  ]);
-  return sources.every((source) => binary.mtimeMs >= source.mtimeMs);
-};
-
-const compileSwift = async (sourcePaths: readonly string[], binaryPath: string): Promise<void> => {
-  if (await isBuildCurrent(sourcePaths, binaryPath)) {
-    return;
-  }
-  await mkdir(buildDir, { recursive: true });
-  await runCommand("swiftc", ["-O", ...sourcePaths, "-o", binaryPath, "-framework", "AppKit"], {
-    env: {
-      ...process.env,
-      ...(existsSync(COMPATIBLE_SDK) ? { SDKROOT: COMPATIBLE_SDK } : {}),
-      CLANG_MODULE_CACHE_PATH: join(buildDir, "clang-module-cache"),
-    },
-  });
 };
 
 export const buildRecorder = (): Promise<void> => compileSwift([recorderSourcePath], recorderPath);

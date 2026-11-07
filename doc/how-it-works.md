@@ -208,7 +208,7 @@ The helper starts the CLI on every copy and on most hotkeys, so start time matte
 
 ## The search prompt
 
-The window starts with the screen cleared, the REDHOT logo from `src/launcher/banner.ts`, a slim wordmark that fades from deep red to coral, and a bare search bar. The logo is drawn once per round, outside the prompt, so typing never redraws it. In windows under 20 columns it falls back to the plain name. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
+The window starts with the screen cleared, the REDHOT logo from `src/launcher/banner.ts`, a slim wordmark that fades from mild red on the left to hot red on the right, and a bare search bar. The logo is drawn once per round, outside the prompt, so typing never redraws it. In windows under 20 columns it falls back to the plain name. Results appear once you type and go away if you delete everything. Pressing Enter with nothing typed does nothing.
 
 `promptForSelection()` in `src/launcher/prompt.ts` uses `AutocompletePrompt` from `@clack/core`, not `autocomplete` from `@clack/prompts`, because the higher-level prompt always draws its header and footer. `@clack/core` is pinned to the version `@clack/prompts` uses.
 

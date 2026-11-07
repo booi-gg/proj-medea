@@ -9,11 +9,11 @@ const LOGO_WIDTH = Math.max(...LOGO_ROWS.map((row) => row.length));
 const LETTER_WIDTH = 3;
 
 type Rgb = readonly [red: number, green: number, blue: number];
-// Deep red to coral, left to right, stopping short of pure #ff0000 so it stays easy on the eyes.
-const GRADIENT_START: Rgb = [175, 30, 30];
-const GRADIENT_END: Rgb = [255, 110, 95];
+// A mild red heating up to a hot red, left to right.
+const GRADIENT_START: Rgb = [235, 100, 95];
+const GRADIENT_END: Rgb = [235, 25, 25];
 // One 256-colour red per letter, for terminals without full RGB colour.
-const LETTER_COLORS = [124, 160, 160, 196, 203, 203];
+const LETTER_COLORS = [210, 203, 203, 196, 196, 196];
 const TRUE_COLOR_TERMS = new Set(["truecolor", "24bit"]);
 
 const supportsTrueColor = (): boolean => TRUE_COLOR_TERMS.has(process.env.COLORTERM ?? "");

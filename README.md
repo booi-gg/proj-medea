@@ -93,6 +93,8 @@ Search `Settings` for:
 
 Choose your terminal from the menu bar icon under **Set Terminal**.
 
+**Bigger text in Terminal.app:** Redhot adds a **Redhot** profile to Terminal the first time it opens a window. Change its font in Terminal > Settings > Profiles > Redhot, and only Redhot's windows change.
+
 ## Permissions
 
 | Permission             | Needed for                | Notes                                                                                                                              |

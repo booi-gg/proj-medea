@@ -2,6 +2,7 @@ import { readConfig, updateConfig } from "../config.ts";
 import { listApps } from "../launcher/apps.ts";
 import { writeLog } from "../log.ts";
 import { quoteForShell, runCommand } from "../shell.ts";
+import { writeTerminalProfile } from "./terminal-profile.ts";
 
 // Ghostty keeps a window open after a "command" exits, leaving an empty window behind. So this
 // opens a normal shell and replaces it with exec: when the CLI exits, the window closes.
@@ -35,8 +36,16 @@ interface TerminalLauncher {
 // Every terminal starts programs differently, so each one needs a tested recipe here.
 const launchers = {
   Terminal: {
-    // Terminal runs .command files directly, with no permission prompt.
-    open: (launcherPath) => openWithApp("Terminal", launcherPath),
+    // A profile runs the launcher with no login shell, so nothing shows before Redhot draws.
+    // Terminal also runs .command files directly, which is the fallback. Neither needs permission.
+    open: async (launcherPath) => {
+      try {
+        await openWithApp("Terminal", await writeTerminalProfile(launcherPath));
+      } catch (error) {
+        writeLog("terminal.open-fallback", { error }, { level: "warn" });
+        await openWithApp("Terminal", launcherPath);
+      }
+    },
     // The CLI has already raised its own window with an escape sequence.
     focus: () => openWithApp("Terminal"),
   },

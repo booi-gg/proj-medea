@@ -102,6 +102,7 @@ src/
     ├── terminals.ts      Lists terminals, saves the choice, launches each one
     ├── running-cli.ts    Talks to a running CLI over its socket
     ├── launcher-script.ts Writes the scripts terminals open
+    ├── terminal-profile.ts Writes the Terminal profile that opens them without a shell
     ├── close-window.ts   Closes a finished Terminal window
     └── actions.ts        Shows the CLI, changes terminal, opens item windows
 native/
@@ -175,14 +176,21 @@ Changing the terminal tells the running CLI to quit, because it lives in the old
 
 Each terminal has its own recipe in `launchers`, because they start programs differently:
 
-| Terminal | Open                                                                                                       | Bring back                                                                     |
-| -------- | ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Terminal | `open -a Terminal <launcher>`, with no permission needed                                                   | The CLI raises its own window with an escape sequence, then `open -a Terminal` |
-| Ghostty  | AppleScript `new window` with `initial input` of `exec <launcher>`, which needs Automation permission once | AppleScript `focus` on the terminal whose `tty` matches the CLI                |
+| Terminal | Open                                                                                                                                                  | Bring back                                                                     |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Terminal | `open -a Terminal Redhot.terminal`, a profile that runs the launcher with no shell. Falls back to `open -a Terminal <launcher>`. No permission needed | The CLI raises its own window with an escape sequence, then `open -a Terminal` |
+| Ghostty  | AppleScript `new window` with `initial input` of `exec <launcher>`, which needs Automation permission once                                            | AppleScript `focus` on the terminal whose `tty` matches the CLI                |
 
 If AppleScript is refused, Ghostty falls back to `open -a Ghostty <launcher>`, which appears to ask for confirmation on each launch, and to plain activation for bringing it back. Because the fallback is silent, a broken script can look like a working one. In AppleScript, read `argv` into a variable before the `tell` block: Ghostty can't evaluate it in a `whose` clause.
 
 Ghostty uses `initial input` and not `command` because it keeps a window open after a `command` exits, even with `wait after command` set to false. With `exec`, the CLI replaces the shell, so the window closes when the CLI exits. A new Ghostty session takes about 1.5 seconds, because the shell starts first.
+
+**Terminal's profile.** Opening a `.command` file starts a login shell, which prints `Last login` and types the launcher's path before Redhot can clear the screen. So `writeTerminalProfile()` writes a `Redhot.terminal` profile with `RunCommandAsShell` set, which makes the launcher the window's only process, and opens that instead. Terminal names the profile after the file and saves it, so a "Redhot" profile appears in Terminal's settings after the first window.
+
+- The file is copied from the saved Redhot profile, or the default profile the first time, so the window keeps the person's colours and font. Changes made to the Redhot profile in Terminal's settings, like a bigger font, apply to Redhot's windows only.
+- Terminal saves a second profile, "Redhot 1", when an opened file differs from the saved one. Copying the saved profile keeps it to one.
+- The window takes its settings from the file, not the saved profile, so the file is written on every open. It takes about 30 ms.
+- Each launcher gets its own folder, `terminal/<launcher>/`, so two windows opening at once never share a file. If Terminal's settings can't be read, a minimal profile is written instead, and if that fails, the `.command` file is opened as before.
 
 To add a terminal, add a recipe to `launchers` and test both open and bring back.
 

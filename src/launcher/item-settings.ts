@@ -27,7 +27,7 @@ const editAliases = async (itemValue: string, itemName: string): Promise<string>
     message: `Up to ${MAX_ALIASES} aliases, separated by commas`,
     placeholder: "Leave empty for none",
     initialValue: (aliases[itemValue] ?? []).join(", "),
-    validate: (value) => findAliasProblem(parseAliasInput(value ?? ""), itemValue, aliases),
+    validate: (value) => findAliasProblem(parseAliasInput(value ?? "")),
   });
   if (isCancel(input)) {
     return "";

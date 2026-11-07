@@ -251,7 +251,7 @@ Aliases are stored in `~/.config/medea/config.json`, keyed by app path or comman
 }
 ```
 
-`updateConfig()` merges changes, so saving a terminal can't wipe aliases, or the other way round. Each item can have up to two aliases of up to 8 characters, so a row stays inside its title column. Aliases are lowercase with no spaces, and two items can't share one. These limits apply when saving in settings, so a hand-edited config can go over them.
+`updateConfig()` merges changes, so saving a terminal can't wipe aliases, or the other way round. Each item can have up to two aliases of up to 8 characters, so a row stays inside its title column. Aliases are lowercase with no spaces. Several items can share one, and typing it lists them all. These limits apply when saving in settings, so a hand-edited config can go over them.
 
 **Opening settings.** Shift+Enter or Tab on a result opens that item's settings in the search window, and Done or Esc goes back to search. The `Alias, Add` and `Hotkey, Create` commands do the same after you pick an item. An error in settings shows above the search bar instead of closing Medea.
 
@@ -352,7 +352,7 @@ Links are stored in `~/.config/medea/medea-quicklinks.json`:
 ]
 ```
 
-The item value is `medea-quicklinks:<id>`. The ID comes from the name when the link is created and never changes, so a rename keeps its alias and hotkey. Warnings like "already used by" show this ID, so they can show an old name after a rename. Deleting a link also removes its alias and hotkey.
+The item value is `medea-quicklinks:<id>`. The ID comes from the name when the link is created and never changes, so a rename keeps its alias and hotkey. Deleting a link also removes its alias and hotkey.
 
 **Links.** A web URL, a deeplink like `spotify://...`, or a path starting with `/` or `~`. `github.com` is saved as `https://github.com`, and `localhost:3000` as `http://localhost:3000`.
 

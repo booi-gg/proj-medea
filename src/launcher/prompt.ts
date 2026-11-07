@@ -13,8 +13,8 @@ const SHIFT_ENTER_KEYS = ["\u001B[27;2;13~", "\u001B[13;2u"];
 const SETTINGS_KEYS = [TAB_KEY, ...SHIFT_ENTER_KEYS];
 // Terminal sends the same bytes for Shift+Enter and Enter, so Tab is the key that always works.
 const SETTINGS_KEY_HINT = process.env.TERM_PROGRAM === "ghostty" ? "⇧↵" : "tab";
-const SEARCH_ICON = styleText("cyan", "❯");
-const FOCUS_ICON = styleText("cyan", "▸");
+const SEARCH_ICON = styleText("white", "❯");
+const FOCUS_ICON = styleText("white", "▸");
 const END_OF_TEXT_CURSOR = "█";
 // Same line count as the search bar: clack crashes when a redraw has fewer lines than it expects.
 const BLANK_FRAME = "\n";

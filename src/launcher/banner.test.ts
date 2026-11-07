@@ -21,9 +21,19 @@ test("falls back to the plain name in a narrow window", () => {
   assert.deepEqual(toVisibleRows(renderBanner(10)), ["  redhot"]);
 });
 
-test("fades from deep red to coral", () => {
-  const banner = renderBanner(80);
-  assert.ok(banner.indexOf("\u001B[38;5;124m") < banner.indexOf("\u001B[38;5;203m"));
+test("fades smoothly from deep red to coral with full RGB colour", () => {
+  const banner = renderBanner(80, undefined, true);
+  assert.ok(banner.indexOf("\u001B[38;2;175;30;30m") < banner.indexOf("\u001B[38;2;255;110;95m"));
+});
+
+test("gives each letter one colour without full RGB colour", () => {
+  const [firstRow = ""] = renderBanner(80, undefined, false).split("\n").filter(Boolean);
+  const [, ...bands] = firstRow.split("\u001B[38;5;");
+  const colors = bands.map((band) => Number.parseInt(band, 10));
+  const letters = bands.map((band) => stripVTControlCharacters(`\u001B[38;5;${band}`));
+  assert.deepEqual(letters, ["╦═╗", "╔═╗", "╦═╗", "╦ ╦", "╔═╗", "╔╦╗"]);
+  assert.equal(colors[0], 124);
+  assert.equal(colors.at(-1), 203);
 });
 
 test("puts sync status beside the logo without wrapping it", () => {

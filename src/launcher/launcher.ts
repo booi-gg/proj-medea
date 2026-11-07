@@ -29,9 +29,9 @@ const SET_ALIAS_VALUE = "command:set-alias";
 const CREATE_HOTKEY_VALUE = "command:create-hotkey";
 const END_PROGRAM_CHOICE = "end-program";
 const CANCEL_CHOICE = "cancel";
-const SEARCH_PLACEHOLDER = "Cast actions";
+const SEARCH_PLACEHOLDER = "Search apps and commands";
 const PICK_ITEM_PLACEHOLDER = "Choose an app or command";
-const APP_ICON = styleText("cyan", "◆");
+const APP_ICON = styleText("white", "◆");
 const COMMAND_ICON = toRedhotIcon("⌘");
 const ACTIVE_SEARCH_ICON = toRedhotIcon("❯");
 

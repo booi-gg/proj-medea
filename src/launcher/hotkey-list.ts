@@ -20,7 +20,7 @@ const MIN_VISIBLE_ROWS = 8;
 // The logo, title, notice, search bar and footer.
 const ROWS_AROUND_LIST = 16;
 const FALLBACK_WINDOW_ROWS = 24;
-const APP_ICON = styleText("cyan", "◆");
+const APP_ICON = styleText("white", "◆");
 const COMMAND_ICON = toRedhotIcon("⌘");
 const NOT_SET = "not set";
 

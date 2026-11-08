@@ -44,6 +44,17 @@ enum RedhotLog {
     write(name, level: level, trace: trace, id: newId(), parent: parent, fields: fields)
   }
 
+  /// Separates a request's "trace <id>" prefix from the command after it.
+  static func splitTrace(_ request: String) -> (trace: String?, command: String) {
+    let parts = request.split(separator: " ", maxSplits: 2).map(String.init)
+    guard parts.count == 3, parts[0] == "trace",
+      parts[1].range(of: "^[a-f0-9-]{6,64}$", options: .regularExpression) != nil
+    else {
+      return (nil, request)
+    }
+    return (parts[1], parts[2])
+  }
+
   static func start(
     _ event: String,
     trace: String? = nil,

@@ -15,7 +15,9 @@ export const helperSourcePaths = [
   "SnippetMatcher.swift",
   "SnippetExpander.swift",
   "PasteBack.swift",
+  "MenuSearch.swift",
   "NoticePanel.swift",
+  "Countdown.swift",
   "Log.swift",
 ].map((name) => join(projectDir, "native", name));
 export const recorderSourcePath = join(projectDir, "native", "HotkeyRecorder.swift");

@@ -85,11 +85,7 @@ final class WindowManager {
 
   /// Answers one line from the CLI's socket.
   func answer(_ request: String, reply: @escaping (String) -> Void) {
-    let parts = request.split(separator: " ", maxSplits: 2).map(String.init)
-    let traceValue = parts.count == 3 && parts[0] == "trace" ? parts[1] : nil
-    let isValidTrace = traceValue?.range(of: "^[a-f0-9-]{6,64}$", options: .regularExpression) != nil
-    let trace = isValidTrace ? traceValue : nil
-    let commandRequest = trace == nil ? request : parts[2]
+    let (trace, commandRequest) = RedhotLog.splitTrace(request)
     if commandRequest == "access" {
       reply(AXIsProcessTrusted() ? "granted" : "missing")
     } else if commandRequest == "access ask" {

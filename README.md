@@ -27,6 +27,8 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Time zones.** Type `3pm PST in Tokyo` or `time in London`.
 - **Dates.** Type `days until dec 25` or `today + 90 days`.
 - **Dictionary.** Type `define serendipity`, `meaning of serendipity` or `what is serendipity` and press Enter to read the definition, using the dictionaries turned on in macOS's Dictionary app.
+- **Timers.** Type `timer 25m` or run `Pomodoro`. The time left shows in the menu bar, even after Redhot's window closes, and a notification appears when it's done.
+- **Menu item search.** Search the menu bar of the app you were just using, like `export pdf`, and run the item.
 - **Window actions.** Halves, quarters, thirds, maximize, center, restore and move to the next display, with optional Rectangle-style default hotkeys.
 - **iCloud Drive sync** (experimental). Share settings, quicklinks, snippets and logs between your Macs through a folder you pick, and choose which of them each Mac shares.
 - **Start at login,** so the shortcut and clipboard history survive a reboot.
@@ -203,6 +205,12 @@ Open `Search Folders` to see Finder's usual places straight away: Recents, Downl
 
 The keys are the same as file search, and the same folders are skipped. Recents is a Finder view rather than a folder, so it can only be opened.
 
+### Menu item search
+
+Open `Search Menu Items` to search the menu bar of the app you were just using. Type a few words from anywhere in the path, like `export pdf`, and press Enter to bring that app to the front and run the item. Each row shows the path, like `File → Export → PDF`, and the item's shortcut. A greyed row looks turned off, but pressing Enter still tries it, because apps often update these once they're in front. Give it an alias or hotkey from its settings with Tab.
+
+It needs the menu bar item and Accessibility permission. The menus are from the last app that wasn't the terminal, so opening Redhot from another Terminal window searches whatever you used before Terminal. The title names the app being searched.
+
 ### Kill a process or port
 
 Open `Kill Process or Port` to see running apps by name, then every other process, busiest first, each with its process ID, CPU and memory. Type to filter by name or process ID. Type `port 3000`, here or in search, to see what's listening on that port.
@@ -269,11 +277,11 @@ In Terminal.app, Redhot opens an 80×18 window from its own **Redhot** profile, 
 
 ## Permissions
 
-| Permission             | Needed for          | Notes                                                                                                                              |
-| ---------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Accessibility          | Window actions only | Granted to `redhot-status`. Run `redhot sign` once so the grant survives upgrades; otherwise remove and re-add it after an update. |
-| Background item notice | Start at login      | macOS shows a notice. Nothing to grant.                                                                                            |
-| Automation             | System commands     | macOS asks once each for Finder and System Events, the first time a command needs them. Sleep and Lock Screen don't need it.       |
+| Permission             | Needed for                          | Notes                                                                                                                              |
+| ---------------------- | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Accessibility          | Window actions and menu item search | Granted to `redhot-status`. Run `redhot sign` once so the grant survives upgrades; otherwise remove and re-add it after an update. |
+| Background item notice | Start at login                      | macOS shows a notice. Nothing to grant.                                                                                            |
+| Automation             | System commands                     | macOS asks once each for Finder and System Events, the first time a command needs them. Sleep and Lock Screen don't need it.       |
 
 `redhot sign` creates a `Redhot Local Signing` certificate in your login keychain and signs every later build with it.
 

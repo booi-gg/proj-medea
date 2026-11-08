@@ -20,8 +20,8 @@ Ideas for Redhot, in the order I'd build them. Each file says what the feature i
 11. ~~[Pinned clipboard items](11-pinned-clipboard-items.md)~~ ✅ built: `Ctrl+P` keeps an entry at the top and stops it expiring
 12. ~~[Dictionary](12-dictionary.md)~~ ✅ built: type `define` and a word to read its definition
 13. ~~[Colour picker](13-colour-picker.md)~~ ✅ built: pick from the screen, copy as hex, RGB or HSL
-14. [Search menu items](14-search-menu-items.md)
-15. [Timers and Pomodoro](15-timers.md)
+14. ~~[Search menu items](14-search-menu-items.md)~~ ✅ built: search the menu bar of the app you just used, and run the item
+15. ~~[Timers and Pomodoro](15-timers.md)~~ ✅ built: type `timer 25m` or run `Pomodoro`, and watch it count down in the menu bar
 
 ## Skipped for now
 

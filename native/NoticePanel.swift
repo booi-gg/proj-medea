@@ -1,9 +1,14 @@
 import AppKit
 
-private struct NoticeRequest: Decodable {
+struct NoticeRequest: Decodable {
   let title: String
   let message: String
   let isError: Bool
+
+  /// The socket reads one line, so a notice arrives as base64 JSON.
+  static func decode(_ encoded: String) -> NoticeRequest? {
+    Data(base64Encoded: encoded).flatMap { try? JSONDecoder().decode(NoticeRequest.self, from: $0) }
+  }
 }
 
 /// Takes clicks while another app stays active, because the panel never becomes the key window.
@@ -125,18 +130,17 @@ final class NoticePanel {
     guard parts.count >= 2, parts[parts.count - 2] == Self.requestPrefix else {
       return nil
     }
-    guard
-      let json = Data(base64Encoded: String(parts[parts.count - 1])),
-      let notice = try? JSONDecoder().decode(NoticeRequest.self, from: json)
-    else {
+    guard let notice = NoticeRequest.decode(String(parts[parts.count - 1])) else {
       return "bad-notice"
     }
     show(title: notice.title, message: notice.message, isError: notice.isError)
     return "ok"
   }
 
-  func show(title: String, message: String, isError: Bool = false) {
+  /// A notice that stays until clicked is for news that could arrive while you're looking away.
+  func show(title: String, message: String, isError: Bool = false, staysUntilClicked: Bool = false) {
     hideTask?.cancel()
+    hideTask = nil
     showCount += 1
     titleLabel.stringValue = title
     messageLabel.stringValue = message
@@ -159,6 +163,9 @@ final class NoticePanel {
       ]
     )
 
+    guard !staysUntilClicked else {
+      return
+    }
     let task = DispatchWorkItem { [weak self] in self?.hide() }
     hideTask = task
     let seconds = isError ? Self.visibleSecondsForError : Self.visibleSeconds

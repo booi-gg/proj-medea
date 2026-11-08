@@ -5,6 +5,7 @@ import { files } from "./redhot-files/index.ts";
 import { folders } from "./redhot-folders/index.ts";
 import { hotkeyList } from "./redhot-hotkeys/index.ts";
 import { redhotLogs } from "./redhot-logs/index.ts";
+import { menuItems } from "./redhot-menu-items/index.ts";
 import { processes } from "./redhot-processes/index.ts";
 import { recentProjects } from "./redhot-projects/index.ts";
 import { quicklinks } from "./redhot-quicklinks/index.ts";
@@ -12,6 +13,7 @@ import { scripts } from "./redhot-scripts/index.ts";
 import { redhotSettings } from "./redhot-settings/index.ts";
 import { snippets } from "./redhot-snippets/index.ts";
 import { systemCommands } from "./redhot-system/index.ts";
+import { timers } from "./redhot-timer/index.ts";
 import { windowActions } from "./redhot-window/index.ts";
 import type { HotkeyMap } from "../config.ts";
 import type { LauncherItem, RedhotApp, SettingsAction } from "./types.ts";
@@ -29,6 +31,8 @@ const redhotApps: readonly RedhotApp[] = [
   colourPicker,
   recentProjects,
   browserBookmarks,
+  timers,
+  menuItems,
   windowActions,
   systemCommands,
   hotkeyList,

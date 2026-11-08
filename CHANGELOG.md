@@ -4,6 +4,11 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+### Added
+
+- Timers: type `timer 25m`, `timer 1h 30m` or `timer 90s` and press Enter, or run `Pomodoro` for 25 minutes. The time left shows in the menu bar, and a notification stays on screen until you click it. `Timer, Cancel` or **Cancel Timer** in the menu bar stops one. It needs the menu bar item.
+- Search Menu Items: search the menu bar of the app you were just using, like `export pdf`, and press Enter to run the item. It needs the menu bar item and Accessibility.
+
 ## 0.6.4
 
 ### Added

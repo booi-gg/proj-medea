@@ -64,6 +64,11 @@ final class PasteBack {
     current = app
   }
 
+  /// The app in use before this one. Only read this on the main thread, which keeps it up to date.
+  var previousApp: NSRunningApplication? {
+    previous
+  }
+
   /// Requests arrive on the main thread, which also keeps `previous` up to date.
   func answer(_ request: String) -> String? {
     guard let command = request.split(separator: " ").last.map(String.init),
@@ -90,19 +95,29 @@ final class PasteBack {
   /// With no target, the keys go to whichever app is already in front.
   private static func press(_ shortcut: Shortcut, in target: NSRunningApplication?) {
     let span = RedhotLog.start(shortcut.logName)
-    if let target {
-      let element = AXUIElementCreateApplication(target.processIdentifier)
-      AXUIElementSetMessagingTimeout(element, messagingTimeout)
-      AXUIElementSetAttributeValue(element, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
-      // In the terminal, these keys would act on Redhot's own search bar instead.
-      guard waitUntilFrontmost(target) else {
-        RedhotLog.end(span, ok: false, fields: ["result": "not-frontmost"])
-        return
-      }
+    // In the terminal, these keys would act on Redhot's own search bar instead.
+    if let target, !bringToFront(target) {
+      RedhotLog.end(span, ok: false, fields: ["result": "not-frontmost"])
+      return
     }
-    usleep(settleMs * microsecondsPerMillisecond)
+    settle()
     post(shortcut)
     RedhotLog.end(span, ok: true)
+  }
+
+  /// Asks both ways: `activate` can be ignored when a background app asks, and setting the
+  /// attribute reports success but does nothing for an app with no windows open. Waits on the
+  /// calling thread, so it must not be called on the main one.
+  static func bringToFront(_ target: NSRunningApplication) -> Bool {
+    let element = AXUIElementCreateApplication(target.processIdentifier)
+    AXUIElementSetMessagingTimeout(element, messagingTimeout)
+    AXUIElementSetAttributeValue(element, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+    target.activate(options: [])
+    return waitUntilFrontmost(target)
+  }
+
+  static func settle() {
+    usleep(settleMs * microsecondsPerMillisecond)
   }
 
   private static func waitUntilFrontmost(_ target: NSRunningApplication) -> Bool {

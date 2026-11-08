@@ -396,6 +396,7 @@ enum RedhotLogo {
 final class StatusItemController: NSObject, NSMenuDelegate {
   private let cliCommand: [String]
   private let windows: WindowManager
+  private let countdown: Countdown
   // The CLI's socket sits next to this binary in the build folder.
   private let cliSocketPath = URL(fileURLWithPath: CommandLine.arguments[0])
     .deletingLastPathComponent()
@@ -408,6 +409,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private var syncTimer: Timer?
   private var updateTimer: Timer?
   private let updateItem = NSMenuItem(title: "Check for Updates…", action: nil, keyEquivalent: "")
+  private let cancelTimerItem = NSMenuItem(title: "Cancel Timer", action: nil, keyEquivalent: "")
   // Set when npm has a newer version, which turns the item into "Update to …".
   private var availableVersion: String?
   private var isCheckingForUpdate = false
@@ -416,9 +418,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     .deletingLastPathComponent()
     .lastPathComponent == ".build"
 
-  init(cliCommand: [String], windows: WindowManager) {
+  init(cliCommand: [String], windows: WindowManager, countdown: Countdown) {
     self.cliCommand = cliCommand
     self.windows = windows
+    self.countdown = countdown
     super.init()
 
     // A template image, so macOS colours it to suit a light or dark menu bar.
@@ -429,10 +432,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     statusItem.button?.toolTip = "Redhot"
     // A checkout builds into .build and an installed copy doesn't, so both can run side by side.
     if isCheckout {
-      statusItem.button?.title = "dev"
-      statusItem.button?.imagePosition = .imageLeading
       statusItem.button?.toolTip = "Redhot (dev checkout)"
     }
+    // Digits of one width, so the item doesn't shift every second while a timer runs.
+    statusItem.button?.font = .monospacedDigitSystemFont(
+      ofSize: NSFont.menuBarFont(ofSize: 0).pointSize,
+      weight: .regular
+    )
+    showTimeLeft(nil)
+    countdown.onTimeLeft = { [weak self] timeLeft in self?.showTimeLeft(timeLeft) }
 
     let openItem = NSMenuItem(
       title: "Open Redhot",
@@ -449,6 +457,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     )
     logsItem.target = self
     menu.addItem(logsItem)
+
+    cancelTimerItem.action = #selector(handleCancelTimer)
+    cancelTimerItem.target = self
+    menu.addItem(cancelTimerItem)
 
     menu.addItem(.separator())
 
@@ -484,8 +496,20 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     RedhotLog.event("menu.open")
   }
 
+  /// A checkout's "dev" stays in front of the time left, so the two copies can still be told apart.
+  private func showTimeLeft(_ timeLeft: String?) {
+    let title = [isCheckout ? "dev" : nil, timeLeft].compactMap { $0 }.joined(separator: " ")
+    statusItem.button?.title = title
+    statusItem.button?.imagePosition = title.isEmpty ? .imageOnly : .imageLeading
+    cancelTimerItem.isHidden = timeLeft == nil
+  }
+
   @objc private func handleOpen() {
     showCli()
+  }
+
+  @objc private func handleCancelTimer() {
+    countdown.cancel()
   }
 
   @objc private func handleOpenLogsFolder() {

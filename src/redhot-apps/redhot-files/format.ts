@@ -33,7 +33,7 @@ export const toFolderLabel = (path: string, home: string = homedir()): string =>
 };
 
 // A path's end says the most about where a file is, so its start is what gets cut.
-const fitEndToWidth = (text: string, width: number): string => {
+export const fitEndToWidth = (text: string, width: number): string => {
   if (stringWidth(text) <= width) {
     return text;
   }

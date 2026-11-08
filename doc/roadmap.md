@@ -22,7 +22,8 @@ The goal is a keyboard launcher for macOS that runs as a CLI.
 | Calculator                        | Yes, built | Nothing special                                                                                                  |
 | Currency conversion               | Yes, built | Daily rates from Frankfurter; saved rates work offline                                                           |
 | Clipboard history                 | Yes, built | The helper watches the clipboard. Pasting into the previous app would need Accessibility permission              |
-| Switch windows, search menu items | Yes        | Accessibility permission                                                                                         |
+| Switch windows                    | Yes        | Accessibility permission                                                                                         |
+| Search menu items                 | Yes, built | Accessibility permission and the menu bar helper                                                                 |
 | Move and resize windows           | Yes, built | Accessibility permission. `pnpm menubar:sign` keeps it across rebuilds                                           |
 | Snippet expansion                 | Yes, built | Accessibility permission                                                                                         |
 

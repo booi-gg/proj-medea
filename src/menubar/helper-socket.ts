@@ -11,16 +11,19 @@ const ACCESSIBILITY_SETTINGS_URL =
 export type WindowAccess = "granted" | "missing" | "no-helper";
 
 /** Returns the helper's one-line reply, or undefined when it isn't running. */
-export const sendHelperRequest = async (request: string): Promise<string | undefined> => {
+export const sendHelperRequest = async (
+  request: string,
+  timeoutMs: number = REQUEST_TIMEOUT_MS,
+): Promise<string | undefined> => {
   const tracedReply = await sendSocketRequest(
     helperSocketPath,
     `trace ${currentTrace()} ${request}`,
-    REQUEST_TIMEOUT_MS,
+    timeoutMs,
   );
   const reply = tracedReply?.trim();
   if (reply === "bad-command") {
     // An older helper may still be running until its next restart.
-    return (await sendSocketRequest(helperSocketPath, request, REQUEST_TIMEOUT_MS))?.trim();
+    return (await sendSocketRequest(helperSocketPath, request, timeoutMs))?.trim();
   }
   return reply;
 };

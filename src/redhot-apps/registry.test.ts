@@ -35,6 +35,11 @@ test("Logs, Open Folder is available from the search prompt", () => {
   assert.equal(rankItems("Logs, Open Folder", listRedhotItems())[0]?.value, "redhot-logs:view");
 });
 
+test("a Pomodoro and cancelling a timer can be found by typing them", () => {
+  assert.equal(rankItems("pomodoro", listRedhotItems())[0]?.value, "redhot-timer:pomodoro");
+  assert.equal(rankItems("timer cancel", listRedhotItems())[0]?.value, "redhot-timer:cancel");
+});
+
 test("leaves out hotkeys for items that no longer exist", () => {
   const live = {
     "/Applications/Safari.app": "shift+cmd+s",

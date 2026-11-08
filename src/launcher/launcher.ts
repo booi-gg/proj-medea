@@ -19,6 +19,7 @@ import { runProcessScreen } from "../redhot-apps/redhot-processes/screen.ts";
 import { DEFINE_VALUE, toDictionaryItem } from "../redhot-apps/redhot-dictionary/index.ts";
 import { findRedhotItem, listRedhotItems } from "../redhot-apps/registry.ts";
 import { toDateItem, toTimeZoneItem } from "../redhot-apps/redhot-time/index.ts";
+import { toTimerItem } from "../redhot-apps/redhot-timer/index.ts";
 import { toUnitItem } from "../redhot-apps/redhot-units/index.ts";
 import { toAliasSearchItem, toWebSearchItem } from "../redhot-apps/redhot-web-search/index.ts";
 import type { LauncherItem } from "../redhot-apps/types.ts";
@@ -162,6 +163,7 @@ const toAnswerItems = (query: string): LauncherItem[] => {
     ...conversions,
     toTimeZoneItem(query),
     toDateItem(query),
+    toTimerItem(query),
     toAliasSearchItem(query),
     toDictionaryItem(query),
   ].filter((item) => item !== undefined);
@@ -199,6 +201,7 @@ const getActionSearchIcon = (query: string): string | undefined =>
     toUnitItem(query),
     toTimeZoneItem(query),
     toDateItem(query),
+    toTimerItem(query),
     toAliasSearchItem(query),
     toDictionaryItem(query),
   ].some((answer) => answer !== undefined)

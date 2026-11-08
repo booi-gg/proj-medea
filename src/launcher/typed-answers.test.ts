@@ -24,6 +24,13 @@ test("time zone and date questions come first in search", () => {
   assert.deepEqual(valuesFor("today + 90 days"), ["redhot-time:date"]);
 });
 
+test("a timer comes first in search, and Enter starts it", () => {
+  const [row] = rankWithAnswers("timer 25m", NO_OPTIONS);
+  assert.equal(row?.value, "redhot-timer:start");
+  assert.equal(row?.name, "Timer for 25 minutes");
+  assert.equal(row?.footer, "↵ start");
+});
+
 test("the calculator isn't confused by a date sum", () => {
   assert.ok(!valuesFor("today + 90 days").includes("redhot-calculator:answer"));
 });

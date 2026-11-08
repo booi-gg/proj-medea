@@ -34,14 +34,16 @@ const toPlainLine = (text: string, maxCharacters: number): string => {
 };
 
 /** The socket reads one line, so the text travels encoded. */
-export const toNoticeRequest = ({ title, message, isError = false }: Notice): string => {
+export const encodeNotice = ({ title, message, isError = false }: Notice): string => {
   const json = JSON.stringify({
     title: toPlainLine(title, MAX_TITLE_CHARACTERS),
     message: toPlainLine(message, MAX_MESSAGE_CHARACTERS),
     isError,
   });
-  return `notice ${Buffer.from(json).toString("base64")}`;
+  return Buffer.from(json).toString("base64");
 };
+
+export const toNoticeRequest = (notice: Notice): string => `notice ${encodeNotice(notice)}`;
 
 /**
  * Shows Redhot's notification. Use this for anything that happens with no window to show it in.

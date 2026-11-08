@@ -2,6 +2,8 @@
 
 **Effort:** small
 
+**Status:** built. See "Timers" in doc/how-it-works.md. The notification is the helper's own panel, so neither `UNUserNotificationCenter` nor `osascript` was needed.
+
 ## What
 
 `timer 25m` or `pomodoro` starts a countdown. A notification appears when it's done.

@@ -1,12 +1,12 @@
 # Redhot roadmap
 
-The goal is a Raycast-style launcher for macOS that runs as a CLI.
+The goal is a keyboard launcher for macOS that runs as a CLI.
 
 ## What is possible
 
 | Feature                           | Possible?  | Needs                                                                                                            |
 | --------------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------- |
-| Global shortcut                   | Yes, built | Reportedly no permission, but Raycast's manual lists Accessibility for hotkeys, so confirm with a real key press |
+| Global shortcut                   | Yes, built | Reportedly no permission, but some launchers ask for Accessibility for hotkeys, so confirm with a real key press |
 | Search and open apps              | Yes, built | Nothing special                                                                                                  |
 | Search files and URLs             | Yes        | Nothing special expected                                                                                         |
 | Quicklinks                        | Yes, built | Nothing special                                                                                                  |
@@ -21,7 +21,7 @@ The goal is a Raycast-style launcher for macOS that runs as a CLI.
 | Move and resize windows           | Yes, built | Accessibility permission. `pnpm menubar:sign` keeps it across rebuilds                                           |
 | Snippet expansion                 | Yes        | Accessibility permission                                                                                         |
 
-The main limit is speed and feel. Raycast appears instantly as a floating panel, while Redhot opens a terminal window each time.
+The main limit is speed and feel. A floating-panel launcher appears instantly, while Redhot opens a terminal window each time.
 
 ## Steps
 
@@ -40,8 +40,8 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 
 ## Decisions
 
-- **Stay in a terminal for now.** A floating panel would feel closer to Raycast but needs much more native code. Revisit it if speed becomes a problem.
-- **`Cmd+Shift+Space` for now.** Raycast currently uses `Cmd+Space`. To switch, quit Raycast, change `hotKeyModifiers` in `native/main.swift`, run `pnpm menubar:stop`, then `pnpm menubar:start`.
+- **Stay in a terminal for now.** A floating panel would feel faster but needs much more native code. Revisit it if speed becomes a problem.
+- **`Cmd+Shift+Space` for now.** To use `Cmd+Space` instead, free it from Spotlight or any other launcher, change `hotKeyModifiers` in `native/main.swift`, run `pnpm menubar:stop`, then `pnpm menubar:start`.
 
 ## Not tested yet
 

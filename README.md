@@ -10,6 +10,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Aliases.** Give any app or command up to two short names, like `code` for Visual Studio Code.
 - **Hotkeys.** Bind any app, command, quicklink or window action to a global shortcut.
 - **Quicklinks.** Save URLs, deeplinks or folders, with `{argument}` and `{clipboard}` placeholders.
+- **Script commands.** Turn any shell, Python or Node script into a search result, with arguments, output and hotkeys.
 - **Clipboard history.** Text and images you copy, searchable, with a preview pane. Password managers and confidential copies are skipped.
 - **Calculator.** Type `2 * (4 + 1)` and press Enter to copy the answer.
 - **Currency conversion.** Type `356 USD to INR` or `$20 in €`. Rates are downloaded daily and work offline.
@@ -80,6 +81,56 @@ Search `Quicklink, Create` and give it a name, a link and, if you like, an app t
 
 For example, `https://github.com/search?q={query}` asks for a search term and opens GitHub.
 
+### Script commands
+
+A script command is a script with a few comments at the top that tell Redhot its name and how to show its output. Put it in `~/.config/redhot/scripts/`, and it shows up in search like any app. Give it an alias or a hotkey from its settings with Tab.
+
+Search `Script, Create` to start one: Redhot writes a template and opens it in your text editor. `Scripts, Open Folder` opens the folder in Finder.
+
+```bash
+#!/bin/bash
+
+# @redhot.title Kill Port
+# @redhot.mode compact
+# @redhot.icon 🔪
+# @redhot.argument1 { "type": "text", "placeholder": "port" }
+
+pid=$(lsof -ti tcp:"$1")
+[ -z "$pid" ] && { echo "Nothing on port $1"; exit 1; }
+kill "$pid" && echo "Stopped process $pid on port $1"
+```
+
+Search `kill`, press Enter, type `3000`, and Redhot shows "Stopped process 41522 on port 3000".
+
+Scripts can sit in subfolders. The comments can start with `#`, `//` or `--`, so a script can be in any language with a `#!` line.
+
+| Header                       | What it does                                                           |
+| ---------------------------- | ---------------------------------------------------------------------- |
+| `title`                      | The name in search. Required.                                          |
+| `mode`                       | How output shows. Required: see below.                                 |
+| `argument1` to `argument3`   | Values to ask for before running, passed to the script as `$1` to `$3` |
+| `icon`                       | An emoji shown beside the title. Image icons aren't supported.         |
+| `description`, `packageName` | Shown in hotkey lists                                                  |
+| `needsConfirmation`          | `true` asks "Run …?" first                                             |
+| `currentDirectoryPath`       | The folder the script runs in. Defaults to the script's own folder.    |
+
+| Mode         | Shows                                                                       |
+| ------------ | --------------------------------------------------------------------------- |
+| `compact`    | The last line of output, above the search bar                               |
+| `silent`     | The last line, if there is one                                              |
+| `fullOutput` | Everything the script prints, colours included, until you go back           |
+| `inline`     | Runs when chosen, like `compact`. Redhot doesn't refresh it on a timer yet. |
+
+An argument is a JSON object. `type` is `text` (the default), `password` or `dropdown`. `placeholder` is the question, `"optional": true` lets it be left empty, and `"percentEncoded": true` encodes the answer for a URL. A dropdown lists its choices in `data`, as `[{ "title": "Dark", "value": "dark" }]`.
+
+A few things to know:
+
+- The script must be executable. Redhot says so if it isn't: run `chmod +x` on it. `Script, Create` does this for you.
+- A script that exits with an error shows its last error line in red.
+- Scripts find Homebrew's tools: Redhot adds `/opt/homebrew/bin` and `/usr/local/bin` to the `PATH`, which is otherwise bare in a Terminal window opened without a shell.
+- A hotkey runs a script without opening a window when it asks nothing, and shows the last line as a notification.
+- Redhot never logs a script's arguments or output.
+
 ### Clipboard history
 
 Search `Clipboard` to see what you've copied, newest first. Type to filter, Enter copies an entry back, and Tab offers View, Delete and Delete all. Redhot copies rather than pastes, so switch back to your app and press `Cmd+V`.
@@ -134,14 +185,15 @@ redhot sync [now|status|open]
 
 | Path                                           | Contents                                        |
 | ---------------------------------------------- | ----------------------------------------------- |
-| `~/.config/redhot/config.json`                 | Terminal, aliases, hotkeys and settings         |
+| `~/.config/redhot/config.json`                 | Aliases, hotkeys and settings                   |
 | `~/.config/redhot/redhot-quicklinks.json`      | Quicklinks                                      |
+| `~/.config/redhot/scripts/`                    | Your script commands                            |
 | `~/.config/redhot/redhot-clipboard-history*`   | Clipboard history and its images                |
 | `~/Library/Application Support/Redhot/`        | The compiled helper, launcher script and socket |
 | `~/Library/Logs/Redhot/`                       | Logs                                            |
 | `~/Library/LaunchAgents/redhot.menu-bar.plist` | The login item, when Start at login is on       |
 
-Logs record action types, item IDs, timings and error categories. They never contain search text, clipboard content, link targets or command output. Redhot makes two kinds of network request: downloading currency rates from [Frankfurter](https://frankfurter.dev), and asking the npm registry for Redhot's latest version once a day. Settings turns the second off.
+Logs record action types, item IDs, timings and error categories. They never contain search text, clipboard content, link targets, script arguments or command output. Redhot makes two kinds of network request: downloading currency rates from [Frankfurter](https://frankfurter.dev), and asking the npm registry for Redhot's latest version once a day. Settings turns the second off.
 
 ## Uninstall
 

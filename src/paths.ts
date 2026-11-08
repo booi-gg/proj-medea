@@ -20,6 +20,8 @@ export const imagePreviewSourcePath = join(projectDir, "native", "ImagePreview.s
 // upgrade. A checkout keeps its own .build, so testing it never touches the installed copy.
 // start.js repeats this, because it can't import a .ts file.
 export const isInstalled = projectDir.split(sep).includes("node_modules");
+// Tells a checkout's windows apart from the installed copy's when both are open.
+export const APP_NAME = isInstalled ? "Redhot" : "Redhot (dev)";
 export const buildDir = isInstalled
   ? join(homedir(), "Library", "Application Support", "Redhot")
   : join(projectDir, ".build");
@@ -34,6 +36,7 @@ export const helperSocketPath = join(buildDir, "helper.sock");
 export const configDir = join(homedir(), ".config", "redhot");
 export const configPath = join(configDir, "config.json");
 export const quicklinksPath = join(configDir, "redhot-quicklinks.json");
+export const scriptsDir = join(configDir, "scripts");
 export const syncStatePath = join(configDir, "sync-state.json");
 export const syncOutboxDir = join(configDir, "sync-outbox");
 export const loginItemPath = join(homedir(), "Library", "LaunchAgents", "redhot.menu-bar.plist");

@@ -1,6 +1,6 @@
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import { basename, dirname, join } from "node:path";
-import { isInstalled } from "../paths.ts";
+import { APP_NAME, isInstalled } from "../paths.ts";
 import { runCommand } from "../shell.ts";
 
 // Terminal names a profile after the file it was opened from, so this file name is the profile.
@@ -14,7 +14,6 @@ const WINDOW_COLUMNS = 80;
 const WINDOW_ROWS = 18;
 // Terminal adds the running program, its arguments and more after a window's title, which would
 // show the launcher's long path. Off, the title is only what Redhot sets, or WindowTitle before then.
-const WINDOW_TITLE = "Redhot";
 const HIDDEN_TITLE_PARTS = [
   "ShowActiveProcessInTitle",
   "ShowActiveProcessArgumentsInTitle",
@@ -61,7 +60,7 @@ export const toMinimalProfile = (launcherPath: string): string =>
     "  <key>RunCommandAsShell</key><true/>",
     `  <key>columnCount</key><integer>${WINDOW_COLUMNS}</integer>`,
     `  <key>rowCount</key><integer>${WINDOW_ROWS}</integer>`,
-    `  <key>WindowTitle</key><string>${WINDOW_TITLE}</string>`,
+    `  <key>WindowTitle</key><string>${APP_NAME}</string>`,
     ...HIDDEN_TITLE_PARTS.map((key) => `  <key>${key}</key><false/>`),
     "</dict>",
     "</plist>",
@@ -130,7 +129,7 @@ export const writeTerminalProfile = async (launcherPath: string): Promise<string
     await setProfileValue(profilePath, "name", "-string", PROFILE_NAME);
     await setProfileValue(profilePath, "CommandString", "-string", toTerminalCommand(launcherPath));
     await setProfileValue(profilePath, "RunCommandAsShell", "-bool", "YES");
-    await setProfileValue(profilePath, "WindowTitle", "-string", WINDOW_TITLE);
+    await setProfileValue(profilePath, "WindowTitle", "-string", APP_NAME);
     for (const key of HIDDEN_TITLE_PARTS) {
       await setProfileValue(profilePath, key, "-bool", "NO");
     }

@@ -1,5 +1,6 @@
 import { styleText } from "node:util";
 import { renderBanner } from "./banner.ts";
+import { APP_NAME } from "../paths.ts";
 import { readSyncStatusSync } from "../sync/sync.ts";
 import type { SyncStatus } from "../sync/sync.ts";
 
@@ -8,7 +9,6 @@ export interface ScreenTitle {
   icon?: string | undefined;
 }
 
-const APP_NAME = "Redhot";
 const CONTROL_CHARACTERS = /\p{Cc}/gu;
 
 const CLEAR_SCREEN_SEQUENCE = "\u001B[2J\u001B[H";

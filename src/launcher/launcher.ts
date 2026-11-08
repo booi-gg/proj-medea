@@ -1,5 +1,6 @@
 import { styleText } from "node:util";
 import { select } from "@clack/prompts";
+import stringWidth from "string-width";
 import { readConfigSync } from "../config.ts";
 import { start, stop } from "../menubar/commands.ts";
 import { toRedhotIcon } from "../redhot-apps/icon.ts";
@@ -61,7 +62,9 @@ const formatRow = (
   const tags = aliases.map((alias) => `[${alias}]`).join(" ");
   const symbols = formatHotkey(hotkey);
   const plainParts = [name, tags, symbols].filter((part) => part !== "");
-  const padding = " ".repeat(Math.max(1, TITLE_COLUMN_WIDTH - plainParts.join(" ").length));
+  // Measured on screen, so a wide emoji icon or name doesn't push the kind out of line.
+  const usedWidth = stringWidth(plainParts.join(" ")) + stringWidth(icon) - 1;
+  const padding = " ".repeat(Math.max(1, TITLE_COLUMN_WIDTH - usedWidth));
   const styledParts = [
     name,
     tags === "" ? "" : styleText("cyan", tags),

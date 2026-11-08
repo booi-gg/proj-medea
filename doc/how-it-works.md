@@ -86,6 +86,11 @@ src/
 │   │   └── index.ts      The Hotkeys, Show All command
 │   ├── redhot-logs/
 │   │   └── index.ts      Opens the log files in Finder
+│   ├── redhot-scripts/
+│   │   ├── index.ts      Search items, argument prompts, output and the create command
+│   │   ├── parse.ts      Reads @redhot headers
+│   │   ├── store.ts      Finds scripts in the folder, re-reading only changed files
+│   │   └── run.ts        Runs a script and cleans up its output
 │   ├── redhot-settings/
 │   │   └── index.ts      The Settings screen
 │   ├── redhot-window/
@@ -348,7 +353,7 @@ An item with `needsWindow: true` asks for input, so its hotkey opens a new windo
 
 ## Quicklinks
 
-The first Redhot app, modelled on Raycast's. `Quicklink, Create` asks for a name, a link and an optional app to open it with. Links appear in search with a `↗` icon, and aliases and hotkeys work as they do for apps. Tab opens settings, which add `Edit link` and `Delete link`.
+The first Redhot app. `Quicklink, Create` asks for a name, a link and an optional app to open it with. Links appear in search with a `↗` icon, and aliases and hotkeys work as they do for apps. Tab opens settings, which add `Edit link` and `Delete link`.
 
 Links are stored in `~/.config/redhot/redhot-quicklinks.json`:
 
@@ -367,7 +372,7 @@ The item value is `redhot-quicklinks:<id>`. The ID comes from the name when the 
 
 **Links.** A web URL, a deeplink like `spotify://...`, or a path starting with `/` or `~`. `github.com` is saved as `https://github.com`, and `localhost:3000` as `http://localhost:3000`.
 
-**Placeholders.** These use Raycast's syntax:
+**Placeholders.**
 
 | Placeholder                           | Result                                                           |
 | ------------------------------------- | ---------------------------------------------------------------- |
@@ -381,11 +386,37 @@ A link can have up to 3 arguments. Values are percent-encoded when the link star
 
 **Failures.** A link that can't open shows a red line above the search bar, and the window stays open. From a hotkey with no window, the failure is silent. If `redhot-quicklinks.json` is broken, search shows no links and saving refuses to run, so a save can't overwrite links you could still fix.
 
+## Script commands
+
+Any executable in `~/.config/redhot/scripts/` with a `@redhot.title` comment near the top is a search item.
+
+**Finding scripts.** `listScripts()` walks the folder three levels deep, skipping hidden files and `node_modules`. Search lists items on every keystroke, so it only stats each file and reads the first 16 KB again when the size or modified time changed. Headers are read from the first 100 lines, in `#`, `//`, `--`, `;` or `%` comments.
+
+The item value is `redhot-scripts:script/<path in the folder>`, so renaming or moving the file loses its alias and hotkey. The `script/` prefix keeps a file called `create` from taking the create command's value.
+
+**Broken headers.** A file with a title but a bad mode or argument still shows, with the kind `Script ▲`. Running it shows what's wrong instead of running it, so a typo doesn't make the script silently disappear.
+
+**Running.** `runScriptFile()` runs the file directly with `execFile`, so its `#!` line picks the language, with each answer as an argument and no shell in between. It runs in the script's folder, or `currentDirectoryPath`. The `PATH` gets Node's folder, `/opt/homebrew/bin` and `/usr/local/bin` added, because a Terminal window opened from Redhot's profile starts with the bare system `PATH`. Output is capped at 4 MB.
+
+| Mode                          | In a window                                                                               | From a hotkey with no window    |
+| ----------------------------- | ----------------------------------------------------------------------------------------- | ------------------------------- |
+| `compact`, `silent`, `inline` | The last non-empty line of stdout, above the search bar                                   | The same line as a notification |
+| `fullOutput`                  | stdout, then stderr, with colours kept and other escape codes removed, then a Back prompt | The last line as a notification |
+| A failure                     | The last line of stderr, or of stdout, in red                                             | The same line as a notification |
+
+`inline` scripts run when chosen. Refreshing them on a timer is still to do.
+
+**When a window opens.** A hotkey opens a window when the script has arguments, uses `fullOutput` or sets `needsConfirmation`. Otherwise it runs straight from the helper.
+
+**Start-up failures.** A file that isn't executable, has no `#!` line, or names a missing program in it gets a sentence saying how to fix it, rather than an error code.
+
+**Privacy.** `script.run` logs the mode and the number of arguments. Never the answers, the output or the folder's contents.
+
 ## Clipboard history
 
 The second Redhot app. `Clipboard` lists what you've copied, newest first, before you type anything. Typing filters by exact text, not loose letters, because loose matching on long text matches nearly everything. Enter copies the entry back and returns to search. Tab offers Copy, View full text or Open image, Delete and Delete all, and Delete all asks first.
 
-Raycast pastes straight into the app you were using. Redhot only copies, because sending Cmd+V to another app needs Accessibility permission. After choosing an entry, switch back and paste.
+Redhot only copies, and doesn't paste into the app you were using, because sending Cmd+V to another app needs Accessibility permission. After choosing an entry, switch back and paste.
 
 **Preview.** The focused entry shows in a pane beside the list, built by `toSplitLayout()` and `joinColumns()` in `src/launcher/split-view.ts`. A window under 56 columns has no room, so it shows only the list.
 

@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { promisify } from "node:util";
+import { APP_NAME } from "../paths.ts";
 import { toMinimalProfile, toTerminalCommand } from "./terminal-profile.ts";
 
 const execFileAsync = promisify(execFile);
@@ -23,7 +24,7 @@ test("the fallback profile is a valid plist that runs the launcher as the shell"
     RunCommandAsShell: true,
     columnCount: 80,
     rowCount: 18,
-    WindowTitle: "Redhot",
+    WindowTitle: APP_NAME,
     ShowActiveProcessInTitle: false,
     ShowActiveProcessArgumentsInTitle: false,
     ShowCommandKeyInTitle: false,

@@ -8,6 +8,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Added
 
+- Script commands: any script in `~/.config/redhot/scripts/` with `@redhot.` headers shows up in search, with arguments, output modes, aliases and hotkeys. `Script, Create` writes a template, and `Scripts, Open Folder` opens the folder.
 - `redhot --version`, `redhot -v` and `redhot version` print the installed version.
 - The menu bar menu has **Check for Updates…**, and shows **Update to 0.x.y…** when npm has a newer version. Updating runs in a terminal window and restarts the menu bar item.
 - Redhot checks npm for a newer version once a day. Turn it off with **Check for updates** in Settings.

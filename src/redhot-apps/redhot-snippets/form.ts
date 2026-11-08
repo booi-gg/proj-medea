@@ -19,7 +19,7 @@ export const askForSnippet = async (
     return undefined;
   }
   const keyword = await text({
-    message: "Keyword to type in any app (optional)",
+    message: "Keyword to type in any app, starting with ; (optional)",
     placeholder: ";addr",
     initialValue: current?.keyword ?? "",
     validate: (value) => findKeywordProblem(value ?? "", current?.id, snippets),

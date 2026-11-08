@@ -21,9 +21,10 @@ const CONTROL_CHARACTERS = /\p{Cc}/gu;
 const TITLE_MARGIN = "  ";
 // Both two-column margins, the label's padding on each side and the gap before the line.
 const TITLE_CHROME_WIDTH = 7;
-// The logo's plain red on white, which is about 5:1 contrast.
-const TITLE_LABEL_COLORS = "\u001B[48;5;231m\u001B[38;5;160m";
-const TITLE_LINE_COLOR = "\u001B[38;5;231m";
+// White on a gray just above the window's background, so the label and its line stay quiet.
+const TITLE_GRAY = 238;
+const TITLE_LABEL_COLORS = `\u001B[48;5;${TITLE_GRAY}m\u001B[38;5;231m`;
+const TITLE_LINE_COLOR = `\u001B[38;5;${TITLE_GRAY}m`;
 const DEFAULT_COLORS = "\u001B[39;49m";
 
 const CLEAR_SCREEN_SEQUENCE = "\u001B[2J\u001B[H";
@@ -65,8 +66,8 @@ export const fitToColumns = (label: string, columns: number): string => {
 
 /**
  * A solid label and a line to the window's right margin, so it's clear which screen this is. The
- * icon's own colour is removed because its reset would also end the label's text colour, leaving
- * the title white on white. One row always, since screens count their rows.
+ * icon's own colour is removed because its reset would also end the label's colours partway
+ * through. One row always, since screens count their rows.
  */
 export const renderTitle = (
   { title, icon }: ScreenTitle,

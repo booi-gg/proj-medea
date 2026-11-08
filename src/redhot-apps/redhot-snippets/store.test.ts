@@ -44,6 +44,12 @@ test("rejects keywords that are too short, too long or contain spaces", () => {
   assert.equal(findKeywordProblem("; addr", undefined, []), "A keyword can't contain spaces");
 });
 
+test("rejects a keyword that doesn't start with a semicolon", () => {
+  assert.equal(findKeywordProblem("addr", undefined, []), "Start the keyword with ;");
+  assert.equal(findKeywordProblem(":addr", undefined, []), "Start the keyword with ;");
+  assert.equal(findKeywordProblem(";addr", undefined, []), undefined);
+});
+
 test("rejects a keyword another snippet uses", () => {
   assert.equal(
     findKeywordProblem(";addr", undefined, [address]),

@@ -12,6 +12,8 @@ const MIN_KEYWORD_LENGTH = 2;
 const MAX_KEYWORD_LENGTH = 32;
 // Keeps a snippet well inside the size sync allows for one change, whatever characters it uses.
 const MAX_TEXT_LENGTH = 16_000;
+// native/SnippetMatcher.swift ignores any keyword without this, like one edited in by hand.
+const KEYWORD_PREFIX = ";";
 const WHITESPACE = /\s/;
 
 export interface SnippetDraft {
@@ -122,6 +124,9 @@ export const findKeywordProblem = (
   }
   if (WHITESPACE.test(keyword)) {
     return "A keyword can't contain spaces";
+  }
+  if (!keyword.startsWith(KEYWORD_PREFIX)) {
+    return `Start the keyword with ${KEYWORD_PREFIX}`;
   }
   if (keyword.length < MIN_KEYWORD_LENGTH || keyword.length > MAX_KEYWORD_LENGTH) {
     return `Use ${MIN_KEYWORD_LENGTH} to ${MAX_KEYWORD_LENGTH} characters`;

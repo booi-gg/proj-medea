@@ -12,22 +12,22 @@ import {
 
 const CLEAR_SCROLLBACK = "\u001B[3J";
 const WINDOW_COLUMNS = 80;
-const WHITE_LABEL_RED_TEXT = "\u001B[48;5;231m\u001B[38;5;160m";
-const WHITE_LINE = "\u001B[38;5;231m─";
+const GRAY_LABEL_WHITE_TEXT = "\u001B[48;5;238m\u001B[38;5;231m";
+const GRAY_LINE = "\u001B[38;5;238m─";
 
 const toVisibleTitle = (title: string, columns: number | undefined, icon?: string): string =>
   stripVTControlCharacters(renderTitle({ title, icon }, columns)).trimEnd();
 
 test("the title is a solid label with the icon inside it, and a line to the right margin", () => {
   const title = renderTitle({ title: "Clipboard", icon: "≡" }, WINDOW_COLUMNS);
-  assert.ok(title.includes(`${WHITE_LABEL_RED_TEXT} ≡ Clipboard \u001B[39;49m`));
-  assert.ok(title.includes(WHITE_LINE));
+  assert.ok(title.includes(`${GRAY_LABEL_WHITE_TEXT} ≡ Clipboard \u001B[39;49m`));
+  assert.ok(title.includes(GRAY_LINE));
   const visible = toVisibleTitle("Clipboard", WINDOW_COLUMNS, "≡");
   assert.match(visible, /^ {3}≡ Clipboard {2}─+$/u);
   assert.equal(toTerminalWidth(visible), WINDOW_COLUMNS - 2);
 });
 
-test("a coloured icon loses its colour, so its reset can't turn the title white on white", () => {
+test("a coloured icon loses its colour, so its reset can't break the label's colours", () => {
   const icon = styleText("red", "≡", { validateStream: false });
   const title = renderTitle({ title: "Clipboard", icon }, WINDOW_COLUMNS);
   assert.ok(!title.includes(icon));

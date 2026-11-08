@@ -27,7 +27,10 @@ const NOT_SET = "not set";
 export type HotkeyEntry = Pick<
   LauncherItem,
   "value" | "name" | "icon" | "diagram" | "hint" | "run"
->;
+> & {
+  /** More text that finds this row, beyond its name, aliases and hotkey. */
+  searchTerms?: readonly string[];
+};
 
 interface HotkeyList {
   title: string;
@@ -35,6 +38,8 @@ interface HotkeyList {
   /** Read again each round, so a hotkey changed in settings shows straight away. */
   getEntries: (hotkeys: HotkeyMap) => HotkeyEntry[];
   placeholder?: string;
+  /** What the footer says Enter does. */
+  enterLabel?: string;
   /** Replaces the usual row, for a list whose names need more room. */
   toRow?: (entry: HotkeyEntry, hotkey: string | undefined) => string;
 }
@@ -68,7 +73,11 @@ const toOption = (
     value: entry.value,
     name: entry.name,
     // The hotkey is searchable too, so typing "ctrl+option" finds what uses those keys.
-    aliases: [...(aliases[entry.value] ?? []), ...(hotkey === undefined ? [] : [hotkey])],
+    aliases: [
+      ...(aliases[entry.value] ?? []),
+      ...(hotkey === undefined ? [] : [hotkey]),
+      ...(entry.searchTerms ?? []),
+    ],
     label: toRow(entry, hotkey),
   };
 };
@@ -123,7 +132,14 @@ const runEntry = async ({ run }: HotkeyEntry): Promise<string> => {
 
 /** Shows the list once. Returns the line to show next, or undefined when finished. */
 const runListRound = async (
-  { title, icon, getEntries, placeholder = "Search hotkeys", toRow = toHotkeyRow }: HotkeyList,
+  {
+    title,
+    icon,
+    getEntries,
+    placeholder = "Search hotkeys",
+    enterLabel = "run",
+    toRow = toHotkeyRow,
+  }: HotkeyList,
   notice: string,
 ): Promise<string | undefined> => {
   const { aliases, hotkeys } = await readConfig();
@@ -132,7 +148,7 @@ const runListRound = async (
   const options = entries.map((entry) => toOption(entry, aliases, hotkeys, toRow));
   const { cancelled, value, wantsSettings } = await promptForSelection(() => options, placeholder, {
     listWhenEmpty: true,
-    enterLabel: "run",
+    enterLabel,
     replaceable: true,
     maxVisibleResults: toVisibleRows(process.stdout.rows ?? FALLBACK_WINDOW_ROWS),
   });

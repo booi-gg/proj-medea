@@ -120,7 +120,7 @@ final class SnippetExpander {
     }
     var loaded: [String: String] = [:]
     for case let entry as [String: Any] in list {
-      if let keyword = entry["keyword"] as? String, !keyword.isEmpty, let text = entry["text"] as? String {
+      if let keyword = entry["keyword"] as? String, isExpandableKeyword(keyword), let text = entry["text"] as? String {
         loaded[keyword] = text
       }
     }

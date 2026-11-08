@@ -99,7 +99,7 @@ A quicklink can act as a search engine too. Give one with a single question an a
 
 ### Snippets
 
-Search `Snippet, Create` and give it a name, the text and, if you like, a keyword. Enter on a snippet in search copies it. Tab has Edit and Delete.
+Search `Snippet, Create` and give it a name, the text and, if you like, a keyword. Enter on a snippet in search copies it. Tab has Edit and Delete. `Snippets, Show All` lists them with their keywords, and you can search by name or keyword.
 
 Typing a keyword in any app replaces it with the snippet. That needs the menu bar item and Accessibility permission, which Redhot asks for when you save your first keyword. Your clipboard is put back afterwards. Expansion doesn't happen in password fields.
 
@@ -110,7 +110,7 @@ Typing a keyword in any app replaces it with the snippet. That needs the menu ba
 | `{clipboard}` | The clipboard text                                              |
 | `{cursor}`    | Where the cursor ends up after expanding. Left out when copying |
 
-A keyword that starts with a letter or number only expands at the start of a word, so `btw` won't fire inside `subtwo`. One that starts with punctuation, like `;addr`, expands anywhere.
+Keywords start with `;`, like `;addr`, so ordinary typing can't set one off. A saved keyword without it doesn't expand until you edit it.
 
 ### Script commands
 

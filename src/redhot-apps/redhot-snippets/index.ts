@@ -1,5 +1,6 @@
 import { confirm } from "@clack/prompts";
 import { saveAliases } from "../../launcher/aliases.ts";
+import type { HotkeyEntry } from "../../launcher/hotkey-list.ts";
 import { saveHotkey } from "../../launcher/hotkeys.ts";
 import { drawScreen } from "../../launcher/screen.ts";
 import {
@@ -11,6 +12,7 @@ import {
 import { reloadHotkeys } from "../../menubar/helper.ts";
 import { UTF8_ENVIRONMENT, copyText, runCommand } from "../../shell.ts";
 import { toRedhotIcon } from "../icon.ts";
+import { toScriptRow } from "../redhot-scripts/index.ts";
 import type { LauncherItem, RedhotApp, SettingsAction } from "../types.ts";
 import { askForSnippet } from "./form.ts";
 import { fillSnippet, usesClipboard } from "./placeholders.ts";
@@ -24,10 +26,12 @@ import {
 } from "./store.ts";
 import type { Snippet, SnippetDraft } from "./store.ts";
 
-// Reserved, so no saved snippet can end up with the same value as the create command.
+// Reserved, so no saved snippet can end up with the same value as one of these commands.
 const CREATE_ID = "create";
+const SHOW_ALL_ID = "show-all";
 const ICON = toRedhotIcon("¶");
 const CREATE_NAME = "Snippet, Create";
+const SHOW_ALL_NAME = "Snippets, Show All";
 const PAUSE_REQUEST = "snippets pause";
 const RESUME_REQUEST = "snippets resume";
 
@@ -87,7 +91,7 @@ const createSnippet = async (): Promise<string> => {
   if (draft === undefined) {
     return "";
   }
-  await addSnippet(draft, [CREATE_ID]);
+  await addSnippet(draft, [CREATE_ID, SHOW_ALL_ID]);
   await reloadSnippets();
   return describeSaved(draft);
 };
@@ -107,6 +111,45 @@ const createItem: LauncherItem = {
   kind: "Command",
   needsWindow: true,
   run: createSnippet,
+};
+
+const toListEntry = (snippet: Snippet): HotkeyEntry => ({
+  value: toSnippetValue(snippet.id),
+  name: snippet.name,
+  icon: ICON,
+  ...(snippet.keyword === undefined
+    ? {}
+    : { hint: snippet.keyword, searchTerms: [snippet.keyword] }),
+  run: () => copySnippet(snippet),
+});
+
+// Loaded late because the list needs the registry, which loads this file.
+const showAllSnippets = async (): Promise<string> => {
+  if (readSnippetsSync().length === 0) {
+    return `No snippets yet. Search ${CREATE_NAME} to make one`;
+  }
+  const { runHotkeyList } = await import("../../launcher/hotkey-list.ts");
+  return runHotkeyList({
+    title: SHOW_ALL_NAME,
+    icon: ICON,
+    placeholder: "Search snippets or keywords",
+    enterLabel: "copy",
+    getEntries: () =>
+      readSnippetsSync()
+        .toSorted((first, second) => first.name.localeCompare(second.name))
+        .map(toListEntry),
+    toRow: toScriptRow,
+  });
+};
+
+const showAllItem: LauncherItem = {
+  value: toSnippetValue(SHOW_ALL_ID),
+  name: SHOW_ALL_NAME,
+  icon: ICON,
+  kind: "Command",
+  hint: "Browse, copy, edit and delete your snippets",
+  needsWindow: true,
+  run: showAllSnippets,
 };
 
 const editSnippet = async (snippet: Snippet): Promise<boolean> => {
@@ -152,6 +195,6 @@ const listSettingsActions = (itemValue: string): SettingsAction[] => {
 
 export const snippets: RedhotApp = {
   id: SNIPPETS_APP_ID,
-  listItems: () => [createItem, ...readSnippetsSync().map(toItem)],
+  listItems: () => [createItem, showAllItem, ...readSnippetsSync().map(toItem)],
   listSettingsActions,
 };

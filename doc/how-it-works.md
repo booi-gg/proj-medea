@@ -449,7 +449,7 @@ These rows aren't registered as a Redhot app. Like the calculator's answer, each
 
 `Snippet, Create` asks for a name, an optional keyword and the text, which can run over several lines. Snippets are stored in `~/.config/redhot/redhot-snippets.json` and appear in search with a `¶` icon. The item value is `redhot-snippets:<id>`, and aliases and hotkeys work as they do for quicklinks. Snippets stay on each Mac unless Snippets is turned on under What to Sync in iCloud Drive Sync, and an import makes the helper reload them.
 
-**From search.** Enter fills the placeholders and copies the result. Like clipboard history, it doesn't paste, because Redhot's own window is in front.
+**From search.** Enter fills the placeholders and copies the result. Like clipboard history, it doesn't paste, because Redhot's own window is in front. `Snippets, Show All` reuses the list behind `Hotkeys, Show All` (`runHotkeyList()`), sorted by name, with each keyword on its row and searchable through `searchTerms`. Enter copies, Tab opens settings, and the list stays open.
 
 **Placeholders.** `{date}` is `yyyy-MM-dd` and `{time}` is `HH:mm`, both local. A fixed format is what lets TypeScript and Swift give the same answer. Each side has its own short version: the copy has to work with no helper running, and expansion can't wait for Node to start, because anything typed in that gap would land in the wrong place. They fill in one pass, so a `{date}` inside the copied text stays as it is. `{cursor}` is dropped from a copy.
 
@@ -460,7 +460,7 @@ These rows aren't registered as a Redhot app. Like the calculator's answer, each
 3. `SnippetMatcher` keeps only the last few characters, as many as the longest keyword needs. Backspace removes one. A click, an app switch, Cmd or Ctrl, and keys like the arrows, Return and Esc clear it, because whatever comes next may not be next to what came before.
 4. When a keyword completes, the rest runs on a queue while typing is ignored: the keyword is deleted with backspaces, the snippet goes on the clipboard, Cmd+V is sent, and `{cursor}` is reached with left arrows, counted in the characters a person sees. After 300 ms the old clipboard goes back, unless something new was copied. Both clipboard writes carry `org.nspasteboard.TransientType`, so clipboard history records neither.
 
-**Keywords.** They're matched exactly, as soon as the last character is typed. The form refuses one that starts another, because the shorter would always win. One starting with a letter or number needs a non-word character before it, so `btw` can't fire inside `subtwo`.
+**Keywords.** They're matched exactly, as soon as the last character is typed. The form refuses one that starts another, because the shorter would always win. Every keyword must start with `;`, so ordinary typing can't set one off. The form enforces that, and `isExpandableKeyword()` in the helper ignores anything else, like a keyword edited in by hand or synced from an older Mac.
 
 **The form.** It sends `snippets pause` while open, or retyping an existing keyword would expand it there. The pause runs out after 5 minutes, so a crashed CLI can't leave expansion off.
 
@@ -468,7 +468,7 @@ These rows aren't registered as a Redhot app. Like the calculator's answer, each
 
 **Privacy.** `snippet.expand` logs that it ran and how long it took. Typed text, keywords and snippet text are never logged.
 
-**Limits.** Cmd+V and backspace are sent by US keyboard position, like hotkeys, so a layout such as Dvorak would need Cmd+V looked up. Input methods aren't detected, so a word-style keyword could fire on letters that are being composed, which a keyword starting with punctuation avoids.
+**Limits.** Cmd+V and backspace are sent by US keyboard position, like hotkeys, so a layout such as Dvorak would need Cmd+V looked up.
 
 ## Script commands
 

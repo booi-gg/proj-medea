@@ -1,5 +1,10 @@
 import Foundation
 
+/// The form only saves keywords like this. A file edited by hand, or an older Mac's sync, may not.
+func isExpandableKeyword(_ keyword: String) -> Bool {
+  keyword.hasPrefix(";") && keyword.count >= 2 && !keyword.contains { $0.isWhitespace }
+}
+
 /// Finds a keyword at the end of what was just typed, with no system calls. What it holds is only
 /// ever in memory, is as short as the longest keyword allows, and must never be logged.
 struct SnippetMatcher {
@@ -14,8 +19,7 @@ struct SnippetMatcher {
   mutating func setKeywords(_ newKeywords: [String]) {
     // Longest first, so a hand-edited file with overlapping keywords still has one answer.
     keywords = newKeywords.map(Array.init).sorted { $0.count > $1.count }
-    // One extra, to see the character before the longest keyword.
-    capacity = (keywords.first?.count ?? 0) + 1
+    capacity = keywords.first?.count ?? 0
     reset()
   }
 
@@ -42,18 +46,8 @@ struct SnippetMatcher {
     return nil
   }
 
-  /// A keyword like "btw" only counts at the start of a word, or it would fire inside "subtwo".
   private func isCompleted(_ keyword: [Character]) -> Bool {
-    guard typed.count >= keyword.count, Array(typed.suffix(keyword.count)) == keyword else {
-      return false
-    }
-    guard let first = keyword.first, first.isLetter || first.isNumber else {
-      return true
-    }
-    guard let before = typed.dropLast(keyword.count).last else {
-      return true
-    }
-    return !before.isLetter && !before.isNumber
+    typed.count >= keyword.count && Array(typed.suffix(keyword.count)) == keyword
   }
 }
 

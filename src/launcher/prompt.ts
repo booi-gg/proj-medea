@@ -22,6 +22,9 @@ const BLANK_FRAME = "\n";
 const PREVIEW_DIVIDER = styleText("dim", "│");
 // The prompt only redraws on a key. This one types nothing and moves nothing.
 const REDRAW_KEY = "\u0018";
+// Never typed, so the options always count as changed.
+const REFRESH_TEXT = "\0";
+const NO_RESULTS_TEXT = "No results";
 
 export interface LauncherOption {
   value: string;
@@ -63,7 +66,13 @@ export interface SelectionDisplay {
   renderPreview?: RenderPreview;
   /** Called with the focused result's value, and undefined when nothing is focused. */
   onFocus?: (value: string | undefined) => void;
-  extraKey?: ExtraKey;
+  /** Called with the search text each time it changes. */
+  onQueryChange?: (query: string) => void;
+  /** Shown instead of "No results", for when there may be some on the way. */
+  getEmptyText?: () => string;
+  /** Receives a function that shows new options, for results that arrive after a keystroke. */
+  watchOptions?: (refresh: () => void) => () => void;
+  extraKeys?: readonly ExtraKey[];
   /** Ends the prompt early, so the caller can show it again with fresh options. */
   signal?: AbortSignal;
   /** True when nothing is lost by leaving, so a hotkey may switch this list for its own item. */
@@ -100,6 +109,12 @@ class SearchPrompt extends AutocompletePrompt<LauncherOption> {
   override get userInputWithCursor(): string {
     return drawTextCursor(this.userInput, this._cursor);
   }
+
+  /** Clack only reads the options again when the text changes. Focus stays on the same result. */
+  refreshOptions(): void {
+    this.emit("userInput", REFRESH_TEXT);
+    this.emit("userInput", this.userInput);
+  }
 }
 
 const renderSearchBar = (
@@ -130,15 +145,16 @@ interface ResultsDisplay {
   maxRows: number;
   layout: SplitLayout | undefined;
   renderPreview: RenderPreview | undefined;
+  emptyText: string;
 }
 
 const renderResults = (
   results: readonly LauncherOption[],
   cursor: number,
-  { footer, maxRows, layout, renderPreview }: ResultsDisplay,
+  { footer, maxRows, layout, renderPreview, emptyText }: ResultsDisplay,
 ): string => {
   if (results.length === 0) {
-    return `\n\n    ${styleText("dim", "No results")}`;
+    return `\n\n    ${styleText("dim", emptyText)}`;
   }
   const focused = results[cursor];
   const canSplit = layout !== undefined && renderPreview !== undefined && focused !== undefined;
@@ -196,9 +212,12 @@ const readKeysInto = (
   };
 };
 
-const toFooter = (baseFooter: string, extraKey: ExtraKey | undefined, value?: string): string => {
-  const label = extraKey?.getLabel(value);
-  return label === undefined ? baseFooter : `${baseFooter}   ${extraKey?.hint} ${label}`;
+const toFooter = (baseFooter: string, extraKeys: readonly ExtraKey[], value?: string): string => {
+  const hints = extraKeys.flatMap((key) => {
+    const label = key.getLabel(value);
+    return label === undefined ? [] : [`${key.hint} ${label}`];
+  });
+  return [baseFooter, ...hints].join("   ");
 };
 
 /** A bare search bar. Results only appear once something has been typed. */
@@ -213,7 +232,10 @@ export const promptForSelection = async (
     settingsLabel = "settings",
     renderPreview,
     onFocus,
-    extraKey,
+    onQueryChange,
+    getEmptyText = () => NO_RESULTS_TEXT,
+    watchOptions,
+    extraKeys = [],
     signal,
     replaceable = false,
     initialQuery = "",
@@ -225,15 +247,16 @@ export const promptForSelection = async (
   let lastQuery = initialQuery;
   let wantsSettings = false;
   let focusedValue: string | undefined;
+  // Clack reads the options once while it's being built, before the first text is in place.
+  let isOpen = false;
   const input = new PassThrough();
 
   const runExtraKey = (keys: string): boolean => {
-    const isAvailable = extraKey?.getLabel(focusedValue) !== undefined;
-    if (!isAvailable || !extraKey?.keys.includes(keys)) {
-      return false;
-    }
-    extraKey.run();
-    return true;
+    const extraKey = extraKeys.find(
+      (key) => key.keys.includes(keys) && key.getLabel(focusedValue) !== undefined,
+    );
+    extraKey?.run();
+    return extraKey !== undefined;
   };
   const replacement = new AbortController();
   if (replaceable) {
@@ -254,6 +277,9 @@ export const promptForSelection = async (
       if (this.userInput !== lastQuery) {
         lastQuery = this.userInput;
         this.focusedValue = undefined;
+        if (isOpen) {
+          onQueryChange?.(this.userInput);
+        }
       }
       if (isEmptyQuery(this.userInput)) {
         return listWhenEmpty ? [...getOptions()] : [];
@@ -278,10 +304,11 @@ export const promptForSelection = async (
         return searchBar;
       }
       const results = renderResults(this.filteredOptions, this.cursor, {
-        footer: focused?.footer ?? toFooter(baseFooter, extraKey, focusedValue),
+        footer: focused?.footer ?? toFooter(baseFooter, extraKeys, focusedValue),
         maxRows: maxVisibleResults,
         layout,
         renderPreview,
+        emptyText: getEmptyText(),
       });
       return `${searchBar}${results}`;
     },
@@ -294,6 +321,11 @@ export const promptForSelection = async (
     },
     runExtraKey,
   );
+  const stopWatchingOptions = watchOptions?.(() => {
+    prompt.refreshOptions();
+    input.write(REDRAW_KEY);
+  });
+  isOpen = true;
   try {
     const result = await prompt.prompt();
     if (isCancel(result)) {
@@ -306,6 +338,7 @@ export const promptForSelection = async (
       query: lastQuery,
     };
   } finally {
+    stopWatchingOptions?.();
     stopReadingKeys();
     if (replaceable) {
       closeOpenList = undefined;

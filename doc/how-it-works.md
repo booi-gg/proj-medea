@@ -76,6 +76,10 @@ src/
 │   │   ├── index.ts      Conversion answers and target suggestions
 │   │   ├── convert.ts    Parses input and converts through USD
 │   │   └── rates.ts      Reads and refreshes the local rates file
+│   ├── redhot-files/
+│   │   ├── index.ts      The Search Files screen, its keys and actions, and the f prefix
+│   │   ├── search.ts     Runs mdfind, filters and ranks what it finds
+│   │   └── format.ts     Row text: the name beside its shortened folder
 │   ├── redhot-clipboard-history/
 │   │   ├── index.ts      The history list and its actions
 │   │   ├── store.ts      Reads and saves history and image files
@@ -321,6 +325,7 @@ Settings is a menu: **Alias, Add**, **Hotkey, Create**, **Remove hotkey** (when 
 | Remove Menu Bar Item | Stops the helper, which also ends all hotkeys              |
 | Quicklink, Create    | Shows the form in the Redhot window                        |
 | Clipboard            | Shows the list in the Redhot window                        |
+| Search Files         | Shows the search in the Redhot window                      |
 | A quicklink          | Opens it, through the Redhot window if it has `{argument}` |
 
 **Seeing them all.** `Hotkeys, Show All` lists everything with a saved hotkey, and `Window Hotkeys, Show All` lists every window action, including any with no hotkey. Each window action has a small diagram, a bracketed screen with the filled part showing where the window ends up, and a few words when a diagram can't show it. Enter runs the row and Tab opens its settings. The list stays open after running something, so you can try several in a row, and Esc goes back. It shows as many rows as the window has room for.
@@ -424,6 +429,22 @@ The item value is `redhot-scripts:script/<path in the folder>`, so renaming or m
 **Start-up failures.** A file that isn't executable, has no `#!` line, or names a missing program in it gets a sentence saying how to fix it, rather than an error code.
 
 **Privacy.** `script.run` logs the mode and the number of arguments. Never the answers, the output or the folder's contents.
+
+## File search
+
+Its own screen, so app search never waits on Spotlight. Typing `f` and a space in search closes the list and opens the screen with whatever followed the prefix. `Search Files` opens it empty. Aliases can't contain spaces, so the prefix can't shadow one.
+
+**Asking Spotlight.** `createFileSearch()` waits 100 ms after the last keystroke, stops the previous `mdfind` and starts a new one. The query is raw, `kMDItemFSName == "*word*"cd` for each word, because `mdfind -name` reads text starting with a dash as an option and refuses to run. `-attr kMDItemLastUsedDate` adds each file's last use to the output, and `-0` separates entries with a null byte, so a line break in a name can't split one.
+
+**Stopping early.** A common word can match tens of thousands of files and take seconds to read, so `mdfind` is stopped after 300 files that pass the filter or 5,000 read in total. Ranking only sees those files. It puts the exact name first, then the most recently used, then names that start with the text, then shorter paths. The list shows the top 50.
+
+**What's left out.** Only the home folder, `/Applications` and `/Volumes` are searched. Inside those, any file in `node_modules`, `Library`, a hidden folder or a bundle like `.app` is dropped. iCloud Drive is inside `Library`, so `Library/Mobile Documents/` is let through. Only folders are checked, so a file like `.env` can still be found. Spotlight offers no way to exclude a path in the query, so this happens as results are read, which is why `node_modules` counts towards the 5,000.
+
+**Results that arrive late.** Search options are normally worked out on a keystroke, but Spotlight answers afterwards. `watchOptions` hands the search a function that makes the prompt read its options again. Clack only re-reads them when the text changes, so `refreshOptions()` emits a throwaway text and then the real one, which keeps focus on the same result. While a new search runs, the old results stay listed, narrowed to what's now typed, so the list doesn't blank between keystrokes. The first batch and the finished list are the only updates, so rows don't jump about during a read.
+
+**Keys.** Terminals don't pass Cmd, so reveal and copy are `Ctrl+R` and `Ctrl+P`, sent through `extraKeys`. They end the list through its abort signal and note the path when pressed, because the prompt clears its focus as it closes.
+
+**Privacy.** `mdfind` is logged by program name only. Never the query or the results.
 
 ## Clipboard history
 
@@ -548,7 +569,7 @@ The third Redhot app. Search `Settings` for a list of toggles, where Enter flips
 
 Terminal keeps a dead window open after a program exits, showing `[Process completed]`, so Redhot closes its own.
 
-When Redhot ends, through the Exit command or **End program**, the window closes without asking.
+When Redhot ends, through the Exit command, its hotkey or **End program**, it shows "Ending program..." under the logo, and the window closes without asking. A window opened for one item closes with that item and shows no message.
 
 - Launcher scripts set `REDHOT_WINDOW=1`, and only those windows can close. Running `pnpm start` in your own terminal never closes it.
 - The window is found while Node is alive and closed 0.6 seconds later, so Terminal doesn't ask about running processes.

@@ -1,5 +1,7 @@
 # File search
 
+**Status:** built. See "File search" in the README and doc/how-it-works.md. Left out: `node_modules`, `Library` (except iCloud Drive), hidden folders and the insides of apps. Sorted by exact name, then most recently used.
+
 **Effort:** small to medium
 
 ## What

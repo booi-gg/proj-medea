@@ -11,6 +11,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Hotkeys.** Bind any app, command, quicklink or window action to a global shortcut.
 - **Quicklinks.** Save URLs, deeplinks or folders, with `{argument}` and `{clipboard}` placeholders.
 - **Script commands.** Turn any shell, Python or Node script into a search result, with arguments, output and hotkeys.
+- **File search.** Type `f`, a space and a file name to find it with Spotlight, then open it, reveal it in Finder or copy its path.
 - **Clipboard history.** Text and images you copy, searchable, with a preview pane. Password managers and confidential copies are skipped.
 - **Calculator.** Type `2 * (4 + 1)` and press Enter to copy the answer.
 - **Currency conversion.** Type `356 USD to INR` or `$20 in €`. Rates are downloaded daily and work offline.
@@ -142,6 +143,20 @@ chmod +x battery-info.sh
 ```
 
 Read a script before you add it, because it runs with your user's full access. Files with `.template.` in the name need editing first, and some scripts need other tools installed. Redhot isn't affiliated with Raycast.
+
+### File search
+
+Type `f` and a space in search to switch to file search, or open `Search Files`, which can have its own alias or hotkey. Type part of a file name, and every word has to appear in it.
+
+| Key      | What it does                               |
+| -------- | ------------------------------------------ |
+| Enter    | Opens the file                             |
+| `Ctrl+R` | Reveals it in Finder                       |
+| `Ctrl+P` | Copies its path                            |
+| Tab      | Lists these actions, along with Open With… |
+| Esc      | Goes back to search                        |
+
+The exact name comes first, then whatever you opened most recently. Redhot searches your home folder, iCloud Drive, `/Applications` and other drives, and skips `node_modules`, `Library`, hidden folders and the insides of apps. Results come from Spotlight, so a file Spotlight hasn't indexed won't show.
 
 ### Clipboard history
 

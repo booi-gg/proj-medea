@@ -263,15 +263,17 @@ const runHistoryRound = async (
           imageWindow.hide();
         }
       },
-      extraKey: {
-        keys: LEFT_ARROW_KEYS,
-        hint: "←",
-        getLabel: (entryId) =>
-          isImage(entryId) && entryId !== closedId ? "close image" : undefined,
-        run: () => {
-          closedId = isImage(focusedId) ? focusedId : undefined;
+      extraKeys: [
+        {
+          keys: LEFT_ARROW_KEYS,
+          hint: "←",
+          getLabel: (entryId) =>
+            isImage(entryId) && entryId !== closedId ? "close image" : undefined,
+          run: () => {
+            closedId = isImage(focusedId) ? focusedId : undefined;
+          },
         },
-      },
+      ],
     },
   );
   stopWatching();

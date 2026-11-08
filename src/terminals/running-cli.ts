@@ -29,12 +29,14 @@ const focusOwnWindow = async (): Promise<void> => {
 export interface RequestHandlers {
   onFocus: () => void;
   onRunItem: (itemValue: string) => void;
+  onQuit: () => void;
 }
 
 /** While the CLI is open it answers on this socket. A dead CLI refuses the connection. */
 export const listenForRequests = async ({
   onFocus,
   onRunItem,
+  onQuit,
 }: RequestHandlers): Promise<() => void> => {
   await mkdir(dirname(socketPath), { recursive: true });
   await rm(socketPath, { force: true });
@@ -44,6 +46,7 @@ export const listenForRequests = async ({
     connection.once("data", async (request) => {
       const message = String(request).trim();
       if (message === QUIT_REQUEST) {
+        onQuit();
         process.stdout.write(SHOW_CURSOR_SEQUENCE);
         // Replies first, so whoever asked isn't kept waiting while the window is found.
         connection.end();

@@ -1,4 +1,5 @@
 import { clipboardHistory } from "./redhot-clipboard-history/index.ts";
+import { files } from "./redhot-files/index.ts";
 import { hotkeyList } from "./redhot-hotkeys/index.ts";
 import { redhotLogs } from "./redhot-logs/index.ts";
 import { quicklinks } from "./redhot-quicklinks/index.ts";
@@ -11,6 +12,7 @@ import type { LauncherItem, RedhotApp, SettingsAction } from "./types.ts";
 const redhotApps: readonly RedhotApp[] = [
   quicklinks,
   scripts,
+  files,
   clipboardHistory,
   windowActions,
   hotkeyList,

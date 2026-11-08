@@ -8,6 +8,12 @@ import { calculate } from "../redhot-apps/redhot-calculator/calculate.ts";
 import { parseConversion } from "../redhot-apps/redhot-currency/convert.ts";
 import { toConversionItems } from "../redhot-apps/redhot-currency/index.ts";
 import { refreshRatesIfStale } from "../redhot-apps/redhot-currency/rates.ts";
+import {
+  FILE_SEARCH_VALUE,
+  createFileSearchExit,
+  runFileSearch,
+  toFileSearchQuery,
+} from "../redhot-apps/redhot-files/index.ts";
 import { findRedhotItem, listRedhotItems } from "../redhot-apps/registry.ts";
 import type { LauncherItem } from "../redhot-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
@@ -52,6 +58,16 @@ interface Session {
 }
 
 const NO_NOTICE = "";
+const ENDING_NOTICE = "Ending program...";
+
+const showEndingScreen = (): void => {
+  drawScreen({ notice: ENDING_NOTICE });
+};
+
+const endProgram = (): RoundResult => {
+  showEndingScreen();
+  return { keepRunning: false, notice: NO_NOTICE };
+};
 
 const formatRow = (
   { icon, name, kind }: LauncherItem,
@@ -205,13 +221,24 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
       rank: rankWithAnswers,
       replaceable: true,
       getSearchIcon: getActionSearchIcon,
+      onQueryChange: createFileSearchExit(closeReplaceableList),
     },
   );
   if (session.nextItem !== undefined) {
     return { keepRunning: true, notice: NO_NOTICE };
   }
+  const fileQuery = toFileSearchQuery(query);
+  if (cancelled && fileQuery !== undefined) {
+    const searchFiles = (): Promise<string> => runFileSearch(fileQuery);
+    return {
+      keepRunning: true,
+      notice: await showErrorsAsNotice(() =>
+        trackItem(session, FILE_SEARCH_VALUE, searchFiles, true),
+      ),
+    };
+  }
   if (cancelled) {
-    return { keepRunning: !(await confirmEndProgram()), notice: NO_NOTICE };
+    return (await confirmEndProgram()) ? endProgram() : { keepRunning: true, notice: NO_NOTICE };
   }
   // An answer has no settings to open, so Tab copies it like Enter does.
   const answer = [toCalculationItem(query), ...toConversionItems(query)].find(
@@ -224,7 +251,7 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
     };
   }
   if (value === EXIT_VALUE && !wantsSettings) {
-    return { keepRunning: false, notice: NO_NOTICE };
+    return endProgram();
   }
   if (wantsSettings) {
     return {
@@ -301,6 +328,7 @@ export const runLauncher = async (firstItem?: string): Promise<void> => {
     onRunItem: (value) => {
       switchToItem(value, session);
     },
+    onQuit: showEndingScreen,
   });
   try {
     let round: RoundResult = { keepRunning: true, notice: NO_NOTICE };

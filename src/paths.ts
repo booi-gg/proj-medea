@@ -20,6 +20,7 @@ export const helperSourcePaths = [
 ].map((name) => join(projectDir, "native", name));
 export const recorderSourcePath = join(projectDir, "native", "HotkeyRecorder.swift");
 export const imagePreviewSourcePath = join(projectDir, "native", "ImagePreview.swift");
+export const colourSamplerSourcePath = join(projectDir, "native", "ColourSampler.swift");
 
 // An installed copy can't write to its own folder, which may be root-owned and is replaced on every
 // upgrade. A checkout keeps its own .build, so testing it never touches the installed copy.
@@ -33,6 +34,7 @@ export const buildDir = isInstalled
 export const helperPath = join(buildDir, "redhot-status");
 export const recorderPath = join(buildDir, "redhot-record");
 export const imagePreviewPath = join(buildDir, "redhot-image-preview");
+export const colourSamplerPath = join(buildDir, "redhot-colour-sampler");
 export const helperLogPath = join(buildDir, "helper.log");
 export const launcherPath = join(buildDir, "open-redhot.command");
 export const socketPath = join(buildDir, "cli.sock");
@@ -43,6 +45,7 @@ export const configPath = join(configDir, "config.json");
 export const quicklinksPath = join(configDir, "redhot-quicklinks.json");
 export const snippetsPath = join(configDir, "redhot-snippets.json");
 export const emojiRecentsPath = join(configDir, "redhot-emoji-recents.json");
+export const colourHistoryPath = join(configDir, "redhot-colour-history.json");
 export const scriptsDir = join(configDir, "scripts");
 export const syncStatePath = join(configDir, "sync-state.json");
 export const syncOutboxDir = join(configDir, "sync-outbox");

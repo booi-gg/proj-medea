@@ -4,6 +4,8 @@ import { setTimeout as delay } from "node:timers/promises";
 import { openSync } from "node:fs";
 import {
   cliEntryPath,
+  colourSamplerPath,
+  colourSamplerSourcePath,
   helperLogPath,
   helperPath,
   helperSourcePaths,
@@ -43,6 +45,9 @@ export const buildRecorder = (): Promise<void> => compileSwift([recorderSourcePa
 export const buildImagePreview = (): Promise<void> =>
   compileSwift([imagePreviewSourcePath], imagePreviewPath);
 
+export const buildColourSampler = (): Promise<void> =>
+  compileSwift([colourSamplerSourcePath], colourSamplerPath);
+
 export const isMenuBarRunning = async (): Promise<boolean> => {
   const pids = await findHelperPids();
   return pids.length > 0;
@@ -54,6 +59,7 @@ export const prepareMenuBar = async (): Promise<void> => {
   await signHelper();
   await buildRecorder();
   await buildImagePreview();
+  await buildColourSampler();
   await writeLauncherScript(launcherPath);
 };
 

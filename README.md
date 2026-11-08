@@ -18,6 +18,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Kill a process or port.** Quit or force quit a running app or process, or type `port 3000` to stop whatever is listening on it.
 - **System commands.** Lock, sleep, empty the Trash, toggle dark mode or hidden files, eject disks, restart, shut down and log out.
 - **Clipboard history.** Text and images you copy, searchable, with a preview pane. Password managers and confidential copies are skipped.
+- **Colour picker.** Pick a colour from anywhere on screen with the macOS magnifier, then copy it as hex, RGB or HSL. `Colour History` keeps your last 12.
 - **Calculator.** Type `2 * (4 + 1)` and press Enter to copy the answer.
 - **Currency conversion.** Type `356 USD to INR` or `$20 in €`. Rates are downloaded daily and work offline.
 - **Window actions.** Halves, quarters, thirds, maximize, center, restore and move to the next display, with optional Rectangle-style default hotkeys.
@@ -290,6 +291,7 @@ redhot sync [now|status|open]
 | `~/.config/redhot/redhot-snippets.json`        | Snippets                                        |
 | `~/.config/redhot/scripts/`                    | Your script commands                            |
 | `~/.config/redhot/redhot-clipboard-history*`   | Clipboard history and its images                |
+| `~/.config/redhot/redhot-colour-history.json`  | Colours you've picked                           |
 | `~/Library/Application Support/Redhot/`        | The compiled helper, launcher script and socket |
 | `~/Library/Logs/Redhot/`                       | Logs                                            |
 | `~/Library/LaunchAgents/redhot.menu-bar.plist` | The login item, when Start at login is on       |

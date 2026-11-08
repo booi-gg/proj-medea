@@ -1,4 +1,5 @@
 import { clipboardHistory } from "./redhot-clipboard-history/index.ts";
+import { colourPicker } from "./redhot-colour-picker/index.ts";
 import { files } from "./redhot-files/index.ts";
 import { folders } from "./redhot-folders/index.ts";
 import { hotkeyList } from "./redhot-hotkeys/index.ts";
@@ -23,6 +24,7 @@ const redhotApps: readonly RedhotApp[] = [
   folders,
   processes,
   clipboardHistory,
+  colourPicker,
   windowActions,
   systemCommands,
   hotkeyList,

@@ -91,6 +91,11 @@ src/
 │   │   ├── list.ts       Runs ps and lsof, and works out which processes are apps
 │   │   ├── stop.ts       Quits, force quits and uses sudo
 │   │   └── format.ts     Row text: name, owner or kind, process ID, CPU and memory
+│   ├── redhot-colour-picker/
+│   │   ├── index.ts      Search items, and running the native sampler
+│   │   ├── colour.ts     Hex, RGB and HSL text, and swatches, with no system calls
+│   │   ├── history.ts    Reads and saves redhot-colour-history.json
+│   │   └── screen.ts     The format and history lists
 │   ├── redhot-clipboard-history/
 │   │   ├── index.ts      The history list and its actions
 │   │   ├── store.ts      Reads and saves history and image files
@@ -161,6 +166,7 @@ native/
 ├── SnippetExpander.swift Watches the keyboard and replaces a keyword with its snippet
 ├── PasteBack.swift       Remembers the previous app and presses a shortcut in it
 ├── HotkeyRecorder.swift  The window that records a hotkey
+├── ColourSampler.swift   Shows the macOS magnifier and prints the colour picked
 └── ImagePreview.swift    The floating window that shows clipboard images
 doc/                      These docs
 .build/                   Generated: helper binary, launcher script, logs, socket, compile cache
@@ -571,6 +577,14 @@ Its own screen, so app search never waits on Spotlight. Typing `f` and a space i
 **Emoji Picker.** Opens the macOS picker by having the helper press Ctrl+Cmd+Space. The picker types into whatever has focus, so from search `PasteBack` first brings back the app used before Redhot's window (`emoji-picker-previous-app`), the same way Ctrl+V does in `Search Emoji & Symbols`. A hotkey runs with no window, which the CLI sees as stdout not being a terminal, so the app in front is already the right one (`emoji-picker-front-app`). It needs the helper and Accessibility permission, and it stops working if that shortcut is turned off or changed in System Settings.
 
 **Safety.** Restart, Shut Down and Log Out ask first, with No selected, so they set `needsWindow` and a hotkey opens a window to ask in.
+
+## Colour picker
+
+`Colour Picker` draws its screen, then runs `.build/redhot-colour-sampler`, built from `native/ColourSampler.swift`. That shows `NSColorSampler`, macOS's own magnifier, and prints `red green blue` in sRGB, or nothing when cancelled. It's a separate program and not part of the helper, because helper requests time out after 3 seconds and picking takes as long as you like. It also means no menu bar item is needed.
+
+A picked colour goes into `~/.config/redhot/redhot-colour-history.json`, newest first, up to 12, on this Mac only. A list then offers Hex, RGB and HSL under a swatch, with Hex first, so one Enter copies it. Swatches use 24-bit colour when `COLORTERM` says the terminal has it, and otherwise the nearest of the 256-colour palette, because a terminal without 24-bit colour would misread that code. `Colour History` lists past colours and leads to the same format list.
+
+**Limit.** Redhot's window stays on screen while you pick, so it covers whatever is behind it.
 
 ## Clipboard history
 

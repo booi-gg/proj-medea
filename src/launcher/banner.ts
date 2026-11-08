@@ -18,7 +18,7 @@ const GRADIENT_END: Rgb = [235, 25, 25];
 const LETTER_COLORS = [210, 203, 203, 196, 196, 196];
 const TRUE_COLOR_TERMS = new Set(["truecolor", "24bit"]);
 
-const supportsTrueColor = (): boolean => TRUE_COLOR_TERMS.has(process.env.COLORTERM ?? "");
+export const supportsTrueColor = (): boolean => TRUE_COLOR_TERMS.has(process.env.COLORTERM ?? "");
 
 const toColorCode = (color: number): string => `\u001B[38;5;${color}m`;
 

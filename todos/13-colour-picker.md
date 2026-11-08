@@ -1,5 +1,7 @@
 # Colour picker
 
+**Status:** built, and the magnifier still needs testing by a person. See "Colour picker" in doc/how-it-works.md. The sampler is its own small program and not part of the helper, because helper requests time out after 3 seconds.
+
 **Effort:** medium
 
 ## What

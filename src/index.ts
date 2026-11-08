@@ -3,6 +3,8 @@ import { flushCompileCache } from "node:module";
 import { buffer, text } from "node:stream/consumers";
 import { withAction } from "./log.ts";
 
+const VERSION_COMMANDS = new Set(["--version", "-v", "version"]);
+
 const PROCESS_COMMANDS = new Set([
   "show",
   "terminals",
@@ -19,6 +21,16 @@ const PROCESS_COMMANDS = new Set([
   "logs",
   "sync",
 ]);
+
+const toProcessKind = (command: string | undefined): string => {
+  if (command === undefined) {
+    return "search";
+  }
+  if (VERSION_COMMANDS.has(command)) {
+    return "version";
+  }
+  return PROCESS_COMMANDS.has(command) ? command : "unknown";
+};
 
 // Each command loads only what it uses, because the helper starts this on every copy and hotkey.
 const main = async (): Promise<void> => {
@@ -99,6 +111,12 @@ const main = async (): Promise<void> => {
     return;
   }
 
+  if (VERSION_COMMANDS.has(command)) {
+    const { readVersion } = await import("./version.ts");
+    process.stdout.write(`${await readVersion()}\n`);
+    return;
+  }
+
   const { intro } = await import("@clack/prompts");
   const { showStatus, sign, start, stop } = await import("./menubar/commands.ts");
   intro("redhot");
@@ -118,13 +136,12 @@ const main = async (): Promise<void> => {
     await sign();
     return;
   }
-  throw new Error(`Unknown command "${command}". Use start, stop, status or sign.`);
+  throw new Error(`Unknown command "${command}". Use start, stop, status, sign or --version.`);
 };
 
 try {
   const command = process.argv[2];
-  const kind =
-    command === undefined ? "search" : PROCESS_COMMANDS.has(command) ? command : "unknown";
+  const kind = toProcessKind(command);
   const closesOwnWindow = command === undefined || command === "run-in-window";
   await withAction("process.run", { kind, interactive: closesOwnWindow }, main);
   if (closesOwnWindow) {

@@ -4,6 +4,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+### Added
+
+- `redhot --version`, `redhot -v` and `redhot version` print the installed version.
+
 ### Fixed
 
 - In Terminal.app, the search window failed with `Command not found: .../Library/Application` in 0.1.1, because the installed launcher's folder has a space in its name.

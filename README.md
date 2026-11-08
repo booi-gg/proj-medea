@@ -113,6 +113,7 @@ redhot start                 # build and start the menu bar helper
 redhot stop                  # stop the helper and its hotkeys
 redhot status                # check whether the helper is running
 redhot sign                  # one-time: keep Accessibility permission across rebuilds
+redhot --version             # print the installed version (also -v)
 redhot logs                  # print the logs
 redhot logs --follow         # watch new log entries
 redhot logs --trace <id>     # follow one action across processes

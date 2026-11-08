@@ -1,4 +1,5 @@
 import { isAutomationDenied } from "../../shell.ts";
+import { toBatteryLine } from "./battery.ts";
 
 export const APP_ID = "redhot-system";
 
@@ -119,15 +120,25 @@ const toggleDarkMode = async (tools: SystemTools): Promise<string> =>
     await tellApp(tools, "Dark mode couldn't be changed", SYSTEM_EVENTS, TOGGLE_DARK_MODE_SCRIPT),
   );
 
-/** The setting doesn't exist until something first writes it, and files are hidden until then. */
-const areHiddenFilesShown = async ({ run }: SystemTools): Promise<boolean> => {
+/** For a reading the command can do without. Resolves to "" when it fails. */
+const readOptional = async (
+  { run }: SystemTools,
+  file: string,
+  args: readonly string[],
+): Promise<string> => {
   try {
-    const { stdout } = await run("defaults", ["read", FINDER_DEFAULTS, SHOW_ALL_FILES_KEY]);
-    return TURNED_ON.test(stdout.trim());
+    const { stdout } = await run(file, args);
+    return stdout.trim();
   } catch {
-    return false;
+    return "";
   }
 };
+
+/** The setting doesn't exist until something first writes it, and files are hidden until then. */
+const areHiddenFilesShown = async (tools: SystemTools): Promise<boolean> =>
+  TURNED_ON.test(
+    await readOptional(tools, "defaults", ["read", FINDER_DEFAULTS, SHOW_ALL_FILES_KEY]),
+  );
 
 const toggleHiddenFiles = async (tools: SystemTools): Promise<string> => {
   const failure = "Hidden files couldn't be changed";
@@ -162,6 +173,15 @@ const ejectAllDisks = async (tools: SystemTools): Promise<string> => {
   const output = await tellApp(tools, "The disks couldn't be ejected", FINDER, EJECT_ALL_SCRIPT);
   const [ejected = 0, failed = 0] = output.split(" ").map(Number);
   return toEjectMessage(ejected, failed);
+};
+
+const showBatteryInfo = async (tools: SystemTools): Promise<string> => {
+  const [status, adapter, report] = await Promise.all([
+    runProgram(tools, "The battery couldn't be read", "pmset", ["-g", "batt"]),
+    readOptional(tools, "pmset", ["-g", "ac"]),
+    readOptional(tools, "system_profiler", ["-json", "SPPowerDataType"]),
+  ]);
+  return toBatteryLine(status, adapter, report);
 };
 
 const tellSystemEvents = async (
@@ -222,6 +242,13 @@ export const SYSTEM_COMMANDS: readonly SystemCommand[] = [
     symbol: "▲",
     hint: "Eject every removable disk",
     run: ejectAllDisks,
+  },
+  {
+    id: "battery-info",
+    name: "Battery Info",
+    symbol: "▮",
+    hint: "Charge, time left and battery health",
+    run: showBatteryInfo,
   },
   {
     id: "restart",

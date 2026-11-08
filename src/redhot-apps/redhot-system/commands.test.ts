@@ -24,7 +24,11 @@ const toTools = (
     tools: {
       run: (file, args) => {
         calls.push({ file, args });
-        const output = outputs[`${file} ${args[0]}`] ?? outputs[file] ?? "";
+        const output =
+          outputs[`${file} ${args.join(" ")}`] ??
+          outputs[`${file} ${args[0]}`] ??
+          outputs[file] ??
+          "";
         return output instanceof Error
           ? Promise.reject(output)
           : Promise.resolve({ stdout: output });
@@ -181,6 +185,40 @@ test("eject messages cover nothing to do, all done and all stuck", () => {
   assert.equal(toEjectMessage(0, 0), "No disks to eject");
   assert.equal(toEjectMessage(1, 0), "Ejected 1 disk");
   assert.equal(toEjectMessage(0, 2), "2 disks couldn't be ejected and may be in use");
+});
+
+test("battery info combines all three readings", async () => {
+  const { tools } = toTools({
+    "pmset -g batt": " -InternalBattery-0 (id=1)\t61%; discharging; 7:11 remaining present: true\n",
+    "pmset -g ac": "No adapter attached.\n",
+    system_profiler: JSON.stringify({
+      SPPowerDataType: [{ sppower_battery_health_info: { sppower_battery_cycle_count: 358 } }],
+    }),
+  });
+  assert.equal(
+    await runSystemCommand(findCommand("battery-info"), tools, decline),
+    "61% · 7h 11m left · 358 cycles",
+  );
+});
+
+test("battery info still answers when the extra readings fail", async () => {
+  const { tools } = toTools({
+    "pmset -g batt": " -InternalBattery-0 (id=1)\t61%; discharging; 7:11 remaining present: true\n",
+    "pmset -g ac": new Error("no"),
+    system_profiler: new Error("no"),
+  });
+  assert.equal(
+    await runSystemCommand(findCommand("battery-info"), tools, decline),
+    "61% · 7h 11m left",
+  );
+});
+
+test("battery info fails plainly when the charge can't be read", async () => {
+  const { tools } = toTools({ "pmset -g batt": new Error("no") });
+  await assert.rejects(
+    runSystemCommand(findCommand("battery-info"), tools, decline),
+    /The battery couldn't be read/u,
+  );
 });
 
 test("a denied Automation permission says where to allow it", async () => {

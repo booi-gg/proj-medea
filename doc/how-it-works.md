@@ -110,7 +110,8 @@ src/
 │   │   └── index.ts      The Settings screen
 │   ├── redhot-system/
 │   │   ├── index.ts      Search items and the question before Restart, Shut Down and Log Out
-│   │   └── commands.ts   The system commands and what each one runs
+│   │   ├── commands.ts   The system commands and what each one runs
+│   │   └── battery.ts    Turns macOS's battery readings into one line
 │   ├── redhot-window/
 │   │   ├── index.ts      Search items and failure messages
 │   │   └── actions.ts    The window actions and their default hotkeys
@@ -495,6 +496,8 @@ Its own screen, so app search never waits on Spotlight. Typing `f` and a space i
 **Lock Screen.** `pmset displaysleepnow` only locks if the Mac is set to ask for a password immediately, so a lock command built on it could leave the screen open. The CLI sends `lock-screen` to the helper instead, which calls `SACLockScreenImmediate` from the private `login` framework (`native/ScreenLock.swift`). That needs no permission, unlike posting the `Ctrl+Cmd+Q` shortcut. It's looked up by name at run time, so if macOS ever removes it the command fails with a message. Without the helper the command says to add the menu bar item, rather than falling back to something that may not lock.
 
 **The rest.** Sleep and Sleep Displays use `pmset`. Empty Trash and Eject All Disks tell Finder, and Toggle Dark Mode, Restart, Shut Down and Log Out tell System Events. Eject tries each disk separately, so one in use doesn't stop the others. Toggle Hidden Files treats a missing `AppleShowAllFiles` as off, because that's what macOS does, then restarts Finder so it reads the new value.
+
+**Battery Info.** Reads `pmset -g batt` for the charge and time left, `pmset -g ac` for the charger's wattage, and `system_profiler -json SPPowerDataType` for cycles and maximum capacity. Only the first has to work, so a failed extra reading just shortens the line. `battery.ts` turns the output into that line. "AC attached" counts as plugged in but not charging, which is what macOS reports while it holds the charge at a limit.
 
 **Safety.** Restart, Shut Down and Log Out ask first, with No selected, so they set `needsWindow` and a hotkey opens a window to ask in.
 

@@ -196,6 +196,7 @@ Search for any of these and press Enter. Each can have its own alias or hotkey f
 | `Toggle Dark Mode`    | Switches between light and dark                            |
 | `Toggle Hidden Files` | Shows or hides dotfiles in Finder, which restarts Finder   |
 | `Eject All Disks`     | Ejects every removable disk, and says how many were in use |
+| `Battery Info`        | Shows the charge, time left, cycles and maximum capacity   |
 | `Restart`             | Asks first, then restarts                                  |
 | `Shut Down`           | Asks first, then shuts down                                |
 | `Log Out`             | Asks first, then logs out                                  |

@@ -350,6 +350,51 @@ final class ClipboardWatcher {
   }
 }
 
+// MARK: - Logo
+
+/// Redhot's logo: the R from the search window's banner, "█▀█" over "█▀▄", drawn as blocks so it
+/// stays sharp at any size.
+enum RedhotLogo {
+  // In banner cells: one column wide, and each row split into a top and bottom half.
+  private static let blocks: [(column: CGFloat, half: CGFloat, columns: CGFloat, halves: CGFloat)] = [
+    (0, 0, 1, 2), (1, 0, 1, 1), (2, 0, 1, 2),  // █▀█
+    (0, 2, 1, 2), (1, 2, 1, 1), (2, 3, 1, 1),  // █▀▄
+  ]
+  // A terminal cell's proportions, with the gap a terminal leaves between lines.
+  private static let cellWidth: CGFloat = 14
+  private static let halfHeight: CGFloat = 11
+  private static let lineGap: CGFloat = 6
+  private static let logoSize = NSSize(width: cellWidth * 3, height: halfHeight * 4 + lineGap)
+  /// The mild red the banner starts with.
+  static let red = NSColor(srgbRed: 235 / 255, green: 100 / 255, blue: 95 / 255, alpha: 1)
+
+  /// The logo centred in a canvas of this size, as tall as fits after the padding.
+  static func image(canvas: NSSize, padding: CGFloat = 0, color: NSColor = red) -> NSImage {
+    NSImage(size: canvas, flipped: true) { bounds in
+      let scale = min(
+        (bounds.width - padding * 2) / logoSize.width,
+        (bounds.height - padding * 2) / logoSize.height
+      )
+      let originX = (bounds.width - logoSize.width * scale) / 2
+      let originY = (bounds.height - logoSize.height * scale) / 2
+      // One shape, not one fill per block, so no seams show where blocks meet.
+      let shape = NSBezierPath()
+      for block in blocks {
+        let gap = block.half >= 2 ? lineGap : 0
+        shape.appendRect(NSRect(
+          x: originX + block.column * cellWidth * scale,
+          y: originY + (block.half * halfHeight + gap) * scale,
+          width: block.columns * cellWidth * scale,
+          height: block.halves * halfHeight * scale
+        ))
+      }
+      color.setFill()
+      shape.fill()
+      return true
+    }
+  }
+}
+
 // MARK: - Menu bar
 
 /// Owns the menu bar item and its menu. The CLI makes all the decisions.
@@ -382,11 +427,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     self.windows = windows
     super.init()
 
-    statusItem.button?.image = NSImage(
-      systemSymbolName: "terminal",
-      accessibilityDescription: "Redhot"
-    )
-    statusItem.button?.image?.isTemplate = true
+    // A template image, so macOS colours it to suit a light or dark menu bar.
+    let menuBarImage = RedhotLogo.image(canvas: NSSize(width: 16, height: 18), padding: 2, color: .black)
+    menuBarImage.isTemplate = true
+    menuBarImage.accessibilityDescription = "Redhot"
+    statusItem.button?.image = menuBarImage
     statusItem.button?.toolTip = "Redhot"
     // A checkout builds into .build and an installed copy doesn't, so both can run side by side.
     if isCheckout {
@@ -504,8 +549,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     NSApp.activate(ignoringOtherApps: true)
     let alert = NSAlert()
     // The helper is a bare binary with no app icon, so macOS would show a folder.
-    alert.icon = NSImage(systemSymbolName: "terminal", accessibilityDescription: "Redhot")?
-      .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 40, weight: .regular))
+    alert.icon = RedhotLogo.image(canvas: NSSize(width: 64, height: 64), padding: 6)
     guard let status else {
       alert.messageText = "Couldn't check for updates"
       alert.informativeText = "Check your internet connection and try again."

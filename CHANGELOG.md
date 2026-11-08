@@ -11,6 +11,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 - Redhot checks npm for a newer version once a day. Turn it off with **Check for updates** in Settings.
 - `redhot restart` (and `pnpm menubar:restart` in a checkout) restarts the menu bar item.
 
+### Changed
+
+- The menu bar icon and Redhot's alerts use the Redhot logo, the R from the banner, instead of a terminal symbol.
+
 ### Fixed
 
 - In Terminal.app, the search window failed with `Command not found: .../Library/Application` in 0.1.1, because the installed launcher's folder has a space in its name.

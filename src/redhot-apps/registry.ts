@@ -7,6 +7,7 @@ import { processes } from "./redhot-processes/index.ts";
 import { quicklinks } from "./redhot-quicklinks/index.ts";
 import { scripts } from "./redhot-scripts/index.ts";
 import { redhotSettings } from "./redhot-settings/index.ts";
+import { systemCommands } from "./redhot-system/index.ts";
 import { windowActions } from "./redhot-window/index.ts";
 import type { HotkeyMap } from "../config.ts";
 import type { LauncherItem, RedhotApp, SettingsAction } from "./types.ts";
@@ -19,6 +20,7 @@ const redhotApps: readonly RedhotApp[] = [
   processes,
   clipboardHistory,
   windowActions,
+  systemCommands,
   hotkeyList,
   redhotLogs,
   redhotSettings,

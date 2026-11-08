@@ -95,6 +95,8 @@ final class WindowManager {
     } else if commandRequest == "access ask" {
       askForAccess()
       reply(Self.okReply)
+    } else if commandRequest == "lock-screen" {
+      reply(lockScreen() ? Self.okReply : "lock-unavailable")
     } else if commandRequest.hasPrefix("window ") {
       let command = String(commandRequest.dropFirst("window ".count))
       let span = RedhotLog.start("window.run", trace: trace, fields: ["kind": Self.safeCommand(command), "sourceKind": "socket"])

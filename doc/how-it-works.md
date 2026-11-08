@@ -108,6 +108,9 @@ src/
 │   │   └── run.ts        Runs a script and cleans up its output
 │   ├── redhot-settings/
 │   │   └── index.ts      The Settings screen
+│   ├── redhot-system/
+│   │   ├── index.ts      Search items and the question before Restart, Shut Down and Log Out
+│   │   └── commands.ts   The system commands and what each one runs
 │   ├── redhot-window/
 │   │   ├── index.ts      Search items and failure messages
 │   │   └── actions.ts    The window actions and their default hotkeys
@@ -339,6 +342,8 @@ Settings is a menu: **Alias, Add**, **Hotkey, Create**, **Remove hotkey** (when 
 | Search Files         | Shows the search in the Redhot window                      |
 | Search Folders       | Shows the search in the Redhot window                      |
 | Kill Process or Port | Shows the list in the Redhot window                        |
+| Restart, Shut Down   | Asks in the Redhot window first                            |
+| Log Out              | Asks in the Redhot window first                            |
 | A quicklink          | Opens it, through the Redhot window if it has `{argument}` |
 
 **Seeing them all.** `Hotkeys, Show All` lists everything with a saved hotkey, and `Window Hotkeys, Show All` lists every window action, including any with no hotkey. Each window action has a small diagram, a bracketed screen with the filled part showing where the window ends up, and a few words when a diagram can't show it. Enter runs the row and Tab opens its settings. The list stays open after running something, so you can try several in a row, and Esc goes back. It shows as many rows as the window has room for.
@@ -482,6 +487,16 @@ Its own screen, so app search never waits on Spotlight. Typing `f` and a space i
 **Stopping.** Enter quits. An app gets `tell application … to quit` through `osascript`, with its name passed as an argument so nothing in it can be read as AppleScript. An app asking about unsaved work holds that call open, so it gives up after 2 seconds and says the app was asked. A process gets `SIGTERM`, and force quit is `SIGKILL`. Afterwards Redhot watches for up to 1.5 seconds so the notice says what really happened. A zombie counts as ended.
 
 **Safety.** The list can be old by the time a key is pressed, so `ps` confirms the process ID still runs the same program before anything is signalled. Force quitting always asks, with No selected. So does anything owned by another user, which then runs `sudo -- /bin/kill` with the terminal attached so it can ask for a password.
+
+## System commands
+
+`src/redhot-apps/redhot-system/commands.ts` is the one list of commands, each with its own red symbol. They take the programs they run as an argument, so tests can check exactly what would run without restarting the Mac.
+
+**Lock Screen.** `pmset displaysleepnow` only locks if the Mac is set to ask for a password immediately, so a lock command built on it could leave the screen open. The CLI sends `lock-screen` to the helper instead, which calls `SACLockScreenImmediate` from the private `login` framework (`native/ScreenLock.swift`). That needs no permission, unlike posting the `Ctrl+Cmd+Q` shortcut. It's looked up by name at run time, so if macOS ever removes it the command fails with a message. Without the helper the command says to add the menu bar item, rather than falling back to something that may not lock.
+
+**The rest.** Sleep and Sleep Displays use `pmset`. Empty Trash and Eject All Disks tell Finder, and Toggle Dark Mode, Restart, Shut Down and Log Out tell System Events. Eject tries each disk separately, so one in use doesn't stop the others. Toggle Hidden Files treats a missing `AppleShowAllFiles` as off, because that's what macOS does, then restarts Finder so it reads the new value.
+
+**Safety.** Restart, Shut Down and Log Out ask first, with No selected, so they set `needsWindow` and a hotkey opens a window to ask in.
 
 ## Clipboard history
 

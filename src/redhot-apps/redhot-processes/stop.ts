@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { once } from "node:events";
 import { setTimeout as sleep } from "node:timers/promises";
 import { trackSpawn } from "../../log.ts";
-import { runCommand } from "../../shell.ts";
+import { isAutomationDenied, runCommand } from "../../shell.ts";
 import { toSafeName } from "../redhot-files/format.ts";
 import { needsAdmin } from "./list.ts";
 import type { RunningItem } from "./list.ts";
@@ -28,7 +28,6 @@ const QUIT_SCRIPT = [
 ];
 // An app asking about unsaved work holds this open for as long as the question is up.
 const QUIT_TIMEOUT_MS = 2000;
-const AUTOMATION_DENIED_CODE = "-1743";
 const EXIT_WAIT_MS = 1500;
 const EXIT_POLL_MS = 100;
 
@@ -94,9 +93,6 @@ const signalWithSudo = async (pid: number, signal: StopSignal, name: string): Pr
 const isTimeout = (error: unknown): boolean =>
   error instanceof Error && "killed" in error && error.killed === true;
 
-const readStderr = (error: unknown): string =>
-  error instanceof Error && "stderr" in error ? String(error.stderr) : "";
-
 /** Resolves to false when the app didn't answer in time, usually because it's asking something. */
 const askAppToQuit = async (appName: string, name: string): Promise<boolean> => {
   try {
@@ -106,7 +102,7 @@ const askAppToQuit = async (appName: string, name: string): Promise<boolean> => 
     if (isTimeout(error)) {
       return false;
     }
-    if (readStderr(error).includes(AUTOMATION_DENIED_CODE)) {
+    if (isAutomationDenied(error)) {
       throw new Error(
         `Redhot can't quit ${name} yet. Allow your terminal to control it in System Settings, Privacy & Security, Automation`,
       );

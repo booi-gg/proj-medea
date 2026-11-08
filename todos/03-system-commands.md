@@ -1,5 +1,7 @@
 # System commands
 
+**Status:** built. See "System commands" in the README and doc/how-it-works.md. Lock Screen calls macOS's lock function through the helper rather than `pmset displaysleepnow`, which doesn't always lock.
+
 **Effort:** small
 
 ## What

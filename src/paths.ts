@@ -11,6 +11,7 @@ export const helperSourcePaths = [
   "HelperSocket.swift",
   "WindowGeometry.swift",
   "WindowManager.swift",
+  "ScreenLock.swift",
   "NoticePanel.swift",
   "Log.swift",
 ].map((name) => join(projectDir, "native", name));

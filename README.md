@@ -14,6 +14,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **File search.** Type `f`, a space and a file name to find it with Spotlight, then open it, reveal it in Finder or copy its path.
 - **Folder search.** Jump to Downloads, Documents, Recents or any folder in Finder.
 - **Kill a process or port.** Quit or force quit a running app or process, or type `port 3000` to stop whatever is listening on it.
+- **System commands.** Lock, sleep, empty the Trash, toggle dark mode or hidden files, eject disks, restart, shut down and log out.
 - **Clipboard history.** Text and images you copy, searchable, with a preview pane. Password managers and confidential copies are skipped.
 - **Calculator.** Type `2 * (4 + 1)` and press Enter to copy the answer.
 - **Currency conversion.** Type `356 USD to INR` or `$20 in €`. Rates are downloaded daily and work offline.
@@ -182,6 +183,23 @@ Stopping anything owned by root or another user asks first and then uses `sudo`,
 
 Without `sudo`, macOS hides what root is listening with, so a port held by root shows as having no listeners. Search for the process by name instead.
 
+### System commands
+
+Search for any of these and press Enter. Each can have its own alias or hotkey from its settings with Tab.
+
+| Command               | What it does                                               |
+| --------------------- | ---------------------------------------------------------- |
+| `Lock Screen`         | Locks straight away. Needs the menu bar item               |
+| `Sleep`               | Puts the Mac to sleep                                      |
+| `Sleep Displays`      | Turns the screens off and leaves the Mac running           |
+| `Empty Trash`         | Empties the Trash, for good                                |
+| `Toggle Dark Mode`    | Switches between light and dark                            |
+| `Toggle Hidden Files` | Shows or hides dotfiles in Finder, which restarts Finder   |
+| `Eject All Disks`     | Ejects every removable disk, and says how many were in use |
+| `Restart`             | Asks first, then restarts                                  |
+| `Shut Down`           | Asks first, then shuts down                                |
+| `Log Out`             | Asks first, then logs out                                  |
+
 ### Clipboard history
 
 Search `Clipboard` to see what you've copied, newest first. Type to filter, Enter copies an entry back, and Tab offers View, Delete and Delete all. Redhot copies rather than pastes, so switch back to your app and press `Cmd+V`.
@@ -213,6 +231,7 @@ In Terminal.app, Redhot opens an 80×18 window from its own **Redhot** profile, 
 | ---------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | Accessibility          | Window actions only | Granted to `redhot-status`. Run `redhot sign` once so the grant survives upgrades; otherwise remove and re-add it after an update. |
 | Background item notice | Start at login      | macOS shows a notice. Nothing to grant.                                                                                            |
+| Automation             | System commands     | macOS asks once each for Finder and System Events, the first time a command needs them. Sleep and Lock Screen don't need it.       |
 
 `redhot sign` creates a `Redhot Local Signing` certificate in your login keychain and signs every later build with it.
 

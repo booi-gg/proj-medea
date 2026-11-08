@@ -7,6 +7,7 @@ import { endAction, startAction, trackSpawn } from "./log.ts";
 const execFileAsync = promisify(execFile);
 // These exit with 1 to say they found nothing, which isn't a failure worth logging as one.
 const NO_MATCH_PROGRAMS: ReadonlySet<string> = new Set(["pgrep", "lsof", "ps"]);
+const AUTOMATION_DENIED = "-1743";
 
 /** Logs the program and exit state, never arguments or output. */
 export const runCommand = async (
@@ -35,6 +36,10 @@ export const runCommand = async (
     throw error;
   }
 };
+
+/** True when macOS refused an AppleScript because Automation permission hasn't been given. */
+export const isAutomationDenied = (error: unknown): boolean =>
+  error instanceof Error && "stderr" in error && String(error.stderr).includes(AUTOMATION_DENIED);
 
 // pbcopy and pbpaste garble non-English text without this, and the helper's locale can be empty.
 export const UTF8_ENVIRONMENT = { ...process.env, LC_CTYPE: "UTF-8" };

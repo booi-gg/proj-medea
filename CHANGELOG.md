@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+## 0.6.1
+
 ### Added
 
 - Snippets: save text with `Snippet, Create`, then type its keyword, like `;addr`, in any app to replace it, or find it in search and copy it. `{date}`, `{time}`, `{clipboard}` and `{cursor}` are filled in. Expansion needs Accessibility permission and stays out of password fields.

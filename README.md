@@ -129,7 +129,7 @@ A few things to know:
 - The script must be executable. Redhot says so if it isn't: run `chmod +x` on it. `Script, Create` does this for you.
 - A script that exits with an error shows its last error line in red.
 - Scripts find Homebrew's tools: Redhot adds `/opt/homebrew/bin` and `/usr/local/bin` to the `PATH`, which is otherwise bare in a Terminal window opened without a shell.
-- A hotkey runs a script without opening a window when it asks nothing, and shows the last line as a notification.
+- A hotkey runs a script without opening a window when it asks nothing, and shows the last line in Redhot's notification.
 - Redhot never logs a script's arguments or output.
 
 If you want to add a Raycast script, Redhot can run those too. Download one from the [script-commands collection](https://github.com/raycast/script-commands/tree/HEAD/commands) (MIT licensed) into the scripts folder and make it executable:

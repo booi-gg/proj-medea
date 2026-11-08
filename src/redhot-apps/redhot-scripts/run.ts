@@ -3,7 +3,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { promisify, stripVTControlCharacters } from "node:util";
 import { withAction } from "../../log.ts";
-import { UTF8_ENVIRONMENT, runCommand } from "../../shell.ts";
+import { UTF8_ENVIRONMENT } from "../../shell.ts";
 import type { Script } from "./store.ts";
 
 const execFileAsync = promisify(execFile);
@@ -27,10 +27,6 @@ const ESCAPE = "\u001B";
 const OTHER_CONTROL_CHARACTERS = /[^\P{Cc}\n\t]/gu;
 const LINE_BREAK = /\r\n|\n|\r/u;
 const HOME_PREFIX = "~/";
-
-const NOTIFY_SCRIPT = `on run argv
-  display notification (item 2 of argv) with title (item 1 of argv)
-end run`;
 
 export interface ScriptResult {
   stdout: string;
@@ -140,12 +136,3 @@ export const runScriptFile = async (
 /** What a failed script said last, preferring its errors. */
 export const toFailureLine = ({ stdout, stderr }: ScriptResult, title: string): string =>
   toLastLine(stderr) || toLastLine(stdout) || `${title} failed`;
-
-/** Shows a line as a notification, for a script run by a hotkey with no window to show it in. */
-export const notify = async (title: string, message: string): Promise<void> => {
-  try {
-    await runCommand("osascript", ["-e", NOTIFY_SCRIPT, title, message]);
-  } catch {
-    // Only the notification failed. The script has already run.
-  }
-};

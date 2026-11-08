@@ -103,6 +103,7 @@ src/
 │       ├── open-link.ts  Checks links and opens them
 │       └── form.ts       The create, edit and argument prompts
 ├── menubar/
+│   ├── notice.ts         Shows Redhot's notification from anywhere
 │   ├── helper.ts         Builds, starts and stops the Swift helper
 │   ├── helper-socket.ts  Talks to the running helper over its socket
 │   ├── signing.ts        Signs the helper so permissions survive a rebuild
@@ -189,6 +190,16 @@ An installed copy checks npm for a newer version and can install it. A checkout,
 - The package manager comes from where Redhot is installed, in `src/update/installer.ts`: a `.pnpm` or `pnpm/global` folder means pnpm, `.bun` means Bun, and anything else npm, preferring the npm beside the Node running Redhot.
 - The install replaces the running copy's files, so the window loads everything it needs first. It then quits an open search window, which still runs the old code, and runs `restart` from the new copy, which rebuilds the helper from the new Swift sources. pnpm keeps each version in its own folder, so the new copy is found with `pnpm root --global`.
 - On success the window closes after a moment. On failure it shows the last lines of the installer's output and the command to run by hand, and closes on a key press.
+
+## Notifications
+
+Anything that happens with no window to show it in uses one notification. In TypeScript that's `showNotice({ title, message, isError })` in `src/menubar/notice.ts`. In Swift it's `NoticePanel.shared.show(...)`.
+
+- macOS shows a notification with the icon of the app that sent it, and the helper is a bare binary with no icon. So `native/NoticePanel.swift` draws its own panel with the logo: top right, under the menu bar, on the screen the pointer is on. It needs no permission.
+- The CLI sends `notice <base64 JSON>` over the helper's socket, because the socket reads one line. Text is cut to fit and stripped of escape codes first.
+- It fades out after 3.5 seconds, or 6 for an error, and a click dismisses it. A new one replaces the one on screen. It's announced to VoiceOver and skips the fade under Reduce Motion.
+- `runCommandItem()` shows the result or failure of anything a hotkey runs with no window, so an item only has to return its line or throw. Window hotkeys run inside the helper and call the panel directly.
+- If the helper isn't running, `showNotice` falls back to a macOS notification, which shows Script Editor's icon. The panel doesn't follow Do Not Disturb, because macOS has no public way to read it.
 
 ## Opening in Terminal
 
@@ -384,7 +395,7 @@ The item value is `redhot-quicklinks:<id>`. The ID comes from the name when the 
 
 A link can have up to 3 arguments. Values are percent-encoded when the link starts with a URL scheme, and left alone in paths and in a link that starts with a placeholder. Braces that hold anything else, like `{"a":1}`, stay in the link as written.
 
-**Failures.** A link that can't open shows a red line above the search bar, and the window stays open. From a hotkey with no window, the failure is silent. If `redhot-quicklinks.json` is broken, search shows no links and saving refuses to run, so a save can't overwrite links you could still fix.
+**Failures.** A link that can't open shows a red line above the search bar, and the window stays open. From a hotkey with no window, the failure shows as a [notification](#notifications). If `redhot-quicklinks.json` is broken, search shows no links and saving refuses to run, so a save can't overwrite links you could still fix.
 
 ## Script commands
 

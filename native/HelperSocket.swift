@@ -15,7 +15,8 @@ func toSocketAddress(path: String) -> sockaddr_un? {
 /// connection, even if the socket file was left behind, so there is no stale state to clean up.
 final class HelperSocket {
   private static let backlog: Int32 = 8
-  private static let maxRequestBytes = 256
+  // Room for a notification's text, which arrives encoded.
+  private static let maxRequestBytes = 4096
   private static let ownerOnly: mode_t = 0o600
 
   private let path: String

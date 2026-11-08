@@ -44,7 +44,13 @@ let helperSocket = HelperSocket(
     .deletingLastPathComponent()
     .appendingPathComponent("helper.sock")
     .path,
-  onRequest: windows.answer
+  onRequest: { request, reply in
+    if let answer = NoticePanel.shared.answer(request) {
+      reply(answer)
+    } else {
+      windows.answer(request, reply: reply)
+    }
+  }
 )
 let socketStarted = helperSocket.start()
 RedhotLog.event("helper.socket", level: socketStarted ? "info" : "warn", trace: RedhotLog.startupTrace, fields: ["ok": socketStarted])

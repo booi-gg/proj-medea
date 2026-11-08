@@ -13,7 +13,7 @@ import { toRedhotIcon } from "../icon.ts";
 import type { LauncherItem, RedhotApp, SettingsAction } from "../types.ts";
 import { prepareAnswer } from "./parse.ts";
 import type { ScriptArgument, ScriptMode } from "./parse.ts";
-import { keepColorsOnly, notify, runScriptFile, toFailureLine, toLastLine } from "./run.ts";
+import { keepColorsOnly, runScriptFile, toFailureLine, toLastLine } from "./run.ts";
 import type { ScriptResult } from "./run.ts";
 import { listScripts } from "./store.ts";
 import type { Script } from "./store.ts";
@@ -152,9 +152,6 @@ const runScript = async (script: Script): Promise<string> => {
   }
   // "inline" runs when chosen, like "compact". Refreshing it on a timer is still to do.
   const line = result.failed ? toFailureLine(result, script.title) : toLastLine(result.stdout);
-  if (!isInteractive && line !== "") {
-    await notify(script.title, line);
-  }
   if (result.failed) {
     throw new Error(line);
   }

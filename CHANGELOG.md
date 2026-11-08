@@ -24,6 +24,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 - Every push to `main` bumps the version from the commit messages, updates this changelog, and commits and tags the release. Publishing to npm stays manual.
 
+### Notifications
+
+- Redhot has its own notification, with its logo, drawn by the menu bar item. Anything a hotkey runs with no window now reports its result or failure there, including window actions that used to only beep.
+
 ### Removed
 
 - Ghostty support and the **Set Terminal** menu. Redhot now opens only in macOS's Terminal.

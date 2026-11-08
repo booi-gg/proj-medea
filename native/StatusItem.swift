@@ -498,11 +498,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
       )
       let opened = NSWorkspace.shared.open(RedhotLog.directory)
       RedhotLog.end(span, ok: opened)
-      if !opened { NSSound.beep() }
+      if !opened { showLogsFolderFailure() }
     } catch {
       RedhotLog.end(span, ok: false, fields: ["error": String(describing: type(of: error))])
-      NSSound.beep()
+      showLogsFolderFailure()
     }
+  }
+
+  private func showLogsFolderFailure() {
+    NoticePanel.shared.show(title: "Couldn't open the logs folder", message: "", isError: true)
   }
 
   @objc private func handleUpdate() {

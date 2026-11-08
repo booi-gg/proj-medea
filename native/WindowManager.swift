@@ -41,6 +41,19 @@ enum WindowFailure: String, Error {
   case notMovable = "not-movable"
   case nothingToRestore = "nothing-to-restore"
   case oneDisplay = "one-display"
+
+  /// What a hotkey shows. Search has the same sentences in redhot-window/index.ts.
+  var message: String {
+    switch self {
+    case .badCommand: return "That isn't a window action"
+    case .noAccess: return "Allow redhot-status under Accessibility in System Settings, then try again"
+    case .noWindow: return "No window to move"
+    case .fullScreen: return "A full-screen window can't be moved"
+    case .notMovable: return "That window can't be moved"
+    case .nothingToRestore: return "Redhot hasn't moved that window"
+    case .oneDisplay: return "There's only one display"
+    }
+  }
 }
 
 private enum WindowTarget {
@@ -94,15 +107,16 @@ final class WindowManager {
     }
   }
 
-  /// A hotkey has nowhere to show a message, so a failure is a beep.
   func runFromHotKey(_ command: String, trace: String? = nil, parent: String? = nil) {
     let span = RedhotLog.start("window.run", trace: trace, parent: parent, fields: [
       "kind": Self.safeCommand(command), "sourceKind": "hotkey",
     ])
     run(command, on: .focused) { failure in
       RedhotLog.end(span, ok: failure == nil, fields: ["result": failure?.rawValue ?? "ok"])
-      if failure != nil {
-        DispatchQueue.main.async { NSSound.beep() }
+      if let failure {
+        DispatchQueue.main.async {
+          NoticePanel.shared.show(title: "Couldn't move the window", message: failure.message, isError: true)
+        }
       }
     }
   }

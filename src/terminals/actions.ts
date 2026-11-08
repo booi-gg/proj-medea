@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { withAction } from "../log.ts";
 import type { LauncherItem } from "../redhot-apps/types.ts";
 import { stopMenuBar } from "../menubar/helper.ts";
+import { showNotice } from "../menubar/notice.ts";
 import { buildDir, launcherPath } from "../paths.ts";
 import { writeLauncherScript } from "./launcher-script.ts";
 import { focusRunningCli, quitRunningCli, runInRunningCli } from "./running-cli.ts";
@@ -61,7 +62,17 @@ const runCommandItemInner = async (itemValue: string | undefined): Promise<void>
     }
     return;
   }
-  await item.run();
+  // A hotkey has no window to answer in, so its result and any failure show as a notice.
+  try {
+    const notice = await item.run();
+    if (notice !== "") {
+      await showNotice({ title: item.name, message: notice });
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    await showNotice({ title: item.name, message, isError: true });
+    throw error;
+  }
 };
 
 export const runCommandItem = async (itemValue: string | undefined): Promise<void> =>

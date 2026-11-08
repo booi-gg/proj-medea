@@ -11,7 +11,6 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Hotkeys.** Bind any app, command, quicklink or window action to a global shortcut.
 - **Quicklinks.** Save URLs, deeplinks or folders, with `{argument}` and `{clipboard}` placeholders.
 - **Snippets.** Save text and type a keyword like `;addr` in any app to replace it, or search for a snippet and copy it.
-- **Emoji and symbols.** Open `Search Emoji & Symbols` and type `fire` or `arrow`. Enter copies, and Ctrl+V pastes into the app you were using, which needs the menu bar item and Accessibility permission.
 - **Web search.** When nothing matches, search Google, DuckDuckGo or Kagi. Type an alias and some text, like `yt lofi`, to search with a quicklink.
 - **Script commands.** Turn any shell, Python or Node script into a search result, with arguments, output and hotkeys.
 - **File search.** Type `f`, a space and a file name to find it with Spotlight, then open it, reveal it in Finder or copy its path.
@@ -215,19 +214,20 @@ Without `sudo`, macOS hides what root is listening with, so a port held by root 
 
 Search for any of these and press Enter. Each can have its own alias or hotkey from its settings with Tab.
 
-| Command               | What it does                                               |
-| --------------------- | ---------------------------------------------------------- |
-| `Lock Screen`         | Locks straight away. Needs the menu bar item               |
-| `Sleep`               | Puts the Mac to sleep                                      |
-| `Sleep Displays`      | Turns the screens off and leaves the Mac running           |
-| `Empty Trash`         | Empties the Trash, for good                                |
-| `Toggle Dark Mode`    | Switches between light and dark                            |
-| `Toggle Hidden Files` | Shows or hides dotfiles in Finder, which restarts Finder   |
-| `Eject All Disks`     | Ejects every removable disk, and says how many were in use |
-| `Battery Info`        | Shows the charge, time left, cycles and maximum capacity   |
-| `Restart`             | Asks first, then restarts                                  |
-| `Shut Down`           | Asks first, then shuts down                                |
-| `Log Out`             | Asks first, then logs out                                  |
+| Command               | What it does                                                                |
+| --------------------- | --------------------------------------------------------------------------- |
+| `Lock Screen`         | Locks straight away. Needs the menu bar item                                |
+| `Sleep`               | Puts the Mac to sleep                                                       |
+| `Sleep Displays`      | Turns the screens off and leaves the Mac running                            |
+| `Empty Trash`         | Empties the Trash, for good                                                 |
+| `Toggle Dark Mode`    | Switches between light and dark                                             |
+| `Toggle Hidden Files` | Shows or hides dotfiles in Finder, which restarts Finder                    |
+| `Eject All Disks`     | Ejects every removable disk, and says how many were in use                  |
+| `Battery Info`        | Shows the charge, time left, cycles and maximum capacity                    |
+| `Emoji Picker`        | Opens macOS's picker in your app. Needs the menu bar item and Accessibility |
+| `Restart`             | Asks first, then restarts                                                   |
+| `Shut Down`           | Asks first, then shuts down                                                 |
+| `Log Out`             | Asks first, then logs out                                                   |
 
 ### Clipboard history
 

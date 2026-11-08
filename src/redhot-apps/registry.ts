@@ -1,5 +1,4 @@
 import { clipboardHistory } from "./redhot-clipboard-history/index.ts";
-import { emoji } from "./redhot-emoji/index.ts";
 import { files } from "./redhot-files/index.ts";
 import { folders } from "./redhot-folders/index.ts";
 import { hotkeyList } from "./redhot-hotkeys/index.ts";
@@ -14,10 +13,11 @@ import { windowActions } from "./redhot-window/index.ts";
 import type { HotkeyMap } from "../config.ts";
 import type { LauncherItem, RedhotApp, SettingsAction } from "./types.ts";
 
+// redhot-emoji is hidden for now, in favour of the Emoji Picker system command. To bring it back,
+// import `emoji` from its index.ts and list it here.
 const redhotApps: readonly RedhotApp[] = [
   quicklinks,
   snippets,
-  emoji,
   scripts,
   files,
   folders,

@@ -6,7 +6,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Added
 
-- `Search Emoji & Symbols` finds emoji and symbols by name or keyword, with your recent picks first. Enter copies one, and Ctrl+V pastes it into the app you were using. Pasting needs the menu bar item and Accessibility permission.
+- `Emoji Picker` is a new system command that opens the macOS emoji picker in the app you were using. It needs the menu bar item and Accessibility permission.
 
 ## 0.6.2
 

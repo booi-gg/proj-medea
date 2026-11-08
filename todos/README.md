@@ -13,7 +13,7 @@ Ideas for Redhot, in the order I'd build them. Each file says what the feature i
 ## Also worth doing
 
 6. ~~[Snippets with text expansion](06-snippets.md)~~ ✅ built: type a keyword in any app, or find a snippet in search
-7. ~~[Emoji and symbol search](07-emoji-search.md)~~ ✅ built: find one by name, then copy or paste it
+7. ~~[Emoji and symbol search](07-emoji-search.md)~~ ✅ built, hidden for now: the `Emoji Picker` system command opens macOS's picker instead
 8. [Units, time zones and dates](08-units-time-zones-dates.md)
 9. [Recent projects](09-recent-projects.md)
 10. [Browser bookmarks](10-browser-bookmarks.md)

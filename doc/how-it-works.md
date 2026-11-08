@@ -159,7 +159,7 @@ native/
 ├── WindowGeometry.swift  Works out frames, with no system calls
 ├── SnippetMatcher.swift  Finds a typed keyword and fills placeholders, with no system calls
 ├── SnippetExpander.swift Watches the keyboard and replaces a keyword with its snippet
-├── PasteBack.swift       Remembers the previous app and sends Cmd+V to it
+├── PasteBack.swift       Remembers the previous app and presses a shortcut in it
 ├── HotkeyRecorder.swift  The window that records a hotkey
 └── ImagePreview.swift    The floating window that shows clipboard images
 doc/                      These docs
@@ -478,6 +478,8 @@ These rows aren't registered as a Redhot app. Like the calculator's answer, each
 
 ## Emoji and symbols
 
+**Hidden for now.** `redhot-emoji` isn't listed in `src/redhot-apps/registry.ts`, so none of this appears in search and the `Emoji Picker` system command is used instead. Listing it there brings it back, along with any aliases saved for it.
+
 `Search Emoji & Symbols` is one search item with its own screen. The roughly 2,200 rows stay out of the main search so they can't crowd out apps, and `data.ts` is imported only when the screen opens, so it costs nothing at startup. `node scripts/build-emoji-data.ts` regenerates that file from Unicode's `emoji-test.txt` and CLDR's English annotations. Skin tone and hair variants are left out, and a short list in the script adds Mac keys like ⌘, which Unicode doesn't annotate.
 
 Matching is by name or keyword and needs the text to appear whole, because the launcher's looser matching finds a word's letters scattered across unrelated names. Recent picks go first in the list handed to the ranking, so they lead an empty search and win ties. The last 24 are kept in `~/.config/redhot/redhot-emoji-recents.json`, on this Mac only.
@@ -565,6 +567,8 @@ Its own screen, so app search never waits on Spotlight. Typing `f` and a space i
 **The rest.** Sleep and Sleep Displays use `pmset`. Empty Trash and Eject All Disks tell Finder, and Toggle Dark Mode, Restart, Shut Down and Log Out tell System Events. Eject tries each disk separately, so one in use doesn't stop the others. Toggle Hidden Files treats a missing `AppleShowAllFiles` as off, because that's what macOS does, then restarts Finder so it reads the new value.
 
 **Battery Info.** Reads `pmset -g batt` for the charge and time left, `pmset -g ac` for the charger's wattage, and `system_profiler -json SPPowerDataType` for cycles and maximum capacity. Only the first has to work, so a failed extra reading just shortens the line. `battery.ts` turns the output into that line. "AC attached" counts as plugged in but not charging, which is what macOS reports while it holds the charge at a limit.
+
+**Emoji Picker.** Opens the macOS picker by having the helper press Ctrl+Cmd+Space. The picker types into whatever has focus, so from search `PasteBack` first brings back the app used before Redhot's window (`emoji-picker-previous-app`), the same way Ctrl+V does in `Search Emoji & Symbols`. A hotkey runs with no window, which the CLI sees as stdout not being a terminal, so the app in front is already the right one (`emoji-picker-front-app`). It needs the helper and Accessibility permission, and it stops working if that shortcut is turned off or changed in System Settings.
 
 **Safety.** Restart, Shut Down and Log Out ask first, with No selected, so they set `needsWindow` and a hotkey opens a window to ask in.
 

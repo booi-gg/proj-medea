@@ -7,7 +7,11 @@ import type { LauncherItem, RedhotApp } from "../types.ts";
 import { APP_ID, SYSTEM_COMMANDS, runSystemCommand, toSystemValue } from "./commands.ts";
 import type { SystemCommand, SystemTools } from "./commands.ts";
 
-const TOOLS: SystemTools = { run: runCommand, askHelper: sendHelperRequest };
+const TOOLS: SystemTools = {
+  run: runCommand,
+  askHelper: sendHelperRequest,
+  isInTerminal: process.stdout.isTTY === true,
+};
 
 const confirmRun = async ({ name, symbol, confirmation }: SystemCommand): Promise<boolean> => {
   drawScreen({ title: name, icon: toRedhotIcon(symbol) });

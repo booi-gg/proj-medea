@@ -15,6 +15,7 @@ interface Call {
 const toTools = (
   outputs: Record<string, string | Error> = {},
   helperReply = "ok",
+  isInTerminal = true,
 ): { tools: SystemTools; calls: Call[]; helperRequests: string[] } => {
   const calls: Call[] = [];
   const helperRequests: string[] = [];
@@ -22,6 +23,7 @@ const toTools = (
     calls,
     helperRequests,
     tools: {
+      isInTerminal,
       run: (file, args) => {
         calls.push({ file, args });
         const output =
@@ -134,6 +136,45 @@ test("lock screen says what to do when the helper can't help", async () => {
     runSystemCommand(lock, toTools({}, "lock-unavailable").tools, decline),
     /didn't let Redhot/u,
   );
+});
+
+test("the emoji picker goes back to your app from search, because Redhot's window has focus", async () => {
+  const { tools, helperRequests, calls } = toTools();
+  assert.equal(await runSystemCommand(findCommand("emoji-picker"), tools, decline), "");
+  assert.deepEqual(helperRequests, ["emoji-picker-previous-app"]);
+  assert.deepEqual(calls, []);
+});
+
+test("the emoji picker opens in the app in front from a hotkey, which has no window", async () => {
+  const { tools, helperRequests } = toTools({}, "ok", false);
+  await runSystemCommand(findCommand("emoji-picker"), tools, decline);
+  assert.deepEqual(helperRequests, ["emoji-picker-front-app"]);
+});
+
+test("the emoji picker says what to do when the helper can't open it", async () => {
+  const picker = findCommand("emoji-picker");
+  const noHelper: SystemTools = {
+    ...toTools().tools,
+    askHelper: () => Promise.resolve(undefined),
+  };
+  await assert.rejects(runSystemCommand(picker, noHelper, decline), /Add Menu Bar Item/u);
+  await assert.rejects(
+    runSystemCommand(picker, toTools({}, "bad-command").tools, decline),
+    /redhot restart/u,
+  );
+  await assert.rejects(
+    runSystemCommand(picker, toTools({}, "no-app").tools, decline),
+    /no other app/u,
+  );
+});
+
+test("the emoji picker asks for Accessibility when it isn't allowed yet", async () => {
+  const { tools, helperRequests } = toTools({}, "no-access");
+  await assert.rejects(
+    runSystemCommand(findCommand("emoji-picker"), tools, decline),
+    /Accessibility/u,
+  );
+  assert.deepEqual(helperRequests, ["emoji-picker-previous-app", "access ask"]);
 });
 
 test("empty trash tells Finder", async () => {

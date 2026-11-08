@@ -6,6 +6,11 @@ export const APP_ID = "redhot-system";
 const OK_REPLY = "ok";
 const BAD_COMMAND_REPLY = "bad-command";
 const LOCK_REQUEST = "lock-screen";
+const ASK_FOR_ACCESS_REQUEST = "access ask";
+const EMOJI_PICKER_PREVIOUS_APP_REQUEST = "emoji-picker-previous-app";
+const EMOJI_PICKER_FRONT_APP_REQUEST = "emoji-picker-front-app";
+const NO_ACCESS_REPLY = "no-access";
+const NO_APP_REPLY = "no-app";
 const FINDER = "Finder";
 const SYSTEM_EVENTS = "System Events";
 const FINDER_DEFAULTS = "com.apple.finder";
@@ -40,6 +45,8 @@ const EJECT_ALL_SCRIPT = [
 export interface SystemTools {
   run: (file: string, args: readonly string[]) => Promise<{ stdout: string }>;
   askHelper: (request: string) => Promise<string | undefined>;
+  /** True in Redhot's window, and false for a hotkey, which runs with no window of its own. */
+  isInTerminal: boolean;
 }
 
 export interface SystemCommand {
@@ -94,6 +101,28 @@ const lockScreen = async ({ askHelper }: SystemTools): Promise<string> => {
   }
   if (reply !== OK_REPLY) {
     throw new Error("macOS didn't let Redhot lock the screen");
+  }
+  return "";
+};
+
+// The picker types into whatever has focus. From search that would be Redhot's own window, so the
+// helper goes back to the app before it. A hotkey leaves the app you're using in front.
+const openEmojiPicker = async ({ askHelper, isInTerminal }: SystemTools): Promise<string> => {
+  const reply = await askHelper(
+    isInTerminal ? EMOJI_PICKER_PREVIOUS_APP_REQUEST : EMOJI_PICKER_FRONT_APP_REQUEST,
+  );
+  if (reply === undefined) {
+    throw new Error("Emoji Picker needs the menu bar item. Use Add Menu Bar Item first");
+  }
+  if (reply === BAD_COMMAND_REPLY) {
+    throw new Error("Emoji Picker needs a newer menu bar item. Run redhot restart, then try again");
+  }
+  if (reply === NO_ACCESS_REPLY) {
+    await askHelper(ASK_FOR_ACCESS_REQUEST);
+    throw new Error("Turn on redhot-status under Accessibility, then try Emoji Picker again");
+  }
+  if (reply === NO_APP_REPLY) {
+    throw new Error("There's no other app to open Emoji Picker in yet");
   }
   return "";
 };
@@ -249,6 +278,13 @@ export const SYSTEM_COMMANDS: readonly SystemCommand[] = [
     symbol: "▮",
     hint: "Charge, time left and battery health",
     run: showBatteryInfo,
+  },
+  {
+    id: "emoji-picker",
+    name: "Emoji Picker",
+    symbol: "☺",
+    hint: "Open macOS's emoji and symbols",
+    run: openEmojiPicker,
   },
   {
     id: "restart",

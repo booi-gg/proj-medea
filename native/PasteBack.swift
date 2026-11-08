@@ -1,11 +1,31 @@
 import AppKit
 import Carbon.HIToolbox
 
-/// Pastes into the app you were using before Redhot's window came to the front. Whatever to paste
-/// is already on the clipboard. Terminals are never named here: when this is asked for, the terminal
-/// holding Redhot is the app in front, so the one to go back to is the one before it.
+/// Presses a shortcut in the app you were using before Redhot's window came to the front, to paste
+/// what's on the clipboard or open macOS's emoji picker. Terminals are never named here: when this
+/// is asked for, the terminal holding Redhot is the app in front, so the one to go back to is the
+/// one before it. A hotkey opens no window, so it asks for the front app instead.
 final class PasteBack {
-  private static let request = "paste-previous-app"
+  private struct Shortcut {
+    let keyCode: Int
+    let flags: CGEventFlags
+    let logName: String
+  }
+
+  private static let pasteRequest = "paste-previous-app"
+  private static let emojiPickerPreviousRequest = "emoji-picker-previous-app"
+  private static let emojiPickerFrontRequest = "emoji-picker-front-app"
+  private static let requests = [pasteRequest, emojiPickerPreviousRequest, emojiPickerFrontRequest]
+  private static let paste = Shortcut(
+    keyCode: kVK_ANSI_V,
+    flags: .maskCommand,
+    logName: "paste.previous-app"
+  )
+  private static let emojiPicker = Shortcut(
+    keyCode: kVK_Space,
+    flags: [.maskCommand, .maskControl],
+    logName: "emoji-picker.open"
+  )
   private static let okReply = "ok"
   private static let noAccessReply = "no-access"
   private static let noAppReply = "no-app"
@@ -46,32 +66,42 @@ final class PasteBack {
 
   /// Requests arrive on the main thread, which also keeps `previous` up to date.
   func answer(_ request: String) -> String? {
-    guard request.split(separator: " ").last.map(String.init) == Self.request else {
+    guard let command = request.split(separator: " ").last.map(String.init),
+      Self.requests.contains(command)
+    else {
       return nil
     }
     guard AXIsProcessTrusted() else {
       return Self.noAccessReply
     }
+    // The waiting can't happen here, because the main thread also answers hotkeys.
+    if command == Self.emojiPickerFrontRequest {
+      queue.async { Self.press(Self.emojiPicker, in: nil) }
+      return Self.okReply
+    }
     guard let target = previous, !target.isTerminated else {
       return Self.noAppReply
     }
-    // The waiting can't happen here, because the main thread also answers hotkeys.
-    queue.async { Self.paste(into: target) }
+    let shortcut = command == Self.pasteRequest ? Self.paste : Self.emojiPicker
+    queue.async { Self.press(shortcut, in: target) }
     return Self.okReply
   }
 
-  private static func paste(into target: NSRunningApplication) {
-    let span = RedhotLog.start("paste.previous-app")
-    let element = AXUIElementCreateApplication(target.processIdentifier)
-    AXUIElementSetMessagingTimeout(element, messagingTimeout)
-    AXUIElementSetAttributeValue(element, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
-    // Cmd+V in the terminal would paste into Redhot's own search bar instead.
-    guard waitUntilFrontmost(target) else {
-      RedhotLog.end(span, ok: false, fields: ["result": "not-frontmost"])
-      return
+  /// With no target, the keys go to whichever app is already in front.
+  private static func press(_ shortcut: Shortcut, in target: NSRunningApplication?) {
+    let span = RedhotLog.start(shortcut.logName)
+    if let target {
+      let element = AXUIElementCreateApplication(target.processIdentifier)
+      AXUIElementSetMessagingTimeout(element, messagingTimeout)
+      AXUIElementSetAttributeValue(element, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+      // In the terminal, these keys would act on Redhot's own search bar instead.
+      guard waitUntilFrontmost(target) else {
+        RedhotLog.end(span, ok: false, fields: ["result": "not-frontmost"])
+        return
+      }
     }
     usleep(settleMs * microsecondsPerMillisecond)
-    pressCommandV()
+    post(shortcut)
     RedhotLog.end(span, ok: true)
   }
 
@@ -87,16 +117,16 @@ final class PasteBack {
     return false
   }
 
-  private static func pressCommandV() {
+  private static func post(_ shortcut: Shortcut) {
     let source = CGEventSource(stateID: .privateState)
     for isDown in [true, false] {
       let event = CGEvent(
         keyboardEventSource: source,
-        virtualKey: CGKeyCode(kVK_ANSI_V),
+        virtualKey: CGKeyCode(shortcut.keyCode),
         keyDown: isDown
       )
-      // Set directly, or a held Shift could turn Cmd+V into another shortcut.
-      event?.flags = .maskCommand
+      // Set directly, or a held Shift could turn this into another shortcut.
+      event?.flags = shortcut.flags
       event?.post(tap: .cghidEventTap)
     }
   }

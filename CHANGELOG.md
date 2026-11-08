@@ -12,6 +12,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 - Redhot shows "Ending program..." when you exit, so the window doesn't vanish without warning.
 
+## 0.4.0
+
 ## 0.3.0
 
 ### Fixed

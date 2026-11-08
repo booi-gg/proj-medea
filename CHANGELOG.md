@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+## 0.6.5
+
 ### Added
 
 - Timers: type `timer 25m`, `timer 1h 30m` or `timer 90s` and press Enter, or run `Pomodoro` for 25 minutes. The time left shows in the menu bar, and a notification stays on screen until you click it. `Timer, Cancel` or **Cancel Timer** in the menu bar stops one. It needs the menu bar item.

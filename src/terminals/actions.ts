@@ -1,35 +1,28 @@
-import { createHash } from "node:crypto";
-import { join } from "node:path";
 import { withAction } from "../log.ts";
 import type { LauncherItem } from "../redhot-apps/types.ts";
 import { stopMenuBar } from "../menubar/helper.ts";
 import { showNotice } from "../menubar/notice.ts";
-import { buildDir, launcherPath } from "../paths.ts";
-import { writeLauncherScript } from "./launcher-script.ts";
+import { requestWindow } from "./pending-window.ts";
 import { focusRunningCli, quitRunningCli, runInRunningCli } from "./running-cli.ts";
-import { openTerminalWindow } from "./terminals.ts";
+import { openRedhotWindow } from "./terminals.ts";
 
 /** Reuses a running CLI window, or opens a new one in Terminal. */
 export const showCli = async (): Promise<void> => {
   if (await focusRunningCli()) {
     return;
   }
-  await openTerminalWindow(launcherPath);
+  await openRedhotWindow();
 };
 
-// One script per item, so two quick requests can't open the wrong item.
 const openItemWindow = async (itemValue: string): Promise<void> => {
-  const itemHash = createHash("sha1").update(itemValue).digest("hex").slice(0, 12);
-  const scriptPath = join(buildDir, `run-${itemHash}.command`);
-  await writeLauncherScript(scriptPath, ["run-in-window", itemValue]);
-  await openTerminalWindow(scriptPath);
+  await requestWindow(["run-in-window", itemValue]);
+  await openRedhotWindow();
 };
 
 /** Opens a window that installs the newest version, so the person can watch it happen. */
 export const openUpdateWindow = async (): Promise<void> => {
-  const scriptPath = join(buildDir, "update-redhot.command");
-  await writeLauncherScript(scriptPath, ["update-in-window"]);
-  await openTerminalWindow(scriptPath);
+  await requestWindow(["update-in-window"]);
+  await openRedhotWindow();
 };
 
 // Loads every Redhot app, so it stays out of commands that never run one.

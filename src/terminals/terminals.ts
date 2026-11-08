@@ -10,21 +10,16 @@ const openWithTerminal = async (path?: string): Promise<void> => {
 };
 
 /**
- * Opens a script in a new Terminal window. The search window opens from a profile, with no login
- * shell, so nothing shows before Redhot draws. Item windows each run their own script, and a
- * profile's command must stay the same or Terminal saves a copy of it, so those open the .command
- * file. Neither needs permission.
+ * Opens a Redhot window from a profile, with no login shell, so nothing shows before Redhot draws.
+ * Every window runs the same launcher: what it should show is left in a note (pending-window.ts).
+ * Neither route needs permission.
  */
-export const openTerminalWindow = async (scriptPath: string): Promise<void> => {
-  if (scriptPath !== launcherPath) {
-    await openWithTerminal(scriptPath);
-    return;
-  }
+export const openRedhotWindow = async (): Promise<void> => {
   try {
-    await openWithTerminal(await writeTerminalProfile(scriptPath));
+    await openWithTerminal(await writeTerminalProfile(launcherPath));
   } catch (error) {
     writeLog("terminal.open-fallback", { error }, { level: "warn" });
-    await openWithTerminal(scriptPath);
+    await openWithTerminal(launcherPath);
   }
 };
 

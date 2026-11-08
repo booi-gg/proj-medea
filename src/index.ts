@@ -34,9 +34,19 @@ const toProcessKind = (command: string | undefined): string => {
   return PROCESS_COMMANDS.has(command) ? command : "unknown";
 };
 
+/** A Redhot window starts with no arguments, and finds out what to show from a note left for it. */
+const readCliArguments = async (): Promise<string[]> => {
+  const given = process.argv.slice(2);
+  if (given.length > 0 || process.env.REDHOT_WINDOW !== "1") {
+    return given;
+  }
+  const { claimWindowRequest } = await import("./terminals/pending-window.ts");
+  return (await claimWindowRequest()) ?? [];
+};
+
 // Each command loads only what it uses, because the helper starts this on every copy and hotkey.
-const main = async (): Promise<void> => {
-  const [command, argument] = process.argv.slice(2);
+const main = async (cliArguments: readonly string[]): Promise<void> => {
+  const [command, argument] = cliArguments;
 
   if (command === undefined) {
     const { runLauncher } = await import("./launcher/launcher.ts");
@@ -74,7 +84,10 @@ const main = async (): Promise<void> => {
     const hasHandedOver = argument !== undefined && (await runInRunningCli(argument));
     if (!hasHandedOver) {
       flushCompileCache();
+      const { repairTerminalProfiles } = await import("./terminals/profile-repair.ts");
+      const profileRepair = repairTerminalProfiles();
       await runLauncher(argument);
+      await profileRepair;
     }
     return;
   }
@@ -159,11 +172,12 @@ const main = async (): Promise<void> => {
 };
 
 try {
-  const command = process.argv[2];
+  const cliArguments = await readCliArguments();
+  const [command] = cliArguments;
   const kind = toProcessKind(command);
   const closesOwnWindow =
     command === undefined || command === "run-in-window" || command === "update-in-window";
-  await withAction("process.run", { kind, interactive: closesOwnWindow }, main);
+  await withAction("process.run", { kind, interactive: closesOwnWindow }, () => main(cliArguments));
   if (closesOwnWindow) {
     const { closeOwnWindow } = await import("./terminals/close-window.ts");
     await closeOwnWindow();

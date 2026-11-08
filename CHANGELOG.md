@@ -4,6 +4,11 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+### Fixed
+
+- Windows opened by a hotkey or for an update no longer flash the file path first, and their title bar shows only Redhot.
+- Hotkeys for items that no longer exist can't hold a key or block it from being used, and the "already used by" message names the real item.
+
 ## 0.2.1
 
 ## 0.2.0

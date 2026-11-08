@@ -6,13 +6,10 @@ import { quoteForShell } from "../shell.ts";
 // Clears the screen, then the scrollback, so it can't be scrolled back to either.
 const CLEAR_WINDOW = String.raw`printf '\033[H\033[2J\033[3J'`;
 
-/** Writes a script a terminal can open to run the CLI with these arguments. */
-export const writeLauncherScript = async (
-  scriptPath: string,
-  cliArguments: readonly string[] = [],
-): Promise<void> => {
+/** Writes the script every Redhot window starts. */
+export const writeLauncherScript = async (scriptPath: string): Promise<void> => {
   // The absolute Node path keeps this working when a terminal's PATH differs from this shell's.
-  const command = [process.execPath, cliEntryPath, ...cliArguments].map(quoteForShell).join(" ");
+  const command = [process.execPath, cliEntryPath].map(quoteForShell).join(" ");
   const script = [
     "#!/bin/zsh",
     CLEAR_WINDOW,

@@ -26,6 +26,8 @@ export interface Config {
   webSearchEngine?: WebSearchEngine;
   /** Off unless it's been turned on. */
   recentProjects?: boolean;
+  /** Off unless it's been turned on. */
+  browserBookmarks?: boolean;
 }
 
 const EMPTY_CONFIG: Config = { aliases: {}, hotkeys: {} };
@@ -79,7 +81,7 @@ export const parseConfig = (configText: string): Config => {
     const clipboardHistoryMonths = toHistoryMonths(parsed.clipboardHistoryMonths);
     const logMaxSizeMb = toLogMaxSizeMb(parsed.logMaxSizeMb);
     const webSearchEngine = toWebSearchEngine(parsed.webSearchEngine);
-    const { checkForUpdates, recentProjects } = parsed;
+    const { checkForUpdates, recentProjects, browserBookmarks } = parsed;
     return {
       aliases: parseAliasMap(parsed.aliases),
       hotkeys: parseHotkeyMap(parsed.hotkeys),
@@ -88,6 +90,7 @@ export const parseConfig = (configText: string): Config => {
       ...(typeof checkForUpdates === "boolean" ? { checkForUpdates } : {}),
       ...(webSearchEngine === undefined ? {} : { webSearchEngine }),
       ...(typeof recentProjects === "boolean" ? { recentProjects } : {}),
+      ...(typeof browserBookmarks === "boolean" ? { browserBookmarks } : {}),
     };
   } catch {
     return EMPTY_CONFIG;

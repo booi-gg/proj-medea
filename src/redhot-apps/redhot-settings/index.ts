@@ -54,6 +54,8 @@ const CHECK_FOR_UPDATES = "check-for-updates";
 const WEB_SEARCH = "web-search";
 const RECENT_PROJECTS = "recent-projects";
 const RECENT_PROJECTS_LABEL = "Show recent projects in search";
+const BROWSER_BOOKMARKS = "browser-bookmarks";
+const BROWSER_BOOKMARKS_LABEL = "Show browser bookmarks in search";
 const DONE = "done";
 const MONTHS_IN_YEAR = 12;
 const SYNC_CHOICES: readonly {
@@ -434,6 +436,17 @@ const chooseRecentProjects = async (isOn: boolean): Promise<string> => {
     : "Recent projects won't show in search";
 };
 
+const chooseBrowserBookmarks = async (isOn: boolean): Promise<string> => {
+  const browserBookmarks = await askOnOff(BROWSER_BOOKMARKS_LABEL, isOn);
+  if (browserBookmarks === undefined) {
+    return "";
+  }
+  await updateConfig({ browserBookmarks });
+  return browserBookmarks
+    ? "Browser bookmarks will show in search"
+    : "Browser bookmarks won't show in search";
+};
+
 /** Shows the menu once. Returns the line to show next, or undefined when finished. */
 const runSettingsRound = async (notice: string): Promise<string | undefined> => {
   drawScreen({ title: "Settings", icon: ICON, notice });
@@ -445,6 +458,7 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
       checkForUpdates = true,
       webSearchEngine = DEFAULT_WEB_SEARCH_ENGINE,
       recentProjects = false,
+      browserBookmarks = false,
     },
     windowAccess,
     syncStatus,
@@ -491,6 +505,10 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
         value: RECENT_PROJECTS,
         label: `${RECENT_PROJECTS_LABEL}  ${recentProjects ? STATE_LABELS.on : STATE_LABELS.off}`,
       },
+      {
+        value: BROWSER_BOOKMARKS,
+        label: `${BROWSER_BOOKMARKS_LABEL}  ${browserBookmarks ? STATE_LABELS.on : STATE_LABELS.off}`,
+      },
       { value: DONE, label: "Done" },
     ],
   });
@@ -505,6 +523,9 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
   }
   if (choice === RECENT_PROJECTS) {
     return chooseRecentProjects(recentProjects);
+  }
+  if (choice === BROWSER_BOOKMARKS) {
+    return chooseBrowserBookmarks(browserBookmarks);
   }
   if (choice === WINDOW_ACCESS) {
     return fixWindowAccess(windowAccess);

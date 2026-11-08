@@ -95,6 +95,9 @@ src/
 │   ├── redhot-projects/
 │   │   ├── index.ts      The list of editors, and the search rows
 │   │   └── sources.ts    Reads each editor's recent projects from disk
+│   ├── redhot-bookmarks/
+│   │   ├── index.ts      The list of browsers, and the search rows
+│   │   └── sources.ts    Reads a browser's bookmarks from each of its profiles
 │   ├── redhot-processes/
 │   │   ├── index.ts      The Kill Process or Port command
 │   │   ├── screen.ts     The list, its keys and the questions before stopping something
@@ -573,6 +576,20 @@ Each editor's recent projects are rows in the main search, up to 30 per editor, 
 **Speed.** `listItems` runs on every keystroke, so a scan is kept for 30 seconds. Only the 100 most recently used folders are read, however long the history is. Projects that no longer exist are left out.
 
 **Ranking.** Items marked `ranksAfterApps` come after apps in the list search ranks, so an app wins a tie and Enter on `Calendar` still opens Calendar. A project that matches better still comes first.
+
+## Browser bookmarks
+
+**Off by default.** `browserBookmarks` in `config.json` turns this on, from **Show browser bookmarks in search** in Settings. Until then `listItems` returns nothing and reads nothing. It stays on each Mac and isn't synced.
+
+Bookmarks from Chrome, Arc, Brave and Edge are rows in the main search, for browsers that are installed. Enter runs `open -a <the browser> <url>`, so a bookmark opens in the browser it came from, in whichever of its profiles was last used. The kind on the row names the browser and the site, like `Chrome · github.com`.
+
+**Where they come from.** Each profile folder (`Default` or `Profile N`) in the browser's data folder has a JSON file called `Bookmarks`. Guest and system profiles are skipped. A page saved in two profiles of one browser gets one row. Arc's sidebar is kept somewhere else, so only what's in its `Bookmarks` file shows up.
+
+**What's left out.** Only `http` and `https` links are listed, so a `javascript:` bookmarklet can never be run from search. Safari isn't read, because `~/Library/Safari/Bookmarks.plist` needs Full Disk Access.
+
+**Speed and width.** A scan is kept for 30 seconds, and each browser is capped at 2,000 bookmarks, because every row is rebuilt on each keystroke. Titles are cut to 44 columns so a row can't wrap, and search only sees the part that's kept.
+
+**Ranking.** Bookmarks are marked `ranksAfterApps`, like projects.
 
 ## Folder search
 

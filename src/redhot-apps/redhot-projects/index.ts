@@ -60,7 +60,7 @@ const EDITORS: readonly Editor[] = [
   },
 ];
 
-const findInstalledApp = (bundle: string): string | undefined =>
+export const findInstalledApp = (bundle: string): string | undefined =>
   ["/Applications", join(homedir(), "Applications")]
     .map((folder) => join(folder, bundle))
     .find((path) => existsSync(path));

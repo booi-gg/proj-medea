@@ -7,6 +7,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Added
 
 - Recent projects in search: type a project's name to reopen it in VS Code, Cursor or Xcode. It's off until you turn on **Show recent projects in search** in Settings.
+- Browser bookmarks in search: type a bookmark's title to open it in Chrome, Arc, Brave or Edge. It's off until you turn on **Show browser bookmarks in search** in Settings.
 
 ## 0.6.3
 

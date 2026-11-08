@@ -16,7 +16,7 @@ Ideas for Redhot, in the order I'd build them. Each file says what the feature i
 7. ~~[Emoji and symbol search](07-emoji-search.md)~~ ✅ built, hidden for now: the `Emoji Picker` system command opens macOS's picker instead
 8. ~~[Units, time zones and dates](08-units-time-zones-dates.md)~~ ✅ built: type them straight into search
 9. ~~[Recent projects](09-recent-projects.md)~~ ✅ built: type a project's name to reopen it in its editor
-10. [Browser bookmarks](10-browser-bookmarks.md)
+10. ~~[Browser bookmarks](10-browser-bookmarks.md)~~ ✅ built: type a bookmark's title to open it in its browser
 11. [Pinned clipboard items](11-pinned-clipboard-items.md)
 12. [Dictionary](12-dictionary.md)
 13. ~~[Colour picker](13-colour-picker.md)~~ ✅ built: pick from the screen, copy as hex, RGB or HSL

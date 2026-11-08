@@ -1,3 +1,4 @@
+import { browserBookmarks } from "./redhot-bookmarks/index.ts";
 import { clipboardHistory } from "./redhot-clipboard-history/index.ts";
 import { colourPicker } from "./redhot-colour-picker/index.ts";
 import { files } from "./redhot-files/index.ts";
@@ -27,6 +28,7 @@ const redhotApps: readonly RedhotApp[] = [
   clipboardHistory,
   colourPicker,
   recentProjects,
+  browserBookmarks,
   windowActions,
   systemCommands,
   hotkeyList,

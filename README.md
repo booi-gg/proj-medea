@@ -15,6 +15,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Script commands.** Turn any shell, Python or Node script into a search result, with arguments, output and hotkeys.
 - **File search.** Type `f`, a space and a file name to find it with Spotlight, then open it, reveal it in Finder or copy its path.
 - **Recent projects.** Type a project's name to reopen it in VS Code, Cursor or Xcode, in the app you last used it in. Off until you turn it on in Settings.
+- **Browser bookmarks.** Type a bookmark's title to open it in Chrome, Arc, Brave or Edge, in the browser it came from. Off until you turn it on in Settings.
 - **Folder search.** Jump to Downloads, Documents, Recents or any folder in Finder.
 - **Kill a process or port.** Quit or force quit a running app or process, or type `port 3000` to stop whatever is listening on it.
 - **System commands.** Lock, sleep, empty the Trash, toggle dark mode or hidden files, eject disks, restart, shut down and log out.
@@ -258,6 +259,7 @@ Search `Settings` for:
 - **iCloud Drive Sync**, which picks an iCloud Drive folder to share things between Macs. **What to Sync** switches settings, quicklinks, snippets and logs on and off for each Mac. Snippets start off, because their text is kept in iCloud Drive as plain files.
 - **Web search**, which picks the engine used when search finds nothing and adds ready-made search quicklinks.
 - **Show recent projects in search**, off by default, for your VS Code, Cursor and Xcode projects.
+- **Show browser bookmarks in search**, off by default, for your Chrome, Arc, Brave and Edge bookmarks.
 
 In Terminal.app, Redhot opens an 80×18 window from its own **Redhot** profile, which it copies from your default profile, so it keeps your colours and font. Change the default profile to change how Redhot looks, not the Redhot profile, which Redhot rewrites and tidies up after. `Cmd` + `=` makes the text bigger in an open window.
 

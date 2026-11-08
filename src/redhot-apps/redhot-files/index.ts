@@ -26,21 +26,6 @@ const SCREEN: SearchScreen = {
 export const toFileSearchQuery = (query: string): string | undefined =>
   PREFIX.test(query) ? query.replace(PREFIX, "") : undefined;
 
-/**
- * Closes the launcher's list as soon as its text asks for files. It waits for the keypress to
- * finish, because this is called while clack is still handling it. Only once, because pasted text
- * changes the query many times in one go, and a second close would land on the file search list.
- */
-export const createFileSearchExit = (close: () => void): ((query: string) => void) => {
-  let isLeaving = false;
-  return (query) => {
-    if (!isLeaving && toFileSearchQuery(query) !== undefined) {
-      isLeaving = true;
-      setImmediate(close);
-    }
-  };
-};
-
 /** Opens the search screen, starting from this text when the launcher's prefix brought us here. */
 export const runFileSearch = (initialQuery = "", closesWhenDone = false): Promise<string> =>
   runSearchScreen(SCREEN, initialQuery, closesWhenDone);

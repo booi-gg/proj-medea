@@ -5,6 +5,8 @@ import { promisify } from "node:util";
 import { endAction, startAction, trackSpawn } from "./log.ts";
 
 const execFileAsync = promisify(execFile);
+// These exit with 1 to say they found nothing, which isn't a failure worth logging as one.
+const NO_MATCH_PROGRAMS: ReadonlySet<string> = new Set(["pgrep", "lsof", "ps"]);
 
 /** Logs the program and exit state, never arguments or output. */
 export const runCommand = async (
@@ -23,7 +25,7 @@ export const runCommand = async (
     return { stdout: String(result.stdout), stderr: String(result.stderr) };
   } catch (error) {
     const isNoMatch =
-      file === "pgrep" && error instanceof Error && "code" in error && error.code === 1;
+      NO_MATCH_PROGRAMS.has(file) && error instanceof Error && "code" in error && error.code === 1;
     endAction(
       action,
       isNoMatch,

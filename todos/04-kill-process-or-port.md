@@ -1,5 +1,7 @@
 # Kill a process or port
 
+**Status:** built. See "Kill a process or port" in the README and doc/how-it-works.md. Left out: finding what root is listening with, because `lsof` can't see it without `sudo`.
+
 **Effort:** small
 
 ## What

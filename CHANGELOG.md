@@ -8,6 +8,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 - File search: type `f` and a space in search, or open `Search Files`, to find files by name with Spotlight. Enter opens a file, `Ctrl+R` reveals it in Finder, `Ctrl+P` copies its path, and Tab adds Open With….
 - Folder search: `Search Folders` lists Finder's usual places, like Downloads, Documents and Recents, and finds any other folder by name.
+- Kill a process or port: `Kill Process or Port` lists running apps and processes with their CPU and memory, and `port 3000` in search shows what's listening on that port. Enter quits, and `Ctrl+K` force quits after asking. Anything owned by root asks first and uses `sudo`.
 
 ### Changed
 

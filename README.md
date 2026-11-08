@@ -13,6 +13,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Script commands.** Turn any shell, Python or Node script into a search result, with arguments, output and hotkeys.
 - **File search.** Type `f`, a space and a file name to find it with Spotlight, then open it, reveal it in Finder or copy its path.
 - **Folder search.** Jump to Downloads, Documents, Recents or any folder in Finder.
+- **Kill a process or port.** Quit or force quit a running app or process, or type `port 3000` to stop whatever is listening on it.
 - **Clipboard history.** Text and images you copy, searchable, with a preview pane. Password managers and confidential copies are skipped.
 - **Calculator.** Type `2 * (4 + 1)` and press Enter to copy the answer.
 - **Currency conversion.** Type `356 USD to INR` or `$20 in €`. Rates are downloaded daily and work offline.
@@ -166,6 +167,20 @@ The exact name comes first, then whatever you opened most recently. Redhot searc
 Open `Search Folders` to see Finder's usual places straight away: Recents, Downloads, Documents, Desktop, Home, iCloud Drive, Applications, Pictures, Movies and Music. Press Enter to open one in Finder, or type to find any other folder by name. Give it an alias or hotkey from its settings with Tab to get there quickly.
 
 The keys are the same as file search, and the same folders are skipped. Recents is a Finder view rather than a folder, so it can only be opened.
+
+### Kill a process or port
+
+Open `Kill Process or Port` to see running apps by name, then every other process, busiest first, each with its process ID, CPU and memory. Type to filter by name or process ID. Type `port 3000`, here or in search, to see what's listening on that port.
+
+| Key      | What it does                                                 |
+| -------- | ------------------------------------------------------------ |
+| Enter    | Quits it. An app gets the normal Quit, so it can ask to save |
+| `Ctrl+K` | Force quits it, after asking                                 |
+| Tab      | Offers Quit and Force Quit                                   |
+
+Stopping anything owned by root or another user asks first and then uses `sudo`, so you may be asked for your password. macOS may also ask to let your terminal control an app the first time you quit one.
+
+Without `sudo`, macOS hides what root is listening with, so a port held by root shows as having no listeners. Search for the process by name instead.
 
 ### Clipboard history
 

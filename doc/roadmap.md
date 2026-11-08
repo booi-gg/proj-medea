@@ -10,6 +10,7 @@ The goal is a keyboard launcher for macOS that runs as a CLI.
 | Search and open apps              | Yes, built | Nothing special                                                                                                  |
 | Search files                      | Yes, built | Spotlight's index                                                                                                |
 | Search folders                    | Yes, built | Spotlight's index                                                                                                |
+| Kill a process or port            | Yes, built | Automation permission to quit apps politely, and `sudo` for anything owned by root                               |
 | Search URLs                       | Yes        | Nothing special expected                                                                                         |
 | Quicklinks                        | Yes, built | Nothing special                                                                                                  |
 | Aliases and per-item settings     | Yes, built | Nothing special                                                                                                  |

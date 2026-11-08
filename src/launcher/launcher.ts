@@ -10,10 +10,12 @@ import { toConversionItems } from "../redhot-apps/redhot-currency/index.ts";
 import { refreshRatesIfStale } from "../redhot-apps/redhot-currency/rates.ts";
 import {
   FILE_SEARCH_VALUE,
-  createFileSearchExit,
   runFileSearch,
   toFileSearchQuery,
 } from "../redhot-apps/redhot-files/index.ts";
+import { PROCESS_SEARCH_VALUE } from "../redhot-apps/redhot-processes/index.ts";
+import { toPort } from "../redhot-apps/redhot-processes/list.ts";
+import { runProcessScreen } from "../redhot-apps/redhot-processes/screen.ts";
 import { findRedhotItem, listRedhotItems } from "../redhot-apps/registry.ts";
 import type { LauncherItem } from "../redhot-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
@@ -25,6 +27,7 @@ import { formatHotkey } from "./hotkeys.ts";
 import { ADD_ALIAS_LABEL, CREATE_HOTKEY_LABEL, runItemSettings } from "./item-settings.ts";
 import { closeReplaceableList, promptForSelection } from "./prompt.ts";
 import type { LauncherOption } from "./prompt.ts";
+import { createQueryExit } from "./query-exit.ts";
 import { drawScreen, toTerminalWidth } from "./screen.ts";
 import { rankItems } from "./search.ts";
 
@@ -206,6 +209,9 @@ const confirmEndProgram = async (): Promise<boolean> => {
   return choice === END_PROGRAM_CHOICE;
 };
 
+const opensOwnScreen = (query: string): boolean =>
+  toFileSearchQuery(query) !== undefined || toPort(query) !== undefined;
+
 /** Shows the search bar once. */
 const runSearchRound = async (notice: string, session: Session): Promise<RoundResult> => {
   drawScreen({ notice });
@@ -221,7 +227,7 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
       rank: rankWithAnswers,
       replaceable: true,
       getSearchIcon: getActionSearchIcon,
-      onQueryChange: createFileSearchExit(closeReplaceableList),
+      onQueryChange: createQueryExit(closeReplaceableList, opensOwnScreen),
     },
   );
   if (session.nextItem !== undefined) {
@@ -234,6 +240,15 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
       keepRunning: true,
       notice: await showErrorsAsNotice(() =>
         trackItem(session, FILE_SEARCH_VALUE, searchFiles, true),
+      ),
+    };
+  }
+  if (cancelled && toPort(query) !== undefined) {
+    const searchPort = (): Promise<string> => runProcessScreen(query);
+    return {
+      keepRunning: true,
+      notice: await showErrorsAsNotice(() =>
+        trackItem(session, PROCESS_SEARCH_VALUE, searchPort, true),
       ),
     };
   }

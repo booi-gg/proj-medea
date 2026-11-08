@@ -84,6 +84,13 @@ src/
 │   ├── redhot-folders/
 │   │   ├── index.ts      The Search Folders command and what counts as a folder result
 │   │   └── places.ts     Finder's usual places, like Downloads and Recents
+│   ├── redhot-processes/
+│   │   ├── index.ts      The Kill Process or Port command
+│   │   ├── screen.ts     The list, its keys and the questions before stopping something
+│   │   ├── search.ts     The full list, or a port's listeners, for what's typed
+│   │   ├── list.ts       Runs ps and lsof, and works out which processes are apps
+│   │   ├── stop.ts       Quits, force quits and uses sudo
+│   │   └── format.ts     Row text: name, owner or kind, process ID, CPU and memory
 │   ├── redhot-clipboard-history/
 │   │   ├── index.ts      The history list and its actions
 │   │   ├── store.ts      Reads and saves history and image files
@@ -331,6 +338,7 @@ Settings is a menu: **Alias, Add**, **Hotkey, Create**, **Remove hotkey** (when 
 | Clipboard            | Shows the list in the Redhot window                        |
 | Search Files         | Shows the search in the Redhot window                      |
 | Search Folders       | Shows the search in the Redhot window                      |
+| Kill Process or Port | Shows the list in the Redhot window                        |
 | A quicklink          | Opens it, through the Redhot window if it has `{argument}` |
 
 **Seeing them all.** `Hotkeys, Show All` lists everything with a saved hotkey, and `Window Hotkeys, Show All` lists every window action, including any with no hotkey. Each window action has a small diagram, a bracketed screen with the filled part showing where the window ends up, and a few words when a diagram can't show it. Enter runs the row and Tab opens its settings. The list stays open after running something, so you can try several in a row, and Esc goes back. It shows as many rows as the window has room for.
@@ -462,6 +470,18 @@ Its own screen, so app search never waits on Spotlight. Typing `f` and a space i
 **Places.** Finder's usual places are pinned through `createFileSearch({ pinned })`. They're all listed before anything is typed, and those whose names match are listed above Spotlight's results, so `Downloads` shows at once and can't be crowded out. A place Spotlight also finds is listed once. A place the Mac doesn't have is left out when the screen opens.
 
 **Recents.** Recents is a saved search, `myDocuments.cannedSearch` inside Finder.app, so it's only reachable as a place. It has no folder to reveal, copy or open in another app, so `hasRealPath()` hides those actions.
+
+## Kill a process or port
+
+`Kill Process or Port` (`redhot-processes:search`) lists what's running. Typing `port` and a number in search leaves for this screen the same way the `f` prefix leaves for file search (`createQueryExit()`). Only a number counts, so `port authority` stays an app search.
+
+**The list.** `ps -axo pid=,user=,%cpu=,rss=,comm=` is read each time the list opens. A process is an app when its path ends in `<Name>.app/Contents/MacOS/<program>` and `<Name>` is in the app search list. It matches on the name because macOS runs Safari from a system volume, not `/Applications`. Helpers nested inside an app stay ordinary processes. Redhot leaves its own process out.
+
+**Ports.** `lsof -nP -iTCP:<port> -sTCP:LISTEN -t` finds the process IDs, then `ps -p` reads those processes, so a server started after the list opened still shows. The lookup waits 120 ms after a keystroke, and a slower answer for an earlier port is thrown away. `lsof` can't see what root is listening with unless it runs under `sudo`, so the empty text says that rather than calling the port free.
+
+**Stopping.** Enter quits. An app gets `tell application … to quit` through `osascript`, with its name passed as an argument so nothing in it can be read as AppleScript. An app asking about unsaved work holds that call open, so it gives up after 2 seconds and says the app was asked. A process gets `SIGTERM`, and force quit is `SIGKILL`. Afterwards Redhot watches for up to 1.5 seconds so the notice says what really happened. A zombie counts as ended.
+
+**Safety.** The list can be old by the time a key is pressed, so `ps` confirms the process ID still runs the same program before anything is signalled. Force quitting always asks, with No selected. So does anything owned by another user, which then runs `sudo -- /bin/kill` with the terminal attached so it can ask for a password.
 
 ## Clipboard history
 

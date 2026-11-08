@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+## 0.6.3
+
 ### Added
 
 - Units in search: `5 km in miles`, `72 f to c`, `2 GB in MB`.

@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+<<<<<<< HEAD
+
 ### Added
 
 - Web search: when search finds nothing, the row offers `Search Google for 'xyz'`, and Settings can switch that to DuckDuckGo or Kagi.
@@ -12,6 +14,11 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Changed
 
 - Enter on a web search, calculation or currency conversion keeps what you typed on screen, so you can change it or run it again. The shortcut brings it back as you left it, and Esc clears it.
+  \=======
+
+## 0.5.0
+
+> > > > > > > e4ad2edffd3ba245732ba9220c7a557146bae158
 
 ## 0.4.1
 

@@ -125,3 +125,11 @@ test("names a command that already uses a hotkey", () => {
 test("skips hotkeys that can't be read", () => {
   assert.deepEqual(toHelperHotkeys({ "/a.app": "nonsense" }), []);
 });
+
+test("names the item that holds a hotkey, using the name it's given", () => {
+  const taken = { "redhot-clipboard-history:open": "shift+cmd+c" };
+  assert.equal(
+    findHotkeyProblem("shift+cmd+c", "redhot-settings:open", taken, () => "Clipboard History"),
+    "That hotkey is already used by Clipboard History",
+  );
+});

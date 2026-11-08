@@ -57,8 +57,9 @@ const main = async (): Promise<void> => {
   if (command === "hotkeys") {
     const { readConfig } = await import("./config.ts");
     const { toHelperHotkeys } = await import("./launcher/hotkeys.ts");
+    const { withoutRemovedItems } = await import("./redhot-apps/registry.ts");
     const { hotkeys } = await readConfig();
-    process.stdout.write(`${JSON.stringify(toHelperHotkeys(hotkeys))}\n`);
+    process.stdout.write(`${JSON.stringify(toHelperHotkeys(withoutRemovedItems(hotkeys)))}\n`);
     return;
   }
   if (command === "run") {

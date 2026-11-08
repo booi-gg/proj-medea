@@ -1,9 +1,19 @@
 import { styleText } from "node:util";
 import { confirm, isCancel, log, select, text } from "@clack/prompts";
 import { readConfig } from "../config.ts";
-import { listSettingsActions } from "../redhot-apps/registry.ts";
+import {
+  findRedhotItemName,
+  listSettingsActions,
+  withoutRemovedItems,
+} from "../redhot-apps/registry.ts";
 import { reloadHotkeys } from "../menubar/helper.ts";
-import { MAX_ALIASES, findAliasProblem, parseAliasInput, saveAliases } from "./aliases.ts";
+import {
+  MAX_ALIASES,
+  findAliasProblem,
+  parseAliasInput,
+  saveAliases,
+  toDisplayName,
+} from "./aliases.ts";
 import { recordKeys } from "./hotkey-recorder.ts";
 import { findHotkeyProblem, formatHotkey, parseRecording, saveHotkey } from "./hotkeys.ts";
 import { drawScreen } from "./screen.ts";
@@ -70,7 +80,12 @@ const createHotkey = async (itemValue: string, itemName: string): Promise<string
   }
   const { hotkey, usedBySystem } = recording;
   const { hotkeys } = await readConfig();
-  const problem = findHotkeyProblem(hotkey, itemValue, hotkeys);
+  const problem = findHotkeyProblem(
+    hotkey,
+    itemValue,
+    withoutRemovedItems(hotkeys),
+    (value) => findRedhotItemName(value) ?? toDisplayName(value),
+  );
   if (problem !== undefined) {
     return toWarning(`${formatHotkey(hotkey)}: ${problem}`);
   }

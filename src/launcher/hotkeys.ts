@@ -162,6 +162,7 @@ export const findHotkeyProblem = (
   input: string,
   itemValue: string,
   allHotkeys: HotkeyMap,
+  toName: (itemValue: string) => string = toDisplayName,
 ): string | undefined => {
   if (input.trim() === "") {
     return undefined;
@@ -180,7 +181,7 @@ export const findHotkeyProblem = (
   }
   for (const [otherValue, otherHotkey] of Object.entries(allHotkeys)) {
     if (otherValue !== itemValue && otherHotkey === hotkey) {
-      return `That hotkey is already used by ${toDisplayName(otherValue)}`;
+      return `That hotkey is already used by ${toName(otherValue)}`;
     }
   }
   return undefined;

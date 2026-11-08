@@ -1,4 +1,4 @@
-import { styleText } from "node:util";
+import { stripVTControlCharacters } from "node:util";
 import { renderBanner } from "./banner.ts";
 import { APP_NAME } from "../paths.ts";
 import { readSyncStatusSync } from "../sync/sync.ts";
@@ -17,6 +17,14 @@ export interface ScreenTitle {
 }
 
 const CONTROL_CHARACTERS = /\p{Cc}/gu;
+
+const TITLE_MARGIN = "  ";
+// Both two-column margins, the label's padding on each side and the gap before the line.
+const TITLE_CHROME_WIDTH = 7;
+// The logo's plain red on white, which is about 5:1 contrast.
+const TITLE_LABEL_COLORS = "\u001B[48;5;231m\u001B[38;5;160m";
+const TITLE_LINE_COLOR = "\u001B[38;5;231m";
+const DEFAULT_COLORS = "\u001B[39;49m";
 
 const CLEAR_SCREEN_SEQUENCE = "\u001B[2J\u001B[H";
 const CLEAR_SCROLLBACK_SEQUENCE = "\u001B[3J";
@@ -43,9 +51,33 @@ const prepareWindow = (title: string | undefined): string =>
     ? `${toClearSequence(true)}${toWindowTitleSequence(title)}`
     : toClearSequence(false);
 
-const renderTitle = ({ title, icon }: ScreenTitle): string => {
-  const parts = icon === undefined ? [] : [icon];
-  return `  ${[...parts, styleText("bold", title)].join(" ")}\n`;
+const fitToColumns = (label: string, columns: number): string => {
+  if (toTerminalWidth(label) <= columns) {
+    return label;
+  }
+  const characters = Array.from(label);
+  while (characters.length > 0 && toTerminalWidth(`${characters.join("")}…`) > columns) {
+    characters.pop();
+  }
+  return `${characters.join("")}…`;
+};
+
+/**
+ * A solid label and a line to the window's right margin, so it's clear which screen this is. The
+ * icon's own colour is removed because its reset would also end the label's text colour, leaving
+ * the title white on white. One row always, since screens count their rows.
+ */
+export const renderTitle = (
+  { title, icon }: ScreenTitle,
+  columns: number | undefined = process.stdout.columns,
+): string => {
+  const room = columns === undefined ? Number.POSITIVE_INFINITY : columns - TITLE_CHROME_WIDTH;
+  const plainIcon = icon === undefined ? [] : [stripVTControlCharacters(icon)];
+  const label = fitToColumns([...plainIcon, title].join(" "), room);
+  const ruleWidth =
+    columns === undefined ? 0 : columns - TITLE_CHROME_WIDTH - toTerminalWidth(label);
+  const rule = ruleWidth > 0 ? ` ${TITLE_LINE_COLOR}${"─".repeat(ruleWidth)}${DEFAULT_COLORS}` : "";
+  return `${TITLE_MARGIN}${TITLE_LABEL_COLORS} ${label} ${DEFAULT_COLORS}${rule}\n`;
 };
 
 export const formatSyncLabel = (status: SyncStatus, now = Date.now()): string => {

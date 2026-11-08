@@ -14,6 +14,7 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Changed
 
 - Redhot shows "Ending program..." when you exit, so the window doesn't vanish without warning.
+- Screen titles like Clipboard and Search Files are now red text on a white label with a line across the window, so it's clear which screen you're on.
 
 ## 0.4.0
 

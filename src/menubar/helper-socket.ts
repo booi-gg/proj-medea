@@ -30,6 +30,20 @@ export const reloadSnippets = async (): Promise<void> => {
   await sendHelperRequest("snippets reload");
 };
 
+export type PasteResult = "pasted" | "no-access" | "no-app" | "no-helper";
+
+/**
+ * Sends what's on the clipboard to the app used before Redhot's window. An older helper doesn't
+ * know this request, so it counts the same as none running.
+ */
+export const pasteIntoPreviousApp = async (): Promise<PasteResult> => {
+  const reply = await sendHelperRequest("paste-previous-app");
+  if (reply === "ok") {
+    return "pasted";
+  }
+  return reply === "no-access" || reply === "no-app" ? reply : "no-helper";
+};
+
 /** The helper has to answer this, because the permission belongs to it and not to the CLI. */
 export const readWindowAccess = async (): Promise<WindowAccess> => {
   const reply = await sendHelperRequest("access");

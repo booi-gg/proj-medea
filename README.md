@@ -11,6 +11,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Hotkeys.** Bind any app, command, quicklink or window action to a global shortcut.
 - **Quicklinks.** Save URLs, deeplinks or folders, with `{argument}` and `{clipboard}` placeholders.
 - **Snippets.** Save text and type a keyword like `;addr` in any app to replace it, or search for a snippet and copy it.
+- **Emoji and symbols.** Open `Search Emoji & Symbols` and type `fire` or `arrow`. Enter copies, and Ctrl+V pastes into the app you were using, which needs the menu bar item and Accessibility permission.
 - **Web search.** When nothing matches, search Google, DuckDuckGo or Kagi. Type an alias and some text, like `yt lofi`, to search with a quicklink.
 - **Script commands.** Turn any shell, Python or Node script into a search result, with arguments, output and hotkeys.
 - **File search.** Type `f`, a space and a file name to find it with Spotlight, then open it, reveal it in Finder or copy its path.

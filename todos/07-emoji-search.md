@@ -1,5 +1,7 @@
 # Emoji and symbol search
 
+**Status:** built, and pasting into another app still needs testing by a person. See "Emoji and symbols" in doc/how-it-works.md. Left out: a grid, because a list searches just as well in a terminal, and skin tone variants.
+
 **Effort:** small
 
 ## What

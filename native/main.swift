@@ -40,6 +40,9 @@ let snippetExpander = SnippetExpander(
 )
 snippetExpander.start()
 
+let pasteBack = PasteBack()
+pasteBack.start()
+
 // The CLI sends this signal after saving a hotkey, so it works without a restart.
 signal(SIGUSR1, SIG_IGN)
 let reloadSignal = DispatchSource.makeSignalSource(signal: SIGUSR1, queue: .main)
@@ -53,7 +56,10 @@ let helperSocket = HelperSocket(
     .appendingPathComponent("helper.sock")
     .path,
   onRequest: { request, reply in
-    if let answer = NoticePanel.shared.answer(request) ?? snippetExpander.answer(request) {
+    if let answer = NoticePanel.shared.answer(request)
+      ?? snippetExpander.answer(request)
+      ?? pasteBack.answer(request)
+    {
       reply(answer)
     } else {
       windows.answer(request, reply: reply)

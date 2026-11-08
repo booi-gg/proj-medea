@@ -1,4 +1,5 @@
 import { clipboardHistory } from "./redhot-clipboard-history/index.ts";
+import { emoji } from "./redhot-emoji/index.ts";
 import { files } from "./redhot-files/index.ts";
 import { folders } from "./redhot-folders/index.ts";
 import { hotkeyList } from "./redhot-hotkeys/index.ts";
@@ -16,6 +17,7 @@ import type { LauncherItem, RedhotApp, SettingsAction } from "./types.ts";
 const redhotApps: readonly RedhotApp[] = [
   quicklinks,
   snippets,
+  emoji,
   scripts,
   files,
   folders,

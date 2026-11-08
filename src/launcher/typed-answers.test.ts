@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
+import { DEFINE_VALUE, toDictionaryItem } from "../redhot-apps/redhot-dictionary/index.ts";
+import type { LauncherItem } from "../redhot-apps/types.ts";
+import { WEB_SEARCH_FALLBACK_VALUE } from "../redhot-apps/redhot-web-search/index.ts";
 import { rankWithAnswers } from "./launcher.ts";
 import type { LauncherOption } from "./prompt.ts";
 
@@ -27,6 +30,22 @@ test("the calculator isn't confused by a date sum", () => {
 
 test("a plain sum is still the calculator's", () => {
   assert.deepEqual(valuesFor("2 + 2"), ["redhot-calculator:answer"]);
+});
+
+const toDefineRow = (query: string): LauncherItem[] =>
+  [toDictionaryItem(query, ["define"])].filter((item) => item !== undefined);
+
+test("a definition comes first, with the web still on offer below it", () => {
+  const query = "define zzqxqzx";
+  const values = rankWithAnswers(query, NO_OPTIONS, toDefineRow(query)).map(({ value }) => value);
+  assert.deepEqual(values, [DEFINE_VALUE, WEB_SEARCH_FALLBACK_VALUE]);
+});
+
+test("the web isn't offered under a definition when something else matches", () => {
+  const safari: LauncherOption = { value: "safari", name: "define zz", aliases: [], label: "x" };
+  const query = "define zz";
+  const values = rankWithAnswers(query, [safari], toDefineRow(query)).map(({ value }) => value);
+  assert.deepEqual(values, [DEFINE_VALUE, "safari"]);
 });
 
 test("the answer's copy goes through its own row", () => {

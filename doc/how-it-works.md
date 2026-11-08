@@ -55,6 +55,7 @@ src/
 ├── launcher/
 │   ├── launcher.ts       The search loop and its list of items
 │   ├── prompt.ts         Draws the search bar and reads keys
+│   ├── pager.ts          Shows long text in less
 │   ├── screen.ts         Clears the window and draws the logo
 │   ├── split-view.ts     Lays out a list beside a preview
 │   ├── item-settings.ts  The settings screen for one app or command
@@ -105,6 +106,9 @@ src/
 │   │   ├── list.ts       Runs ps and lsof, and works out which processes are apps
 │   │   ├── stop.ts       Quits, force quits and uses sudo
 │   │   └── format.ts     Row text: name, owner or kind, process ID, CPU and memory
+│   ├── redhot-dictionary/
+│   │   ├── index.ts      The define row, and running the native lookup
+│   │   └── definition.ts Lays out a definition's senses and wraps them, with no system calls
 │   ├── redhot-colour-picker/
 │   │   ├── index.ts      Search items, and running the native sampler
 │   │   ├── colour.ts     Hex, RGB and HSL text, and swatches, with no system calls
@@ -181,6 +185,7 @@ native/
 ├── PasteBack.swift       Remembers the previous app and presses a shortcut in it
 ├── HotkeyRecorder.swift  The window that records a hotkey
 ├── ColourSampler.swift   Shows the macOS magnifier and prints the colour picked
+├── DictionaryLookup.swift Prints a word's definition from the macOS dictionaries
 └── ImagePreview.swift    The floating window that shows clipboard images
 doc/                      These docs
 .build/                   Generated: helper binary, launcher script, logs, socket, compile cache
@@ -471,7 +476,7 @@ A link can have up to 3 arguments. Values are percent-encoded when the link star
 
 These rows aren't registered as a Redhot app. Like the calculator's answer, each comes from what's typed, so it has no saved value for an alias or hotkey to point at, and Tab does the same as Enter.
 
-**The fallback.** `rankWithAnswers()` adds `toWebSearchItem()` only when there are no answers and no results. It goes under a `No results` line, an option marked `isInert`, so focus starts there and it takes the down arrow and then Enter to search. An inert line shows no focus marker, and the prompt's `validate` refuses Enter on it, so a stray Enter can't send what was typed to a search engine. Tab is refused the same way. Loose matching finds something for most short text, so the row mostly appears for longer searches. The engine is `webSearchEngine` in `config.json`. It stays on each Mac, like log size and update checks, so it isn't synced.
+**The fallback.** `rankWithAnswers()` adds `toWebSearchItem()` only when there are no results and no answers other than a dictionary row, which can't know whether the word exists. With nothing else to show, it goes under a `No results` line, an option marked `isInert`, so focus starts there and it takes the down arrow and then Enter to search. An inert line shows no focus marker, and the prompt's `validate` refuses Enter on it, so a stray Enter can't send what was typed to a search engine. Tab is refused the same way. Loose matching finds something for most short text, so the row mostly appears for longer searches. The engine is `webSearchEngine` in `config.json`. It stays on each Mac, like log size and update checks, so it isn't synced.
 
 **An alias and some text.** `findAliasSearch()` splits what's typed at the first space and looks for a quicklink with that alias and exactly one question. Named arguments that share a value count as one. It's an answer, so it goes above ordinary results, and the search arrow turns red to show it's active. When several quicklinks share an alias, the first in the file wins. The `f` and `port` prefixes are checked first, so an alias of `f` can't be used this way.
 
@@ -590,6 +595,16 @@ Bookmarks from Chrome, Arc, Brave and Edge are rows in the main search, for brow
 **Speed and width.** A scan is kept for 30 seconds, and each browser is capped at 2,000 bookmarks, because every row is rebuilt on each keystroke. Titles are cut to 44 columns so a row can't wrap, and search only sees the part that's kept.
 
 **Ranking.** Bookmarks are marked `ranksAfterApps`, like projects.
+
+## Dictionary
+
+`define serendipity` adds a row to search, and Enter shows the definition. Rows are made on every keystroke and have to be ready at once, so the lookup waits for Enter. A user's own search alias called `define` keeps the higher row.
+
+**Phrases.** `define` is one of a list, with `definition of`, `meaning of`, `what is`, `what's` and the two `the meaning of` forms. **Dictionary phrases** in Settings shows them as one comma-separated line, saved as `definePhrases` in `config.json`, and leaving it blank restores the defaults. It stays on each Mac, so it isn't synced. The longest phrase wins, so `what is the meaning of run` isn't read as `what is` and a long term. A term over four words gets no row, which leaves `what is the tallest mountain in asia` to web search. The row can't know whether the word exists, so when nothing else matches the web search row stays below it.
+
+`.build/redhot-dictionary`, built from `native/DictionaryLookup.swift`, calls `DCSCopyTextDefinition` and prints the text, or nothing if there's no entry. It's a separate program so it doesn't need the menu bar item. macOS searches the dictionaries turned on in Dictionary.app, in that app's order, so turning on another language there adds it here. The whole term is looked up, so `define ice cream` works and `define asdf run` finds nothing. If nothing is found and the term starts with a, an or the, it's looked up again without that word, so `what is a noun` finds `noun` and `a priori` is still found as typed.
+
+macOS returns a definition as one long paragraph, up to 21,000 characters for `run`. `definition.ts` splits it on what marks each part: the next number in the count for a sense, `•` for a sub-sense, and `PHRASES`, `PHRASAL VERBS`, `DERIVATIVES`, `ORIGIN` and `USAGE` for sections. Numbers only count in sequence and before the first section, so "weighs 3 tons" isn't read as sense 3. Dictionaries marked differently, like the Japanese ones, are wrapped without being split. The result is wrapped to the window, and shown in `less` through `src/launcher/pager.ts`, where `q` or the left arrow comes back to the search as you left it. The left arrow is bound with `LESSKEY_CONTENT`, which secure mode only accepts alongside `LESSSECURE_ALLOW=lesskey`. Clipboard's View full text doesn't bind it, because there it scrolls long lines back. Versions of `less` older than the one in macOS 26 may ignore the binding, and `q` still works.
 
 ## Folder search
 

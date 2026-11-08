@@ -6,6 +6,8 @@ import {
   cliEntryPath,
   colourSamplerPath,
   colourSamplerSourcePath,
+  dictionaryLookupPath,
+  dictionaryLookupSourcePath,
   helperLogPath,
   helperPath,
   helperSourcePaths,
@@ -48,6 +50,9 @@ export const buildImagePreview = (): Promise<void> =>
 export const buildColourSampler = (): Promise<void> =>
   compileSwift([colourSamplerSourcePath], colourSamplerPath);
 
+export const buildDictionaryLookup = (): Promise<void> =>
+  compileSwift([dictionaryLookupSourcePath], dictionaryLookupPath);
+
 export const isMenuBarRunning = async (): Promise<boolean> => {
   const pids = await findHelperPids();
   return pids.length > 0;
@@ -60,6 +65,7 @@ export const prepareMenuBar = async (): Promise<void> => {
   await buildRecorder();
   await buildImagePreview();
   await buildColourSampler();
+  await buildDictionaryLookup();
   await writeLauncherScript(launcherPath);
 };
 

@@ -16,6 +16,7 @@ import {
 import { PROCESS_SEARCH_VALUE } from "../redhot-apps/redhot-processes/index.ts";
 import { toPort } from "../redhot-apps/redhot-processes/list.ts";
 import { runProcessScreen } from "../redhot-apps/redhot-processes/screen.ts";
+import { DEFINE_VALUE, toDictionaryItem } from "../redhot-apps/redhot-dictionary/index.ts";
 import { findRedhotItem, listRedhotItems } from "../redhot-apps/registry.ts";
 import { toDateItem, toTimeZoneItem } from "../redhot-apps/redhot-time/index.ts";
 import { toUnitItem } from "../redhot-apps/redhot-units/index.ts";
@@ -162,6 +163,7 @@ const toAnswerItems = (query: string): LauncherItem[] => {
     toTimeZoneItem(query),
     toDateItem(query),
     toAliasSearchItem(query),
+    toDictionaryItem(query),
   ].filter((item) => item !== undefined);
 };
 
@@ -173,18 +175,21 @@ const toAnswerOption = (item: LauncherItem): LauncherOption => ({
 
 // Answers come from the query, so they go above ordinary search results. When there's no answer and
 // no result, the web is offered a row down from where focus starts, so a stray Enter can't send what
-// was typed to a search engine.
+// was typed to a search engine. A dictionary row doesn't know the word exists, so the web stays on
+// offer below it.
 export const rankWithAnswers = (
   query: string,
   options: readonly LauncherOption[],
+  answers: readonly LauncherItem[] = toAnswerItems(query),
 ): LauncherOption[] => {
   const results = rankItems(query, options);
-  const answers = toAnswerItems(query);
-  const isEmpty = answers.length === 0 && results.length === 0;
-  const fallback = isEmpty ? toWebSearchItem(query) : undefined;
-  return fallback === undefined
-    ? [...answers.map(toAnswerOption), ...results]
-    : [NO_MATCHES_OPTION, toAnswerOption(fallback)];
+  const foundNothing = results.length === 0 && answers.every(({ value }) => value === DEFINE_VALUE);
+  const fallback = foundNothing ? toWebSearchItem(query) : undefined;
+  if (fallback === undefined) {
+    return [...answers.map(toAnswerOption), ...results];
+  }
+  const firstRows = answers.length === 0 ? [NO_MATCHES_OPTION] : answers.map(toAnswerOption);
+  return [...firstRows, toAnswerOption(fallback)];
 };
 
 const getActionSearchIcon = (query: string): string | undefined =>
@@ -195,6 +200,7 @@ const getActionSearchIcon = (query: string): string | undefined =>
     toTimeZoneItem(query),
     toDateItem(query),
     toAliasSearchItem(query),
+    toDictionaryItem(query),
   ].some((answer) => answer !== undefined)
     ? ACTIVE_SEARCH_ICON
     : undefined;

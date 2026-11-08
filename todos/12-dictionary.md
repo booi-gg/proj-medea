@@ -1,5 +1,7 @@
 # Dictionary
 
+**Status:** built. See "Dictionary" in doc/how-it-works.md. The definition opens on Enter, in `less`, because search rows are made on every keystroke and the longest entries run to 21,000 characters.
+
 **Effort:** medium
 
 ## What

@@ -1,15 +1,13 @@
-import { spawn } from "node:child_process";
-import { trackSpawn } from "../../log.ts";
-import { once } from "node:events";
 import { styleText } from "node:util";
 import { confirm, isCancel, select } from "@clack/prompts";
+import { showInPager } from "../../launcher/pager.ts";
 import { promptForSelection } from "../../launcher/prompt.ts";
 import type { LauncherOption } from "../../launcher/prompt.ts";
 import { drawScreen } from "../../launcher/screen.ts";
 import { rankByText } from "../../launcher/search.ts";
 import { fitToWidth, padToWidth, toSplitLayout } from "../../launcher/split-view.ts";
 import { isMenuBarRunning } from "../../menubar/helper.ts";
-import { UTF8_ENVIRONMENT, copyText, runCommand } from "../../shell.ts";
+import { copyText, runCommand } from "../../shell.ts";
 import { toRedhotIcon } from "../icon.ts";
 import type { LauncherItem, RedhotApp } from "../types.ts";
 import { formatAge, formatSize, toPreview, toPreviewLines, toSafeText } from "./format.ts";
@@ -133,25 +131,9 @@ const copyEntry = async (entry: ClipboardEntry): Promise<string> => {
   return `Copied ${describeEntry(entry, MENU_PREVIEW_LENGTH)}`;
 };
 
-// Less needs -R to show colours, which would also run any escape codes in the copied text. So
-// those are removed first, and only the highlighter's colours reach it.
-const viewText = async (text: string, highlight: Highlight): Promise<void> => {
-  const pager = trackSpawn(
-    spawn("less", ["-RS", "-Ps(q to go back)"], {
-      env: { ...UTF8_ENVIRONMENT, LESSCHARSET: "utf-8", LESSSECURE: "1" },
-      stdio: ["pipe", "inherit", "inherit"],
-    }),
-    "less",
-  );
-  // Quitting before less has read everything closes the pipe, which is fine.
-  pager.stdin.on("error", () => {});
-  pager.stdin.end(highlight(toSafeText(text)));
-  await once(pager, "close");
-};
-
 const viewEntry = async (entry: ClipboardEntry, highlight: Highlight): Promise<void> => {
   if (entry.kind === "text") {
-    await viewText(entry.text, highlight);
+    await showInPager(highlight(toSafeText(entry.text)));
     return;
   }
   await runCommand("open", [getImagePath(entry.hash)]);

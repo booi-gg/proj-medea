@@ -16,6 +16,15 @@ export const DEFAULT_LOG_MAX_SIZE_MB: LogMaxSizeMb = 50;
 export const WEB_SEARCH_ENGINE_CHOICES = ["google", "duckduckgo", "kagi"] as const;
 export type WebSearchEngine = (typeof WEB_SEARCH_ENGINE_CHOICES)[number];
 export const DEFAULT_WEB_SEARCH_ENGINE: WebSearchEngine = "google";
+export const DEFAULT_DEFINE_PHRASES: readonly string[] = [
+  "define",
+  "definition of",
+  "meaning of",
+  "what is",
+  "what's",
+  "what is the meaning of",
+  "what's the meaning of",
+];
 
 export interface Config {
   aliases: AliasMap;
@@ -28,6 +37,8 @@ export interface Config {
   recentProjects?: boolean;
   /** Off unless it's been turned on. */
   browserBookmarks?: boolean;
+  /** What's typed before a word to define it. Missing means the defaults, and empty means none. */
+  definePhrases?: string[];
 }
 
 const EMPTY_CONFIG: Config = { aliases: {}, hotkeys: {} };
@@ -81,7 +92,7 @@ export const parseConfig = (configText: string): Config => {
     const clipboardHistoryMonths = toHistoryMonths(parsed.clipboardHistoryMonths);
     const logMaxSizeMb = toLogMaxSizeMb(parsed.logMaxSizeMb);
     const webSearchEngine = toWebSearchEngine(parsed.webSearchEngine);
-    const { checkForUpdates, recentProjects, browserBookmarks } = parsed;
+    const { checkForUpdates, recentProjects, browserBookmarks, definePhrases } = parsed;
     return {
       aliases: parseAliasMap(parsed.aliases),
       hotkeys: parseHotkeyMap(parsed.hotkeys),
@@ -91,6 +102,7 @@ export const parseConfig = (configText: string): Config => {
       ...(webSearchEngine === undefined ? {} : { webSearchEngine }),
       ...(typeof recentProjects === "boolean" ? { recentProjects } : {}),
       ...(typeof browserBookmarks === "boolean" ? { browserBookmarks } : {}),
+      ...(isStringList(definePhrases) ? { definePhrases } : {}),
     };
   } catch {
     return EMPTY_CONFIG;

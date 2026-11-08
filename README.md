@@ -26,6 +26,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Units.** Type `5 km in miles`, `72 f to c` or `2 GB in MB`.
 - **Time zones.** Type `3pm PST in Tokyo` or `time in London`.
 - **Dates.** Type `days until dec 25` or `today + 90 days`.
+- **Dictionary.** Type `define serendipity`, `meaning of serendipity` or `what is serendipity` and press Enter to read the definition, using the dictionaries turned on in macOS's Dictionary app.
 - **Window actions.** Halves, quarters, thirds, maximize, center, restore and move to the next display, with optional Rectangle-style default hotkeys.
 - **iCloud Drive sync** (experimental). Share settings, quicklinks, snippets and logs between your Macs through a folder you pick, and choose which of them each Mac shares.
 - **Start at login,** so the shortcut and clipboard history survive a reboot.
@@ -262,6 +263,7 @@ Search `Settings` for:
 - **Web search**, which picks the engine used when search finds nothing and adds ready-made search quicklinks.
 - **Show recent projects in search**, off by default, for your VS Code, Cursor and Xcode projects.
 - **Show browser bookmarks in search**, off by default, for your Chrome, Arc, Brave and Edge bookmarks.
+- **Dictionary phrases**, a comma-separated list of what you can type before a word to define it.
 
 In Terminal.app, Redhot opens an 80×18 window from its own **Redhot** profile, which it copies from your default profile, so it keeps your colours and font. Change the default profile to change how Redhot looks, not the Redhot profile, which Redhot rewrites and tidies up after. `Cmd` + `=` makes the text bigger in an open window.
 

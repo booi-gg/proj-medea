@@ -1,6 +1,7 @@
 import { styleText } from "node:util";
 import { confirm, isCancel, select, spinner } from "@clack/prompts";
 import {
+  DEFAULT_DEFINE_PHRASES,
   DEFAULT_HISTORY_MONTHS,
   DEFAULT_LOG_MAX_SIZE_MB,
   DEFAULT_WEB_SEARCH_ENGINE,
@@ -38,6 +39,7 @@ import type { LoginItemState } from "../../menubar/login-item.ts";
 import { countEntriesToRemove, removeExpiredEntries } from "../redhot-clipboard-history/store.ts";
 import { toRedhotIcon } from "../icon.ts";
 import type { LauncherItem, RedhotApp } from "../types.ts";
+import { runDictionarySettings } from "../redhot-dictionary/settings.ts";
 import { WEB_SEARCH_ENGINES } from "../redhot-web-search/engines.ts";
 import { runWebSearchSettings } from "../redhot-web-search/settings.ts";
 
@@ -56,6 +58,7 @@ const RECENT_PROJECTS = "recent-projects";
 const RECENT_PROJECTS_LABEL = "Show recent projects in search";
 const BROWSER_BOOKMARKS = "browser-bookmarks";
 const BROWSER_BOOKMARKS_LABEL = "Show browser bookmarks in search";
+const DICTIONARY_PHRASES = "dictionary-phrases";
 const DONE = "done";
 const MONTHS_IN_YEAR = 12;
 const SYNC_CHOICES: readonly {
@@ -459,6 +462,7 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
       webSearchEngine = DEFAULT_WEB_SEARCH_ENGINE,
       recentProjects = false,
       browserBookmarks = false,
+      definePhrases = DEFAULT_DEFINE_PHRASES,
     },
     windowAccess,
     syncStatus,
@@ -498,8 +502,7 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
       },
       {
         value: WEB_SEARCH,
-        label: `Web search  ${WEB_SEARCH_ENGINES[webSearchEngine].name}`,
-        hint: "Used when search finds nothing",
+        label: `Web search ${WEB_SEARCH_ENGINES[webSearchEngine].name}`,
       },
       {
         value: RECENT_PROJECTS,
@@ -508,6 +511,11 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
       {
         value: BROWSER_BOOKMARKS,
         label: `${BROWSER_BOOKMARKS_LABEL}  ${browserBookmarks ? STATE_LABELS.on : STATE_LABELS.off}`,
+      },
+      {
+        value: DICTIONARY_PHRASES,
+        label: `Dictionary phrases  ${definePhrases.length}`,
+        hint: "What opens a definition in search",
       },
       { value: DONE, label: "Done" },
     ],
@@ -526,6 +534,9 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
   }
   if (choice === BROWSER_BOOKMARKS) {
     return chooseBrowserBookmarks(browserBookmarks);
+  }
+  if (choice === DICTIONARY_PHRASES) {
+    return runDictionarySettings();
   }
   if (choice === WINDOW_ACCESS) {
     return fixWindowAccess(windowAccess);

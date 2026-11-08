@@ -32,10 +32,10 @@ Run these before opening a pull request:
 ```sh
 pnpm typecheck
 pnpm test
-pnpm check      # format and lint with Oxfmt and Oxlint
+pnpm check      # format, lint and type-check with Vite+ (Oxfmt and Oxlint)
 ```
 
-`pnpm format` fixes most formatting problems. Don't silence a lint rule with a disable comment; change the code instead.
+The project uses the [Vite+](https://viteplus.dev) toolchain, installed with the other dev dependencies, and its settings live in `vite.config.ts`. `pnpm install` also sets up a pre-commit hook that runs `vp check --fix` on the files you're committing, so formatting is fixed and lint errors stop the commit. `pnpm format` fixes most formatting problems by hand. Don't silence a lint rule with a disable comment; change the code instead.
 
 ## How the code is laid out
 

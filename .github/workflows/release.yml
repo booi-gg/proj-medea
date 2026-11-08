@@ -28,13 +28,18 @@ jobs:
 
       - uses: pnpm/action-setup@v4
         with:
-          version: 10
+          version: 12
 
       - uses: actions/setup-node@v4
         with:
           node-version: 24
 
+      # The pre-commit hook is for people committing, not for this run.
       - run: pnpm install
+        env:
+          VP_GIT_HOOKS: "0"
+
+      - run: pnpm check
 
       - run: pnpm typecheck
 

@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+## 0.6.0
+
 ### Added
 
 - Web search: when search finds nothing, the row offers `Search Google for 'xyz'`, and Settings can switch that to DuckDuckGo or Kagi.

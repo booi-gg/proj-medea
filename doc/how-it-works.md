@@ -571,7 +571,7 @@ The third Redhot app. Search `Settings` for a list of toggles, where Enter flips
 
 Terminal keeps a dead window open after a program exits, showing `[Process completed]`, so Redhot closes its own.
 
-When Redhot ends, through the Exit command, its hotkey or **End program**, it shows "Ending program..." under the logo, and the window closes without asking. A window opened for one item closes with that item and shows no message.
+When Redhot ends, through the Exit command, its hotkey or **End program**, it shows "Ending program..." under the logo, and the window closes without asking. A window opened for one item closes with that item and shows the same message.
 
 - Launcher scripts set `REDHOT_WINDOW=1`, and only those windows can close. Running `pnpm start` in your own terminal never closes it.
 - The window is found while Node is alive and closed 0.6 seconds later, so Terminal doesn't ask about running processes.

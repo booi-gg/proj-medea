@@ -289,10 +289,8 @@ const runNextItem = async (value: string, session: Session): Promise<RoundResult
   const item = findRedhotItem(value);
   const tracked = (): Promise<string> => trackItem(session, value, run, item?.needsWindow);
   const notice = session.closeWhenDone ? await tracked() : await showErrorsAsNotice(tracked);
-  return {
-    keepRunning: !session.closeWhenDone || session.nextItem !== undefined,
-    notice,
-  };
+  const keepRunning = !session.closeWhenDone || session.nextItem !== undefined;
+  return keepRunning ? { keepRunning, notice } : endProgram();
 };
 
 // Anything but a list could hold unsaved typing, so there the window only comes to the front.

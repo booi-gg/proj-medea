@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+## 0.3.0
+
 ### Fixed
 
 - Windows opened by a hotkey or for an update no longer flash the file path first, and their title bar shows only Redhot.

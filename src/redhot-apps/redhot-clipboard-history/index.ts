@@ -18,9 +18,11 @@ import type { ImageWindow } from "./image-window.ts";
 import {
   clearEntries,
   getImagePath,
+  pinnedFirst,
   readEntries,
   removeEntry,
   removeExpiredEntries,
+  toggleEntryPin,
   watchEntries,
 } from "./store.ts";
 import type { ClipboardEntry, ImageEntry } from "./store.ts";
@@ -43,6 +45,10 @@ const COPY_IMAGE_SCRIPT = `on run argv
 end run`;
 // Terminals send the first, or the second when an app has asked for application cursor keys.
 const LEFT_ARROW_KEYS = ["\u001B[D", "\u001BOD"];
+const CTRL_P = "\u0010";
+const PIN_MARKER = styleText("yellow", "★");
+// The marker and the space after it.
+const PIN_MARKER_WIDTH = 2;
 const SCREEN_TITLE = { title: "Clipboard", icon: ICON };
 const COPY = "copy";
 const VIEW = "view";
@@ -67,14 +73,16 @@ const toSearchText = (entry: ClipboardEntry): string =>
     : `${entry.name ?? ""} ${toImageSizeLabel(entry)}`.trim();
 
 const toOption = (entry: ClipboardEntry, labelWidth: number, now: number): LauncherOption => {
-  const descriptionWidth = labelWidth - AGE_WIDTH;
+  const marker = entry.pinned === true ? `${PIN_MARKER} ` : "";
+  const markerWidth = entry.pinned === true ? PIN_MARKER_WIDTH : 0;
+  const descriptionWidth = labelWidth - AGE_WIDTH - markerWidth;
   const description = padToWidth(describeEntry(entry, descriptionWidth), descriptionWidth);
   const age = padToWidth(formatAge(entry.copiedAt, now), AGE_WIDTH - 1);
   return {
     value: entry.id,
     name: toSearchText(entry),
     aliases: [],
-    label: `${description} ${styleText("gray", age)}`,
+    label: `${marker}${description} ${styleText("gray", age)}`,
   };
 };
 
@@ -87,6 +95,8 @@ interface Round {
   /** A line to show when finished, or undefined to show the list again. */
   notice: string | undefined;
   query: string;
+  /** The entry to focus on the next round, because pinning or a new copy moves it. */
+  focus?: string | undefined;
 }
 
 // The list cuts a long name short, so the pane shows all of it above these.
@@ -147,9 +157,15 @@ const viewEntry = async (entry: ClipboardEntry, highlight: Highlight): Promise<v
   await runCommand("open", [getImagePath(entry.hash)]);
 };
 
+// Deleting everything is often for privacy, so it includes pins, and says so.
 const confirmDeleteAll = async (): Promise<boolean> => {
+  const entries = await readEntries();
+  const pinnedCount = entries.filter(({ pinned }) => pinned === true).length;
   const answer = await confirm({
-    message: "Delete all clipboard history?",
+    message:
+      pinnedCount === 0
+        ? "Delete all clipboard history?"
+        : `Delete all clipboard history, including ${pinnedCount} pinned?`,
     initialValue: false,
   });
   return answer === true;
@@ -203,8 +219,10 @@ const describeEmptyHistory = async (): Promise<string> =>
 const runHistoryRound = async (
   { highlight, imageWindow }: Screen,
   initialQuery: string,
+  initialFocus: string | undefined,
 ): Promise<Round> => {
-  const entries = await readEntries();
+  // Ranking keeps this order among matches, so pins stay on top while searching too.
+  const entries = pinnedFirst(await readEntries());
   if (entries.length === 0) {
     return { notice: await describeEmptyHistory(), query: "" };
   }
@@ -235,8 +253,13 @@ const runHistoryRound = async (
   const isImage = (entryId: string | undefined): boolean =>
     entries.some(({ id, kind }) => id === entryId && kind === "image");
 
+  let idToToggle: string | undefined;
+  // Saved here because closing the list clears focusedId. macOS can also report a save made just
+  // before the watch began, which would otherwise send the focus back to the top after a pin.
+  let focusAtChange: string | undefined;
   const historyChange = new AbortController();
   const stopWatching = watchEntries(() => {
+    focusAtChange = focusedId;
     historyChange.abort();
   });
   const { cancelled, value, wantsSettings, query } = await promptForSelection(
@@ -251,6 +274,7 @@ const runHistoryRound = async (
       signal: historyChange.signal,
       replaceable: true,
       initialQuery,
+      initialFocus,
       onFocus: (entryId) => {
         if (entryId !== focusedId) {
           focusedId = entryId;
@@ -273,12 +297,31 @@ const runHistoryRound = async (
             closedId = isImage(focusedId) ? focusedId : undefined;
           },
         },
+        {
+          keys: [CTRL_P],
+          hint: "^P",
+          getLabel: (entryId) => {
+            const focused = entries.find(({ id }) => id === entryId);
+            if (focused === undefined) {
+              return undefined;
+            }
+            return focused.pinned === true ? "unpin" : "pin";
+          },
+          run: () => {
+            idToToggle = focusedId;
+            historyChange.abort();
+          },
+        },
       ],
     },
   );
   stopWatching();
+  if (idToToggle !== undefined) {
+    await toggleEntryPin(idToToggle);
+    return { notice: undefined, query, focus: idToToggle };
+  }
   if (historyChange.signal.aborted) {
-    return { notice: undefined, query };
+    return { notice: undefined, query, focus: focusAtChange };
   }
   const entry = entries.find(({ id }) => id === value);
   if (cancelled || entry === undefined) {
@@ -293,9 +336,9 @@ const browseHistory = async (): Promise<string> => {
   const [highlight, imageWindow] = await Promise.all([createHighlighter(), openImageWindow()]);
   const screen = { highlight, imageWindow };
   try {
-    let round = await runHistoryRound(screen, "");
+    let round = await runHistoryRound(screen, "", undefined);
     while (round.notice === undefined) {
-      round = await runHistoryRound(screen, round.query);
+      round = await runHistoryRound(screen, round.query, round.focus);
     }
     return round.notice;
   } finally {

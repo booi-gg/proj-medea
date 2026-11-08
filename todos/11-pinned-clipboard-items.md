@@ -1,5 +1,7 @@
 # Pinned clipboard items
 
+**Status:** built. See "Pins" under "Clipboard history" in doc/how-it-works.md.
+
 **Effort:** small
 
 ## What

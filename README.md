@@ -239,6 +239,8 @@ Search for any of these and press Enter. Each can have its own alias or hotkey f
 
 Search `Clipboard` to see what you've copied, newest first. Type to filter, Enter copies an entry back, and Tab offers View, Delete and Delete all. Redhot copies rather than pastes, so switch back to your app and press `Cmd+V`.
 
+`Ctrl+P` pins the focused entry, and pressing it again unpins. Pinned entries are marked with ★, stay at the top of the list and don't expire. Delete and Delete all still remove them.
+
 History is kept for 3 months by default (Settings offers up to a year) and stays on your Mac. Redhot doesn't record content marked confidential or temporary, anything copied in Passwords or Keychain Access, or text over 100,000 characters. A password manager has to mark its copies for this to work.
 
 ### Window actions

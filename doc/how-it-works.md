@@ -639,6 +639,8 @@ A picked colour goes into `~/.config/redhot/redhot-colour-history.json`, newest 
 
 The second Redhot app. `Clipboard` lists what you've copied, newest first, before you type anything. Typing filters by exact text, not loose letters, because loose matching on long text matches nearly everything. Enter copies the entry back and returns to search. Tab offers Copy, View full text or Open image, Delete and Delete all, and Delete all asks first.
 
+**Pins.** `Ctrl+P` sets `pinned` on the focused entry, and pressing it again clears it. The key can't be a letter, because letters are search text. `pinnedFirst()` puts pins at the top when the list is drawn, not in the file, and ranking keeps that order among matches. Age-based expiry skips pins. Copying a pinned entry back records it again, so `addEntry()` carries the pin over to the new entry. The size limits below count pins first, so unpinned entries go before an old pin, and a pin is only lost if pins alone are over a limit. Delete all includes pins, because clearing history is often for privacy, and its question says how many.
+
 Redhot only copies, and doesn't paste into the app you were using, because sending Cmd+V to another app needs Accessibility permission. After choosing an entry, switch back and paste.
 
 **Preview.** The focused entry shows in a pane beside the list, built by `toSplitLayout()` and `joinColumns()` in `src/launcher/split-view.ts`. A window under 56 columns has no room, so it shows only the list.
@@ -651,7 +653,7 @@ Images aren't drawn in the terminal, because a terminal can only draw characters
 
 `emphasize` loads when the screen opens, not at startup, because the CLI also starts on every copy.
 
-**Staying current.** The list watches the history file and redraws as soon as anything is recorded, keeping what you've typed. Without this, a screen left open would show an old list, because Redhot's window stays alive between uses.
+**Staying current.** The list watches the history file and redraws as soon as anything is recorded, keeping what you've typed and the entry you're on. Without this, a screen left open would show an old list, because Redhot's window stays alive between uses.
 
 The logo stays on this screen like every other, which leaves an 80×24 window 11 rows for the list. The panes grow with the window.
 

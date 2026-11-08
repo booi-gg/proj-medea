@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { addEntry, keepRecentEntries, parseEntries, readPngSize, toImageName } from "./store.ts";
+import {
+  addEntry,
+  keepRecentEntries,
+  parseEntries,
+  pinnedFirst,
+  readPngSize,
+  toImageName,
+  togglePinned,
+} from "./store.ts";
 import type { ImageEntry, TextEntry } from "./store.ts";
 
 const toText = (text: string, copiedAt = 1): TextEntry => ({
@@ -132,6 +140,68 @@ test("a longer history keeps what a shorter one drops", () => {
   const entry = toText("old", monthsBefore(4));
   assert.deepEqual(keepRecentEntries([entry], 3, NOW), []);
   assert.deepEqual(keepRecentEntries([entry], 5, NOW), [entry]);
+});
+
+test("a pinned entry outlasts the history length", () => {
+  const pinned = { ...toText("pinned", monthsBefore(24)), pinned: true };
+  assert.deepEqual(keepRecentEntries([pinned], 3, NOW), [pinned]);
+});
+
+test("an unpinned entry expires as usual", () => {
+  const unpinned = { ...toText("unpinned", monthsBefore(4)), pinned: false };
+  assert.deepEqual(keepRecentEntries([unpinned], 3, NOW), []);
+});
+
+test("pinning and unpinning only changes the chosen entry", () => {
+  const other = toText("other", 2);
+  const pinned = togglePinned([other, first], first.id);
+  assert.deepEqual(pinned, [other, { ...first, pinned: true }]);
+  assert.deepEqual(togglePinned(pinned, first.id), [other, { ...first, pinned: false }]);
+});
+
+test("copying a pinned entry again keeps it pinned", () => {
+  const pinned = { ...toText("same", 1), pinned: true };
+  const again = toText("same", 2);
+  assert.deepEqual(addEntry([pinned], again), [{ ...again, pinned: true }]);
+});
+
+test("copying a pinned image again keeps its pin and its name", () => {
+  const pinned = { ...toImage("same", 1), name: "cat.png", pinned: true };
+  const again = toImage("same", 2);
+  assert.deepEqual(addEntry([pinned], again), [{ ...again, name: "cat.png", pinned: true }]);
+});
+
+test("a pinned entry isn't pushed out by the entry limit", () => {
+  const entries = Array.from({ length: 5000 }, (_, index) => toText(`text ${index}`, 5000 - index));
+  const oldestPinned = { ...toText("oldest", 0), pinned: true };
+  const newest = toText("newest", 6000);
+  const kept = addEntry([...entries.slice(0, -1), oldestPinned], newest);
+  assert.equal(kept.length, 5000);
+  assert.equal(kept[0], newest);
+  assert.equal(kept.at(-1), oldestPinned);
+});
+
+test("lists pinned entries first, each group still newest first", () => {
+  const newest = toText("newest", 4);
+  const newerPin = { ...toText("newer pin", 3), pinned: true };
+  const older = toText("older", 2);
+  const olderPin = { ...toImage("older pin", 1), pinned: true };
+  assert.deepEqual(pinnedFirst([newest, newerPin, older, olderPin]), [
+    newerPin,
+    olderPin,
+    newest,
+    older,
+  ]);
+});
+
+test("reads pins back, on text and images", () => {
+  const text = { ...first, pinned: true };
+  const image = { ...toImage("a"), pinned: true };
+  assert.deepEqual(parseEntries(JSON.stringify([text, image])), [text, image]);
+});
+
+test("ignores a pin that isn't true", () => {
+  assert.deepEqual(parseEntries(JSON.stringify([{ ...first, pinned: "yes" }])), [first]);
 });
 
 test("broken history reads as empty", () => {

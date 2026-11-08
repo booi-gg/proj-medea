@@ -31,6 +31,7 @@ export interface TextEntry {
   id: string;
   text: string;
   copiedAt: number;
+  pinned?: boolean;
 }
 
 export interface ImageEntry {
@@ -43,6 +44,7 @@ export interface ImageEntry {
   copiedAt: number;
   /** The file's name. A screenshot is only pixels, so it doesn't have one. */
   name?: string;
+  pinned?: boolean;
 }
 
 export type ClipboardEntry = TextEntry | ImageEntry;
@@ -51,9 +53,10 @@ const toEntry = (value: unknown): ClipboardEntry | undefined => {
   if (!isObject(value) || typeof value.id !== "string" || typeof value.copiedAt !== "number") {
     return undefined;
   }
-  const { id, copiedAt, text, hash, width, height, bytes, name } = value;
+  const { id, copiedAt, text, hash, width, height, bytes, name, pinned } = value;
+  const pin = pinned === true ? { pinned } : {};
   if (typeof text === "string") {
-    return { kind: "text", id, text, copiedAt };
+    return { kind: "text", id, text, copiedAt, ...pin };
   }
   const isImage =
     typeof hash === "string" &&
@@ -71,6 +74,7 @@ const toEntry = (value: unknown): ClipboardEntry | undefined => {
     height,
     bytes,
     copiedAt,
+    ...pin,
   };
   return typeof name === "string" ? { ...image, name } : image;
 };
@@ -144,10 +148,19 @@ const hasSameContent = (first: ClipboardEntry, second: ClipboardEntry): boolean 
   return first.kind === "image" && second.kind === "image" && first.hash === second.hash;
 };
 
+const isPinned = (entry: ClipboardEntry): boolean => entry.pinned === true;
+
+/** Pinned entries, then the rest, each still newest first. */
+export const pinnedFirst = (entries: readonly ClipboardEntry[]): ClipboardEntry[] => [
+  ...entries.filter(isPinned),
+  ...entries.filter((entry) => !isPinned(entry)),
+];
+
+// Pins are counted first, so an old pin only goes if pins alone are over a limit.
 const keepWithinLimits = (entries: readonly ClipboardEntry[]): ClipboardEntry[] => {
   let textLength = 0;
   let imageBytes = 0;
-  const kept = entries.filter((entry) => {
+  const fitting = pinnedFirst(entries).filter((entry) => {
     if (entry.kind === "text") {
       textLength += entry.text.length;
       return textLength <= MAX_TOTAL_TEXT_LENGTH;
@@ -155,7 +168,8 @@ const keepWithinLimits = (entries: readonly ClipboardEntry[]): ClipboardEntry[] 
     imageBytes += entry.bytes;
     return imageBytes <= MAX_TOTAL_IMAGE_BYTES;
   });
-  return kept.slice(0, MAX_ENTRIES);
+  const kept = new Set(fitting.slice(0, MAX_ENTRIES));
+  return entries.filter((entry) => kept.has(entry));
 };
 
 // Copying an image back out of Redhot leaves only its pixels, which must not lose the name it had.
@@ -172,6 +186,12 @@ const keepKnownName = (
     : entry;
 };
 
+// Enter copies an entry back, which records it again and must not unpin it.
+const keepKnownPin = (entry: ClipboardEntry, others: readonly ClipboardEntry[]): ClipboardEntry =>
+  others.some((other) => isPinned(other) && hasSameContent(other, entry))
+    ? { ...entry, pinned: true }
+    : entry;
+
 /** Newest first. Copying the same thing again moves it to the top instead of adding it twice. */
 export const addEntry = (
   entries: readonly ClipboardEntry[],
@@ -181,10 +201,14 @@ export const addEntry = (
     return [...entries];
   }
   const others = entries.filter((other) => !hasSameContent(other, entry));
-  return keepWithinLimits([keepKnownName(entry, entries), ...others]);
+  return keepWithinLimits([keepKnownPin(keepKnownName(entry, entries), entries), ...others]);
 };
 
-/** Entries copied within the last `months`, counted in calendar months. */
+/** Pins the entry with this id, or unpins it if it's already pinned. */
+export const togglePinned = (entries: readonly ClipboardEntry[], id: string): ClipboardEntry[] =>
+  entries.map((entry) => (entry.id === id ? { ...entry, pinned: !isPinned(entry) } : entry));
+
+/** Pinned entries, and any others copied within the last `months`, counted in calendar months. */
 export const keepRecentEntries = (
   entries: readonly ClipboardEntry[],
   months: HistoryMonths,
@@ -192,7 +216,7 @@ export const keepRecentEntries = (
 ): ClipboardEntry[] => {
   const oldestAllowed = new Date(now);
   oldestAllowed.setMonth(oldestAllowed.getMonth() - months);
-  return entries.filter((entry) => entry.copiedAt >= oldestAllowed.getTime());
+  return entries.filter((entry) => isPinned(entry) || entry.copiedAt >= oldestAllowed.getTime());
 };
 
 const readHistoryMonths = async (): Promise<HistoryMonths> => {
@@ -282,6 +306,12 @@ export const removeEntry = async (id: string): Promise<void> => {
   await withAction("clipboard.remove", {}, async () => {
     const entries = await readEntries();
     await writeEntries(entries.filter((entry) => entry.id !== id));
+  });
+};
+
+export const toggleEntryPin = async (id: string): Promise<void> => {
+  await withAction("clipboard.pin", {}, async () => {
+    await writeEntries(togglePinned(await readEntries(), id));
   });
 };
 

@@ -39,7 +39,7 @@ The main limit is speed and feel. A floating-panel launcher appears instantly, w
 
 ## Later ideas
 
-- **Clipboard history:** files, pinned entries, and choosing which apps to ignore.
+- **Clipboard history:** files, and choosing which apps to ignore.
 - **Window actions:** pressing a hotkey again to cycle sizes, gaps between windows, and larger and smaller. Drag-to-snap needs a global mouse tap and an overlay, so it's a project of its own.
 - **Alias plus search text:** typing an alias then a query, like `gh react`. Quicklinks now take input through a prompt after Enter, so this would fill their first argument straight from the search bar.
 

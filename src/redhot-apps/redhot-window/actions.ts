@@ -130,7 +130,7 @@ export const WINDOW_ACTIONS: readonly WindowAction[] = [
     command: "minimize",
     diagram: "▁▁▁",
     hint: "Sends the window to the Dock",
-    defaultHotkey: "ctrl+option+m",
+    defaultHotkey: "ctrl+option+x",
   },
   {
     id: "center",

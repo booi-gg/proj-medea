@@ -52,7 +52,7 @@ const fitEndToWidth = (text: string, width: number): string => {
 
 /** The name, with its shortened folder dimmed beside it, in this many columns. */
 export const toFileRow = (
-  { path, name }: FileResult,
+  { path, name, location }: FileResult,
   width: number,
   home: string = homedir(),
 ): string => {
@@ -62,6 +62,6 @@ export const toFileRow = (
   if (folderWidth <= 0) {
     return shownName;
   }
-  const folder = fitEndToWidth(toSafeName(toFolderLabel(path, home)), folderWidth);
+  const folder = fitEndToWidth(toSafeName(location ?? toFolderLabel(path, home)), folderWidth);
   return `${shownName}${COLUMN_GAP}${styleText("gray", folder)}`;
 };

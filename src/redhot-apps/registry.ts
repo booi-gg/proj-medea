@@ -1,5 +1,6 @@
 import { clipboardHistory } from "./redhot-clipboard-history/index.ts";
 import { files } from "./redhot-files/index.ts";
+import { folders } from "./redhot-folders/index.ts";
 import { hotkeyList } from "./redhot-hotkeys/index.ts";
 import { redhotLogs } from "./redhot-logs/index.ts";
 import { quicklinks } from "./redhot-quicklinks/index.ts";
@@ -13,6 +14,7 @@ const redhotApps: readonly RedhotApp[] = [
   quicklinks,
   scripts,
   files,
+  folders,
   clipboardHistory,
   windowActions,
   hotkeyList,

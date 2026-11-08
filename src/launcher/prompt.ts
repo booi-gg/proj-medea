@@ -272,6 +272,8 @@ export const promptForSelection = async (
   const prompt = new SearchPrompt({
     input,
     initialUserInput: initialQuery,
+    // With no text there's no change for the options callback to restore the focus on.
+    ...(initialFocus === undefined ? {} : { initialValue: [initialFocus] }),
     signal:
       signal === undefined ? replacement.signal : AbortSignal.any([signal, replacement.signal]),
     // rankItems has already chosen the results, so clack's own filter must not remove any.

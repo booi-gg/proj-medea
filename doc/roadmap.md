@@ -9,6 +9,7 @@ The goal is a keyboard launcher for macOS that runs as a CLI.
 | Global shortcut                   | Yes, built | Reportedly no permission, but some launchers ask for Accessibility for hotkeys, so confirm with a real key press |
 | Search and open apps              | Yes, built | Nothing special                                                                                                  |
 | Search files                      | Yes, built | Spotlight's index                                                                                                |
+| Search folders                    | Yes, built | Spotlight's index                                                                                                |
 | Search URLs                       | Yes        | Nothing special expected                                                                                         |
 | Quicklinks                        | Yes, built | Nothing special                                                                                                  |
 | Aliases and per-item settings     | Yes, built | Nothing special                                                                                                  |

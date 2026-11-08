@@ -77,9 +77,13 @@ src/
 │   │   ├── convert.ts    Parses input and converts through USD
 │   │   └── rates.ts      Reads and refreshes the local rates file
 │   ├── redhot-files/
-│   │   ├── index.ts      The Search Files screen, its keys and actions, and the f prefix
+│   │   ├── index.ts      The Search Files command and the f prefix
+│   │   ├── screen.ts     The search list, its keys and actions, shared with Search Folders
 │   │   ├── search.ts     Runs mdfind, filters and ranks what it finds
 │   │   └── format.ts     Row text: the name beside its shortened folder
+│   ├── redhot-folders/
+│   │   ├── index.ts      The Search Folders command and what counts as a folder result
+│   │   └── places.ts     Finder's usual places, like Downloads and Recents
 │   ├── redhot-clipboard-history/
 │   │   ├── index.ts      The history list and its actions
 │   │   ├── store.ts      Reads and saves history and image files
@@ -326,6 +330,7 @@ Settings is a menu: **Alias, Add**, **Hotkey, Create**, **Remove hotkey** (when 
 | Quicklink, Create    | Shows the form in the Redhot window                        |
 | Clipboard            | Shows the list in the Redhot window                        |
 | Search Files         | Shows the search in the Redhot window                      |
+| Search Folders       | Shows the search in the Redhot window                      |
 | A quicklink          | Opens it, through the Redhot window if it has `{argument}` |
 
 **Seeing them all.** `Hotkeys, Show All` lists everything with a saved hotkey, and `Window Hotkeys, Show All` lists every window action, including any with no hotkey. Each window action has a small diagram, a bracketed screen with the filled part showing where the window ends up, and a few words when a diagram can't show it. Enter runs the row and Tab opens its settings. The list stays open after running something, so you can try several in a row, and Esc goes back. It shows as many rows as the window has room for.
@@ -447,6 +452,16 @@ Its own screen, so app search never waits on Spotlight. Typing `f` and a space i
 **After an action.** The list opens again with the same text and results, focus on the file just used (`initialFocus`) and any message or failure above it. A window a hotkey opened closes instead, so nothing is left behind the file: the launcher tells the item through `run({ closesWhenDone })`.
 
 **Privacy.** `mdfind` is logged by program name only. Never the query or the results.
+
+## Folder search
+
+`Search Folders` is its own command, with its own item value (`redhot-folders:search`), and runs the same screen as file search (`runSearchScreen()`). It has no prefix, so give it an alias or hotkey to reach it quickly.
+
+**What's different from file search.** The Spotlight query adds `kMDItemContentType == "public.folder"`, which also leaves out app bundles. A result's own name is checked as well as the folders above it, or every project's `node_modules` and `.git` would be listed.
+
+**Places.** Finder's usual places are pinned through `createFileSearch({ pinned })`. They're all listed before anything is typed, and those whose names match are listed above Spotlight's results, so `Downloads` shows at once and can't be crowded out. A place Spotlight also finds is listed once. A place the Mac doesn't have is left out when the screen opens.
+
+**Recents.** Recents is a saved search, `myDocuments.cannedSearch` inside Finder.app, so it's only reachable as a place. It has no folder to reveal, copy or open in another app, so `hasRealPath()` hides those actions.
 
 ## Clipboard history
 

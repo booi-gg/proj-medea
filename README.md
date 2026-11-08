@@ -12,6 +12,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Quicklinks.** Save URLs, deeplinks or folders, with `{argument}` and `{clipboard}` placeholders.
 - **Script commands.** Turn any shell, Python or Node script into a search result, with arguments, output and hotkeys.
 - **File search.** Type `f`, a space and a file name to find it with Spotlight, then open it, reveal it in Finder or copy its path.
+- **Folder search.** Jump to Downloads, Documents, Recents or any folder in Finder.
 - **Clipboard history.** Text and images you copy, searchable, with a preview pane. Password managers and confidential copies are skipped.
 - **Calculator.** Type `2 * (4 + 1)` and press Enter to copy the answer.
 - **Currency conversion.** Type `356 USD to INR` or `$20 in €`. Rates are downloaded daily and work offline.
@@ -159,6 +160,12 @@ Type `f` and a space in search to switch to file search, or open `Search Files`,
 The list stays open after you open, reveal or copy something, with the cursor where it was, so you can act on several files in a row. A window opened by a hotkey closes once the file is open.
 
 The exact name comes first, then whatever you opened most recently. Redhot searches your home folder, iCloud Drive, `/Applications` and other drives, and skips `node_modules`, `Library`, hidden folders and the insides of apps. Results come from Spotlight, so a file Spotlight hasn't indexed won't show.
+
+### Folder search
+
+Open `Search Folders` to see Finder's usual places straight away: Recents, Downloads, Documents, Desktop, Home, iCloud Drive, Applications, Pictures, Movies and Music. Press Enter to open one in Finder, or type to find any other folder by name. Give it an alias or hotkey from its settings with Tab to get there quickly.
+
+The keys are the same as file search, and the same folders are skipped. Recents is a Finder view rather than a folder, so it can only be opened.
 
 ### Clipboard history
 

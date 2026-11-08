@@ -30,6 +30,8 @@ export interface FileResult {
   name: string;
   /** When the file was last opened, in milliseconds, or 0 when Spotlight doesn't know. */
   lastUsed: number;
+  /** Shown beside the name in place of its folder. */
+  location?: string;
 }
 
 /** Sends entries as Spotlight finds them, and resolves when it has stopped. */
@@ -70,6 +72,12 @@ export const parseEntry = (entry: string): FileResult | undefined => {
   return { path, name: basename(path), lastUsed: Number.isNaN(lastUsed) ? 0 : lastUsed };
 };
 
+/** A folder whose contents search leaves out: hidden, dependencies, Library, or an app's parts. */
+export const isSkippedFolder = (folder: string): boolean =>
+  (folder.startsWith(".") && folder !== ".") ||
+  SKIPPED_FOLDERS.has(folder) ||
+  BUNDLE_FOLDER.test(folder);
+
 /** Whether a path is somewhere people keep files. Only its folders count, so `.env` can be found. */
 export const isSearchablePath = (path: string, home: string = homedir()): boolean => {
   const homePrefix = `${home}${sep}`;
@@ -80,13 +88,7 @@ export const isSearchablePath = (path: string, home: string = homedir()): boolea
   const inHome = isUnderHome ? path.slice(homePrefix.length) : path;
   const inICloud = inHome.startsWith(ICLOUD_FOLDER);
   const relative = inICloud ? inHome.slice(ICLOUD_FOLDER.length) : inHome;
-  const folders = dirname(relative).split(sep);
-  return !folders.some(
-    (folder) =>
-      (folder.startsWith(".") && folder !== ".") ||
-      SKIPPED_FOLDERS.has(folder) ||
-      BUNDLE_FOLDER.test(folder),
-  );
+  return !dirname(relative).split(sep).some(isSkippedFolder);
 };
 
 // Spotlight ignores case and accents, and macOS often stores é as e plus a separate accent.
@@ -154,12 +156,20 @@ interface FileSearchOptions {
   find?: FindFiles;
   delayMs?: number;
   home?: string;
+  /** Turns the typed text into a Spotlight query, or undefined when there's nothing to search. */
+  toQuery?: (query: string) => string | undefined;
+  isSearchable?: (path: string, home: string) => boolean;
+  /** Listed above Spotlight's results when their names match, and all of them before any typing. */
+  pinned?: readonly FileResult[];
 }
 
 export const createFileSearch = ({
   find = findWithSpotlight,
   delayMs = SEARCH_DELAY_MS,
   home = homedir(),
+  toQuery = toSpotlightQuery,
+  isSearchable = isSearchablePath,
+  pinned = [],
 }: FileSearchOptions = {}): FileSearch => {
   let currentQuery = "";
   let results: FileResult[] = [];
@@ -194,7 +204,7 @@ export const createFileSearch = ({
       for (const entry of entries) {
         scanned += 1;
         const file = parseEntry(entry);
-        if (file !== undefined && isSearchablePath(file.path, home)) {
+        if (file !== undefined && isSearchable(file.path, home)) {
           kept.push(file);
         }
       }
@@ -223,7 +233,7 @@ export const createFileSearch = ({
     }
     currentQuery = next;
     stop();
-    const spotlightQuery = toSpotlightQuery(next);
+    const spotlightQuery = toQuery(next);
     if (spotlightQuery === undefined) {
       results = [];
       resultsQuery = "";
@@ -238,14 +248,15 @@ export const createFileSearch = ({
   // The last results stay up while the next ones load, narrowed so nothing listed contradicts
   // what's been typed.
   const getResults = (): readonly FileResult[] => {
-    if (resultsQuery === currentQuery) {
-      return results;
-    }
     const terms = toTerms(toComparable(currentQuery));
-    return results.filter(({ name }) => {
+    const matchesText = ({ name }: FileResult): boolean => {
       const comparable = toComparable(name);
       return terms.every((term) => comparable.includes(term));
-    });
+    };
+    const found = resultsQuery === currentQuery ? results : results.filter(matchesText);
+    const pinnedMatches = pinned.filter(matchesText);
+    const pinnedPaths = new Set(pinnedMatches.map(({ path }) => path));
+    return [...pinnedMatches, ...found.filter(({ path }) => !pinnedPaths.has(path))];
   };
 
   const setOnChange = (listener: (() => void) | undefined): void => {

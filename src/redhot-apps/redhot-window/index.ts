@@ -11,7 +11,8 @@ const OK_REPLY = "ok";
 const ADD_HOTKEYS_ID = "add-default-hotkeys";
 const SHOW_HOTKEYS_ID = "show-hotkeys";
 const SHOW_HOTKEYS_NAME = "Window Hotkeys, Show All";
-const NO_HELPER_MESSAGE = "Window actions need the menu bar item. Use Add Menu Bar Item first";
+const NO_HELPER_MESSAGE =
+  'Window actions need the menu bar item. Use Add "Redhot" to Menu Bar first';
 
 // The keys are the helper's replies, from WindowFailure in native/WindowManager.swift.
 const FAILURE_MESSAGES: Record<string, string> = {

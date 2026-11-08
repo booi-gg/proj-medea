@@ -12,7 +12,7 @@ import type { AppMenu } from "./menu.ts";
 const APP_ID = "redhot-menu-items";
 const SEARCH_ID = "search";
 const NAME = "Search Menu Items";
-const ICON = toRedhotIcon("☰");
+const ICON = toRedhotIcon("≡");
 const FOOTER = "↵ run";
 const TURNED_OFF_FOOTER = "↵ try anyway, it looks turned off";
 const FALLBACK_COLUMNS = 80;

@@ -393,21 +393,21 @@ Settings is a menu: **Alias, Add**, **Hotkey, Create**, **Remove hotkey** (when 
 
 **Pressing a hotkey.** An item saved as a path is an app, and opens directly through `open <path>` without starting Node. A window action also runs in the helper. Anything else runs `node src/start.js run <value>`:
 
-| Command              | Hotkey does                                                |
-| -------------------- | ---------------------------------------------------------- |
-| Exit                 | Quits the open search window                               |
-| Alias, Add           | Opens Redhot                                               |
-| Hotkey, Create       | Opens Redhot                                               |
-| Remove Menu Bar Item | Stops the helper, which also ends all hotkeys              |
-| Quicklink, Create    | Shows the form in the Redhot window                        |
-| Clipboard            | Shows the list in the Redhot window                        |
-| Search Files         | Shows the search in the Redhot window                      |
-| Search Folders       | Shows the search in the Redhot window                      |
-| Search Menu Items    | Shows the search in the Redhot window                      |
-| Kill Process or Port | Shows the list in the Redhot window                        |
-| Restart, Shut Down   | Asks in the Redhot window first                            |
-| Log Out              | Asks in the Redhot window first                            |
-| A quicklink          | Opens it, through the Redhot window if it has `{argument}` |
+| Command                       | Hotkey does                                                |
+| ----------------------------- | ---------------------------------------------------------- |
+| Exit                          | Quits the open search window                               |
+| Alias, Add                    | Opens Redhot                                               |
+| Hotkey, Create                | Opens Redhot                                               |
+| Remove "Redhot" from Menu Bar | Stops the helper, which also ends all hotkeys              |
+| Quicklink, Create             | Shows the form in the Redhot window                        |
+| Clipboard                     | Shows the list in the Redhot window                        |
+| Search Files                  | Shows the search in the Redhot window                      |
+| Search Folders                | Shows the search in the Redhot window                      |
+| Search Menu Items             | Shows the search in the Redhot window                      |
+| Kill Process or Port          | Shows the list in the Redhot window                        |
+| Restart, Shut Down            | Asks in the Redhot window first                            |
+| Log Out                       | Asks in the Redhot window first                            |
+| A quicklink                   | Opens it, through the Redhot window if it has `{argument}` |
 
 **Seeing them all.** `Hotkeys, Show All` lists everything with a saved hotkey, and `Window Hotkeys, Show All` lists every window action, including any with no hotkey. Each window action has a small diagram, a bracketed screen with the filled part showing where the window ends up, and a few words when a diagram can't show it. Enter runs the row and Tab opens its settings. The list stays open after running something, so you can try several in a row, and Esc goes back. It shows as many rows as the window has room for.
 
@@ -825,7 +825,7 @@ When Redhot ends, through the Exit command, its hotkey or **End program**, it sh
 
 ## Stopping
 
-`pnpm menubar:stop`, or "Remove Menu Bar Item" in the search prompt, finds the helper with `pgrep` and sends it a kill signal. Exit in the menu makes the helper exit by itself. Either way, the icon and shortcut go away.
+`pnpm menubar:stop`, or `Remove "Redhot" from Menu Bar` in the search prompt, finds the helper with `pgrep` and sends it a kill signal. Exit in the menu makes the helper exit by itself. Either way, the icon and shortcut go away.
 
 ## Known limits
 

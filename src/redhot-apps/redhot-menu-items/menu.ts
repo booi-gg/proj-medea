@@ -10,7 +10,7 @@ const NO_APP_REPLY = "no-app";
 const OLD_HELPER_REPLY = "bad-command";
 const PATH_KEY_SEPARATOR = "\0";
 const NO_HELPER_MESSAGE =
-  "Searching menus needs the menu bar item. Use Add Menu Bar Item, or restart it if it's on";
+  'Searching menus needs the menu bar item. Use Add "Redhot" to Menu Bar, or restart it if it\'s on';
 const NO_ACCESS_MESSAGE = "Turn on redhot-status under Accessibility, then try again";
 const NO_APP_MESSAGE = "There's no other app to search yet. Switch to one, then come back";
 const UNREADABLE_MESSAGE = "The menu couldn't be read";

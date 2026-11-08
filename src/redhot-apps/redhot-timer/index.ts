@@ -9,7 +9,7 @@ const APP_ID = "redhot-timer";
 export const TIMER_VALUE = `${APP_ID}:start`;
 const ICON = toRedhotIcon("◔");
 const POMODORO_SECONDS = 25 * 60;
-const NO_HELPER_MESSAGE = "Timers need the menu bar item. Use Add Menu Bar Item first";
+const NO_HELPER_MESSAGE = 'Timers need the menu bar item. Use Add "Redhot" to Menu Bar first';
 const OLD_HELPER_MESSAGE = "The menu bar item is out of date. Run redhot restart, then try again";
 
 // The keys are the helper's replies, from native/Countdown.swift.

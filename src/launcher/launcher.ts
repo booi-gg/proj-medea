@@ -137,8 +137,8 @@ const doNothing = async (): Promise<void> => {};
 const buildCommandItems = (menuBarRunning: boolean): LauncherItem[] => [
   // One value for both states, so an alias survives the item switching between them.
   menuBarRunning
-    ? toCommandItem("command:menu-bar", "Remove Menu Bar Item", stop)
-    : toCommandItem("command:menu-bar", "Add Menu Bar Item", start),
+    ? toCommandItem("command:menu-bar", 'Remove "Redhot" from Menu Bar', stop)
+    : toCommandItem("command:menu-bar", 'Add "Redhot" to Menu Bar', start),
   toCommandItem(SET_ALIAS_VALUE, ADD_ALIAS_LABEL, doNothing),
   toCommandItem(CREATE_HOTKEY_VALUE, CREATE_HOTKEY_LABEL, doNothing),
   toCommandItem(EXIT_VALUE, "Exit", doNothing),

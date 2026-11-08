@@ -94,7 +94,7 @@ const tellApp = (
 const lockScreen = async ({ askHelper }: SystemTools): Promise<string> => {
   const reply = await askHelper(LOCK_REQUEST);
   if (reply === undefined) {
-    throw new Error("Lock Screen needs the menu bar item. Use Add Menu Bar Item first");
+    throw new Error('Lock Screen needs the menu bar item. Use Add "Redhot" to Menu Bar first');
   }
   if (reply === BAD_COMMAND_REPLY) {
     throw new Error("Lock Screen needs a newer menu bar item. Run redhot restart, then try again");
@@ -112,7 +112,7 @@ const openEmojiPicker = async ({ askHelper, isInTerminal }: SystemTools): Promis
     isInTerminal ? EMOJI_PICKER_PREVIOUS_APP_REQUEST : EMOJI_PICKER_FRONT_APP_REQUEST,
   );
   if (reply === undefined) {
-    throw new Error("Emoji Picker needs the menu bar item. Use Add Menu Bar Item first");
+    throw new Error('Emoji Picker needs the menu bar item. Use Add "Redhot" to Menu Bar first');
   }
   if (reply === BAD_COMMAND_REPLY) {
     throw new Error("Emoji Picker needs a newer menu bar item. Run redhot restart, then try again");

@@ -323,7 +323,7 @@ const fixWindowAccess = async (access: WindowAccess): Promise<string> => {
     return "Window actions are ready";
   }
   if (access === "no-helper") {
-    return "Use Add Menu Bar Item first, then come back";
+    return 'Use Add "Redhot" to Menu Bar first, then come back';
   }
   await askForWindowAccess();
   return "Turn on redhot-status under Accessibility, then come back";

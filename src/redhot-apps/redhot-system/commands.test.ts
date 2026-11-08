@@ -127,7 +127,7 @@ test("lock screen says what to do when the helper can't help", async () => {
     ...toTools().tools,
     askHelper: () => Promise.resolve(undefined),
   };
-  await assert.rejects(runSystemCommand(lock, noHelper, decline), /Add Menu Bar Item/u);
+  await assert.rejects(runSystemCommand(lock, noHelper, decline), /Add "Redhot" to Menu Bar/u);
   await assert.rejects(
     runSystemCommand(lock, toTools({}, "bad-command").tools, decline),
     /redhot restart/u,
@@ -157,7 +157,7 @@ test("the emoji picker says what to do when the helper can't open it", async () 
     ...toTools().tools,
     askHelper: () => Promise.resolve(undefined),
   };
-  await assert.rejects(runSystemCommand(picker, noHelper, decline), /Add Menu Bar Item/u);
+  await assert.rejects(runSystemCommand(picker, noHelper, decline), /Add "Redhot" to Menu Bar/u);
   await assert.rejects(
     runSystemCommand(picker, toTools({}, "bad-command").tools, decline),
     /redhot restart/u,

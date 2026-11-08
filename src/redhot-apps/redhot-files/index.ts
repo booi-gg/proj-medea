@@ -1,3 +1,4 @@
+import { styleText } from "node:util";
 import { autocomplete, isCancel, select } from "@clack/prompts";
 import { listApps } from "../../launcher/apps.ts";
 import { promptForSelection } from "../../launcher/prompt.ts";
@@ -71,7 +72,7 @@ const askForApp = async (): Promise<string | undefined> => {
   return isCancel(choice) ? undefined : choice;
 };
 
-/** Returns a line to show when finished, or undefined to go back to the list. */
+/** Returns a line to show when it's done, or undefined when it was cancelled. */
 const runFileAction = async (action: FileAction, path: string): Promise<string | undefined> => {
   if (action === OPEN) {
     await runOpen([path]);
@@ -107,11 +108,45 @@ const askForAction = async ({ name }: FileResult): Promise<FileAction | undefine
   return isCancel(choice) ? undefined : choice;
 };
 
-interface Round {
-  /** A line to show when finished, or undefined to show the list again. */
-  notice: string | undefined;
+/** What the list shows when it opens. */
+interface ListState {
   query: string;
+  notice: string;
+  focusedPath: string | undefined;
 }
+
+interface Round extends ListState {
+  /** False to show the list again with this state. */
+  isFinished: boolean;
+}
+
+/** The list stays up after an action, unless the window is about to close with it. */
+const runActionRound = async (
+  action: FileAction,
+  path: string,
+  query: string,
+  closesWhenDone: boolean,
+): Promise<Round> => {
+  const backToList = (notice: string): Round => ({
+    isFinished: false,
+    notice,
+    query,
+    focusedPath: path,
+  });
+  try {
+    const notice = await runFileAction(action, path);
+    if (notice === undefined || !closesWhenDone) {
+      return backToList(notice ?? "");
+    }
+    return { ...backToList(notice), isFinished: true };
+  } catch (error) {
+    // A window that's closing shows this as it exits. Otherwise it goes above the results.
+    if (closesWhenDone) {
+      throw error;
+    }
+    return backToList(styleText("red", error instanceof Error ? error.message : String(error)));
+  }
+};
 
 interface PressedKey {
   action: FileAction;
@@ -126,8 +161,12 @@ const toOption = (file: FileResult, labelWidth: number): LauncherOption => ({
 });
 
 /** Shows the list once. */
-const runSearchRound = async (search: FileSearch, initialQuery: string): Promise<Round> => {
-  drawScreen(SCREEN_TITLE);
+const runSearchRound = async (
+  search: FileSearch,
+  { query: initialQuery, notice, focusedPath: initialFocus }: ListState,
+  closesWhenDone: boolean,
+): Promise<Round> => {
+  drawScreen({ ...SCREEN_TITLE, notice });
   const labelWidth = (process.stdout.columns ?? FALLBACK_COLUMNS) - ROW_MARGIN;
   // The prompt clears its focus as it closes, so a key has to note the path when it's pressed.
   let focusedPath: string | undefined;
@@ -150,6 +189,7 @@ const runSearchRound = async (search: FileSearch, initialQuery: string): Promise
       // Spotlight has already matched and the search has ranked, so the order stands.
       rank: (_query, options) => [...options],
       initialQuery,
+      initialFocus,
       replaceable: true,
       enterLabel: OPEN,
       settingsLabel: "actions",
@@ -172,34 +212,32 @@ const runSearchRound = async (search: FileSearch, initialQuery: string): Promise
     },
   );
   if (pressedKey?.path !== undefined) {
-    return { notice: await runFileAction(pressedKey.action, pressedKey.path), query };
+    return runActionRound(pressedKey.action, pressedKey.path, query, closesWhenDone);
   }
   if (cancelled) {
-    return { notice: "", query };
+    return { isFinished: true, notice: "", query, focusedPath: undefined };
   }
   // Enter with nothing listed has nothing to open, so the search carries on.
   const file = search.getResults().find(({ path }) => path === value);
   if (file === undefined) {
-    return { notice: undefined, query };
+    return { isFinished: false, notice: "", query, focusedPath: undefined };
   }
-  if (!wantsSettings) {
-    return { notice: await runFileAction(OPEN, file.path), query };
+  const action = wantsSettings ? await askForAction(file) : OPEN;
+  if (action === undefined) {
+    return { isFinished: false, notice: "", query, focusedPath: file.path };
   }
-  const action = await askForAction(file);
-  return {
-    notice: action === undefined ? undefined : await runFileAction(action, file.path),
-    query,
-  };
+  return runActionRound(action, file.path, query, closesWhenDone);
 };
 
 /** Opens the search screen, starting from this text when the launcher's prefix brought us here. */
-export const runFileSearch = async (initialQuery = ""): Promise<string> => {
+export const runFileSearch = async (initialQuery = "", closesWhenDone = false): Promise<string> => {
   const search = createFileSearch();
   search.setQuery(initialQuery);
   try {
-    let round = await runSearchRound(search, initialQuery);
-    while (round.notice === undefined) {
-      round = await runSearchRound(search, round.query);
+    const firstState = { query: initialQuery, notice: "", focusedPath: undefined };
+    let round = await runSearchRound(search, firstState, closesWhenDone);
+    while (!round.isFinished) {
+      round = await runSearchRound(search, round, closesWhenDone);
     }
     return round.notice;
   } finally {
@@ -214,7 +252,7 @@ const searchItem: LauncherItem = {
   kind: "Command",
   hint: "Find files by name with Spotlight",
   needsWindow: true,
-  run: () => runFileSearch(),
+  run: (context) => runFileSearch("", context?.closesWhenDone),
 };
 
 export const files: RedhotApp = {

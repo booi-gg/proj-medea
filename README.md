@@ -156,6 +156,8 @@ Type `f` and a space in search to switch to file search, or open `Search Files`,
 | Tab      | Lists these actions, along with Open With… |
 | Esc      | Goes back to search                        |
 
+The list stays open after you open, reveal or copy something, with the cursor where it was, so you can act on several files in a row. A window opened by a hotkey closes once the file is open.
+
 The exact name comes first, then whatever you opened most recently. Redhot searches your home folder, iCloud Drive, `/Applications` and other drives, and skips `node_modules`, `Library`, hidden folders and the insides of apps. Results come from Spotlight, so a file Spotlight hasn't indexed won't show.
 
 ### Clipboard history

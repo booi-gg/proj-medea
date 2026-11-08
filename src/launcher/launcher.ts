@@ -274,18 +274,18 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
   return { keepRunning: true, notice: nextNotice };
 };
 
-const runItemByValue = async (value: string): Promise<string> => {
+const runItemByValue = async (value: string, closesWhenDone: boolean): Promise<string> => {
   const item = findRedhotItem(value);
   if (item === undefined) {
     throw new Error(`Unknown item "${value}".`);
   }
-  return item.run();
+  return item.run({ closesWhenDone });
 };
 
 /** Runs the item a hotkey asked for. A window that closes with it shows errors as it exits. */
 const runNextItem = async (value: string, session: Session): Promise<RoundResult> => {
   session.nextItem = undefined;
-  const run = (): Promise<string> => runItemByValue(value);
+  const run = (): Promise<string> => runItemByValue(value, session.closeWhenDone);
   const item = findRedhotItem(value);
   const tracked = (): Promise<string> => trackItem(session, value, run, item?.needsWindow);
   const notice = session.closeWhenDone ? await tracked() : await showErrorsAsNotice(tracked);

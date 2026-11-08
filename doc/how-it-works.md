@@ -444,6 +444,8 @@ Its own screen, so app search never waits on Spotlight. Typing `f` and a space i
 
 **Keys.** Terminals don't pass Cmd, so reveal and copy are `Ctrl+R` and `Ctrl+P`, sent through `extraKeys`. They end the list through its abort signal and note the path when pressed, because the prompt clears its focus as it closes.
 
+**After an action.** The list opens again with the same text and results, focus on the file just used (`initialFocus`) and any message or failure above it. A window a hotkey opened closes instead, so nothing is left behind the file: the launcher tells the item through `run({ closesWhenDone })`.
+
 **Privacy.** `mdfind` is logged by program name only. Never the query or the results.
 
 ## Clipboard history

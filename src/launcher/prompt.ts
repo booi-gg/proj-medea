@@ -78,6 +78,8 @@ export interface SelectionDisplay {
   /** True when nothing is lost by leaving, so a hotkey may switch this list for its own item. */
   replaceable?: boolean;
   initialQuery?: string;
+  /** The result to focus when the list opens with initialQuery, instead of the top one. */
+  initialFocus?: string | undefined;
   /** Replaces the search arrow when the query activates a special action. */
   getSearchIcon?: (query: string) => string | undefined;
 }
@@ -239,6 +241,7 @@ export const promptForSelection = async (
     signal,
     replaceable = false,
     initialQuery = "",
+    initialFocus,
     getSearchIcon,
   }: SelectionDisplay = {},
 ): Promise<Selection> => {
@@ -249,6 +252,7 @@ export const promptForSelection = async (
   let focusedValue: string | undefined;
   // Clack reads the options once while it's being built, before the first text is in place.
   let isOpen = false;
+  let focusToRestore = initialFocus;
   const input = new PassThrough();
 
   const runExtraKey = (keys: string): boolean => {
@@ -276,8 +280,10 @@ export const promptForSelection = async (
       // Clack keeps focus on the old item while it stays listed. Enter must pick the top result.
       if (this.userInput !== lastQuery) {
         lastQuery = this.userInput;
-        this.focusedValue = undefined;
+        const isOpeningText = isOpen && this.userInput === initialQuery;
+        this.focusedValue = isOpeningText ? focusToRestore : undefined;
         if (isOpen) {
+          focusToRestore = undefined;
           onQueryChange?.(this.userInput);
         }
       }

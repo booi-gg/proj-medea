@@ -1,3 +1,8 @@
+export interface RunContext {
+  /** True when the window closes as soon as this item finishes, like one a hotkey opened. */
+  closesWhenDone: boolean;
+}
+
 export interface LauncherItem {
   /** Saved aliases and hotkeys use this, so it must not change. Apps use "<app id>:<item id>". */
   value: string;
@@ -13,7 +18,7 @@ export interface LauncherItem {
   /** Replaces the list's key hints while this item is focused. */
   footer?: string;
   /** Resolves to a line to show above the search bar, or "" for none. */
-  run: () => Promise<string>;
+  run: (context?: RunContext) => Promise<string>;
 }
 
 export interface SettingsAction {

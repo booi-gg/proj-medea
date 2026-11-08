@@ -3,6 +3,13 @@ import { renderBanner } from "./banner.ts";
 import { APP_NAME } from "../paths.ts";
 import { readSyncStatusSync } from "../sync/sync.ts";
 import type { SyncStatus } from "../sync/sync.ts";
+import stringWidth from "string-width";
+
+const EMOJI_STYLE_MARK = "\uFE0F";
+
+/** Columns Terminal moves for this text. It ignores the mark that asks for emoji style. */
+export const toTerminalWidth = (text: string): number =>
+  stringWidth(text.replaceAll(EMOJI_STYLE_MARK, ""));
 
 export interface ScreenTitle {
   title: string;

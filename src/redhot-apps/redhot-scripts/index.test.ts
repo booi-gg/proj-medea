@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { stripVTControlCharacters } from "node:util";
 import stringWidth from "string-width";
-import { scripts, toFileName, toScriptRow, toScriptTemplate } from "./index.ts";
+import { toTerminalWidth } from "../../launcher/screen.ts";
+import { scripts, toFileName, toIcon, toScriptRow, toScriptTemplate } from "./index.ts";
 import { parseScriptCommand } from "./parse.ts";
 
 test("names a new script after its title without overwriting another", () => {
@@ -56,4 +57,21 @@ test("search lists the create, show all and open folder commands", () => {
   for (const name of ["Script, Create", "Scripts, Show All", "Scripts, Open Folder"]) {
     assert.ok(names.includes(name));
   }
+});
+
+test("every emoji icon takes two columns in Terminal, so the title keeps its gap", () => {
+  for (const icon of ["⏱️", "⏹️", "🗑", "🖥", "🖥️", "☕️", "😴", "🔋"]) {
+    assert.equal(toTerminalWidth(toIcon(icon)), 2, icon);
+  }
+});
+
+test("rows line up with icons Terminal measures differently", () => {
+  const widths = ["😴", "⏱️", "🗑", "☕️"].map((icon) =>
+    toTerminalWidth(toPlainRow(toIcon(icon), "Sleep", "System")),
+  );
+  assert.equal(new Set(widths).size, 1);
+});
+
+test("an image path or a missing icon falls back to the script symbol", () => {
+  assert.equal(toIcon("images/docker.png"), toIcon(undefined));
 });

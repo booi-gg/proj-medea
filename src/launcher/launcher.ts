@@ -1,6 +1,5 @@
 import { styleText } from "node:util";
 import { select } from "@clack/prompts";
-import stringWidth from "string-width";
 import { readConfigSync } from "../config.ts";
 import { start, stop } from "../menubar/commands.ts";
 import { toRedhotIcon } from "../redhot-apps/icon.ts";
@@ -20,7 +19,7 @@ import { formatHotkey } from "./hotkeys.ts";
 import { ADD_ALIAS_LABEL, CREATE_HOTKEY_LABEL, runItemSettings } from "./item-settings.ts";
 import { closeReplaceableList, promptForSelection } from "./prompt.ts";
 import type { LauncherOption } from "./prompt.ts";
-import { drawScreen } from "./screen.ts";
+import { drawScreen, toTerminalWidth } from "./screen.ts";
 import { rankItems } from "./search.ts";
 
 const TITLE_COLUMN_WIDTH = 40;
@@ -63,7 +62,7 @@ const formatRow = (
   const symbols = formatHotkey(hotkey);
   const plainParts = [name, tags, symbols].filter((part) => part !== "");
   // Measured on screen, so a wide emoji icon or name doesn't push the kind out of line.
-  const usedWidth = stringWidth(plainParts.join(" ")) + stringWidth(icon) - 1;
+  const usedWidth = toTerminalWidth(plainParts.join(" ")) + toTerminalWidth(icon) - 1;
   const padding = " ".repeat(Math.max(1, TITLE_COLUMN_WIDTH - usedWidth));
   const styledParts = [
     name,

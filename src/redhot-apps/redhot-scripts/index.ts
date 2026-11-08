@@ -6,7 +6,7 @@ import { confirm, isCancel, log, password, select, spinner, text } from "@clack/
 import stringWidth from "string-width";
 import { formatHotkey } from "../../launcher/hotkeys.ts";
 import type { HotkeyEntry } from "../../launcher/hotkey-list.ts";
-import { drawScreen } from "../../launcher/screen.ts";
+import { drawScreen, toTerminalWidth } from "../../launcher/screen.ts";
 import { scriptsDir } from "../../paths.ts";
 import { runCommand } from "../../shell.ts";
 import { toRedhotIcon } from "../icon.ts";
@@ -35,19 +35,27 @@ const NON_WORD = /[^a-z0-9]+/gu;
 const EDGE_DASHES = /^-+|-+$/gu;
 // An emoji or a single symbol. Image paths and URLs can't be drawn in a terminal.
 const MAX_ICON_WIDTH = 2;
+const PICTOGRAPH = /\p{Extended_Pictographic}/u;
 
 const toValue = (id: string): string => `${APP_ID}:${id}`;
 // Under its own prefix, so a script file named "create" can't take the create command's value.
 const toScriptValue = (script: Script): string => toValue(`script/${script.id}`);
 
-const toIcon = (icon: string | undefined): string => {
+/**
+ * Some emoji, like ⏱️ and 🗑, are drawn two columns wide while Terminal only moves one, so they'd
+ * cover the space after them. One more space keeps a gap before the title.
+ */
+export const toIcon = (icon: string | undefined): string => {
   const isDrawable =
     icon !== undefined &&
     !icon.includes("/") &&
     !icon.includes(".") &&
     stringWidth(icon) > 0 &&
     stringWidth(icon) <= MAX_ICON_WIDTH;
-  return isDrawable ? icon : SCRIPT_ICON;
+  if (!isDrawable) {
+    return SCRIPT_ICON;
+  }
+  return PICTOGRAPH.test(icon) && toTerminalWidth(icon) === 1 ? `${icon} ` : icon;
 };
 
 const needsWindow = (script: Script): boolean =>
@@ -168,13 +176,13 @@ const toItem = (script: Script): LauncherItem => ({
 /** Cuts text to a width on screen, then pads it, so wide emoji and long titles keep columns straight. */
 const fitToWidth = (text: string, width: number): string => {
   let fitted = text;
-  if (stringWidth(fitted) > width) {
-    while (stringWidth(`${fitted}${ELLIPSIS}`) > width) {
+  if (toTerminalWidth(fitted) > width) {
+    while (toTerminalWidth(`${fitted}${ELLIPSIS}`) > width) {
       fitted = fitted.slice(0, -1);
     }
     fitted = `${fitted}${ELLIPSIS}`;
   }
-  return `${fitted}${" ".repeat(Math.max(0, width - stringWidth(fitted)))}`;
+  return `${fitted}${" ".repeat(Math.max(0, width - toTerminalWidth(fitted)))}`;
 };
 
 export const toScriptRow = (

@@ -7,7 +7,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 ### Changed
 
 - Several items can now share an alias.
-- In Terminal.app, the search window opens straight into Redhot at 80×14, without the `Last login` line or the launcher path flashing first.
+- `redhot` stops with a clear message on Windows and Linux, even when an install got past the `os` check.
+- In Terminal.app, the search window opens straight into Redhot at 80×18, without the `Last login` line or the launcher path flashing first.
 
 ## 0.1.0
 

@@ -52,15 +52,8 @@ const extractProfile = async (
  * the file must come out the same every time. Terminal also writes its settings late, so a saved
  * Redhot profile read back here can be out of date, which is why it's never the starting point.
  */
-const copyDefaultProfile = async (
-  preferencesPath: string,
-  profilePath: string,
-): Promise<void> => {
-  await runCommand("defaults", [
-    "export",
-    TERMINAL_PREFERENCES,
-    preferencesPath,
-  ]);
+const copyDefaultProfile = async (preferencesPath: string, profilePath: string): Promise<void> => {
+  await runCommand("defaults", ["export", TERMINAL_PREFERENCES, preferencesPath]);
   const { stdout } = await runCommand("plutil", [
     "-extract",
     "Default Window Settings",
@@ -84,39 +77,18 @@ const setProfileValue = async (
  * .command file starts a login shell first, which prints "Last login" and types the launcher's
  * path before Redhot can clear the screen. Returns the profile's path.
  */
-export const writeTerminalProfile = async (
-  launcherPath: string,
-): Promise<string> => {
+export const writeTerminalProfile = async (launcherPath: string): Promise<string> => {
   // One folder per launcher, so two windows opening at once never share a file.
-  const profileDir = join(
-    dirname(launcherPath),
-    "terminal",
-    basename(launcherPath, ".command"),
-  );
+  const profileDir = join(dirname(launcherPath), "terminal", basename(launcherPath, ".command"));
   const profilePath = join(profileDir, PROFILE_FILE);
   const preferencesPath = join(profileDir, "preferences.plist");
   await mkdir(profileDir, { recursive: true });
   try {
     await copyDefaultProfile(preferencesPath, profilePath);
-    await setProfileValue(
-      profilePath,
-      "columnCount",
-      "-integer",
-      String(WINDOW_COLUMNS),
-    );
-    await setProfileValue(
-      profilePath,
-      "rowCount",
-      "-integer",
-      String(WINDOW_ROWS),
-    );
+    await setProfileValue(profilePath, "columnCount", "-integer", String(WINDOW_COLUMNS));
+    await setProfileValue(profilePath, "rowCount", "-integer", String(WINDOW_ROWS));
     await setProfileValue(profilePath, "name", "-string", PROFILE_NAME);
-    await setProfileValue(
-      profilePath,
-      "CommandString",
-      "-string",
-      launcherPath,
-    );
+    await setProfileValue(profilePath, "CommandString", "-string", launcherPath);
     await setProfileValue(profilePath, "RunCommandAsShell", "-bool", "YES");
   } catch {
     await writeFile(profilePath, toMinimalProfile(launcherPath));

@@ -93,7 +93,7 @@ Search `Settings` for:
 
 Choose your terminal from the menu bar icon under **Set Terminal**.
 
-In Terminal.app, Redhot opens an 80×14 window from its own **Redhot** profile, which it copies from your default profile, so it keeps your colours and font. Change the default profile to change how Redhot looks, not the Redhot profile, which Redhot rewrites. `Cmd` + `=` makes the text bigger in an open window.
+In Terminal.app, Redhot opens an 80×18 window from its own **Redhot** profile, which it copies from your default profile, so it keeps your colours and font. Change the default profile to change how Redhot looks, not the Redhot profile, which Redhot rewrites. `Cmd` + `=` makes the text bigger in an open window.
 
 ## Permissions
 

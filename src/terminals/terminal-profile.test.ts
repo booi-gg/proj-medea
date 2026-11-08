@@ -21,6 +21,6 @@ test("the fallback profile is a valid plist that runs the launcher as the shell"
     CommandString: "/a & b/open-redhot.command",
     RunCommandAsShell: true,
     columnCount: 80,
-    rowCount: 14,
+    rowCount: 18,
   });
 });

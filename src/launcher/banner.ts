@@ -33,9 +33,14 @@ const mixGradient = (amount: number): Rgb => [
   mixChannel(GRADIENT_START[2], GRADIENT_END[2], amount),
 ];
 
+const characterSegmenter = new Intl.Segmenter();
+
+const splitCharacters = (text: string): string[] =>
+  Array.from(characterSegmenter.segment(text), ({ segment }) => segment);
+
 /** Every column gets its own colour, so the fade is smooth. */
 const paintSmoothGradient = (row: string): string =>
-  [...row]
+  splitCharacters(row)
     .map((character, column) => {
       const amount = column / (LOGO_WIDTH - 1);
       return `${toRgbCode(mixGradient(amount))}${character}`;

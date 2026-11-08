@@ -95,9 +95,10 @@ Search `Script, Create` to start one: Redhot writes a template and opens it in y
 # @redhot.icon 🔪
 # @redhot.argument1 { "type": "text", "placeholder": "port" }
 
-pid=$(lsof -ti tcp:"$1")
-[ -z "$pid" ] && { echo "Nothing on port $1"; exit 1; }
-kill "$pid" && echo "Stopped process $pid on port $1"
+# -sTCP:LISTEN matches only the server, not programs connected to it, like your browser.
+pids=$(lsof -ti tcp:"$1" -sTCP:LISTEN | xargs)
+[ -z "$pids" ] && { echo "Nothing listening on port $1"; exit 1; }
+kill $pids && echo "Stopped process $pids on port $1"
 ```
 
 Search `kill`, press Enter, type `3000`, and Redhot shows "Stopped process 41522 on port 3000".
@@ -130,6 +131,17 @@ A few things to know:
 - Scripts find Homebrew's tools: Redhot adds `/opt/homebrew/bin` and `/usr/local/bin` to the `PATH`, which is otherwise bare in a Terminal window opened without a shell.
 - A hotkey runs a script without opening a window when it asks nothing, and shows the last line as a notification.
 - Redhot never logs a script's arguments or output.
+
+If you want to add a Raycast script, Redhot can run those too. Download one from the [script-commands collection](https://github.com/raycast/script-commands/tree/HEAD/commands) (MIT licensed) into the scripts folder and make it executable:
+
+```sh
+mkdir -p ~/.config/redhot/scripts
+cd ~/.config/redhot/scripts
+curl -fsSLO https://raw.githubusercontent.com/raycast/script-commands/HEAD/commands/system/battery-info.sh
+chmod +x battery-info.sh
+```
+
+Read a script before you add it, because it runs with your user's full access. Files with `.template.` in the name need editing first, and some scripts need other tools installed. Redhot isn't affiliated with Raycast.
 
 ### Clipboard history
 

@@ -21,7 +21,7 @@ const KILL_PORT = `#!/bin/bash
 # @redhot.argument1 { "type": "text", "placeholder": "port" }
 # @redhot.needsConfirmation true
 
-kill $(lsof -ti tcp:"$1")
+kill $(lsof -ti tcp:"$1" -sTCP:LISTEN)
 `;
 
 test("reads a script command", () => {

@@ -44,7 +44,11 @@ const main = async (): Promise<void> => {
     const { runLauncher } = await import("./launcher/launcher.ts");
     // Node saves the cache on a clean exit, and closing the window isn't one.
     flushCompileCache();
+    // Runs beside search, so it never holds up the first screen.
+    const { repairTerminalProfiles } = await import("./terminals/profile-repair.ts");
+    const profileRepair = repairTerminalProfiles();
     await runLauncher();
+    await profileRepair;
     return;
   }
   if (command === "show") {

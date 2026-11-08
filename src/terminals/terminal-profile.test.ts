@@ -23,6 +23,16 @@ test("the fallback profile is a valid plist that runs the launcher as the shell"
     RunCommandAsShell: true,
     columnCount: 80,
     rowCount: 18,
+    WindowTitle: "Redhot",
+    ShowActiveProcessInTitle: false,
+    ShowActiveProcessArgumentsInTitle: false,
+    ShowCommandKeyInTitle: false,
+    ShowDimensionsInTitle: false,
+    ShowShellCommandInTitle: false,
+    ShowTTYNameInTitle: false,
+    ShowRepresentedURLInTitle: false,
+    ShowRepresentedURLPathInTitle: false,
+    ShowWindowSettingsNameInTitle: false,
   });
 });
 

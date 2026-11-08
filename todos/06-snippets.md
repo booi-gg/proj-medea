@@ -1,5 +1,7 @@
 # Snippets with text expansion
 
+**Status:** built, and expansion in other apps still needs testing by a person. See "Snippets" in the README and doc/how-it-works.md. Left out: Enter in search copies a snippet and doesn't paste it into the app behind Redhot.
+
 **Effort:** medium to large · **Roadmap:** "Snippets are still to do"
 
 ## What

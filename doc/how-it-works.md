@@ -108,6 +108,11 @@ src/
 │   │   └── run.ts        Runs a script and cleans up its output
 │   ├── redhot-settings/
 │   │   └── index.ts      The Settings screen
+│   ├── redhot-snippets/
+│   │   ├── index.ts      Search items, settings actions and telling the helper about changes
+│   │   ├── store.ts      Reads and saves redhot-snippets.json, and checks keywords
+│   │   ├── placeholders.ts Fills {date}, {time}, {clipboard} and {cursor} for a copy
+│   │   └── form.ts       The create and edit prompts
 │   ├── redhot-system/
 │   │   ├── index.ts      Search items and the question before Restart, Shut Down and Log Out
 │   │   ├── commands.ts   The system commands and what each one runs
@@ -147,6 +152,8 @@ native/
 ├── HelperSocket.swift    Answers requests from the CLI
 ├── WindowManager.swift   Finds and moves windows through the Accessibility API
 ├── WindowGeometry.swift  Works out frames, with no system calls
+├── SnippetMatcher.swift  Finds a typed keyword and fills placeholders, with no system calls
+├── SnippetExpander.swift Watches the keyboard and replaces a keyword with its snippet
 ├── HotkeyRecorder.swift  The window that records a hotkey
 └── ImagePreview.swift    The floating window that shows clipboard images
 doc/                      These docs
@@ -437,6 +444,31 @@ These rows aren't registered as a Redhot app. Like the calculator's answer, each
 **An alias and some text.** `findAliasSearch()` splits what's typed at the first space and looks for a quicklink with that alias and exactly one question. Named arguments that share a value count as one. It's an answer, so it goes above ordinary results, and the search arrow turns red to show it's active. When several quicklinks share an alias, the first in the file wins. The `f` and `port` prefixes are checked first, so an alias of `f` can't be used this way.
 
 **Ready-made quicklinks.** Settings adds them as ordinary quicklinks, which can be edited, deleted and synced like any other. One already saved under the same name or link isn't offered. `addQuicklink()` resolves to the new ID so the alias can be saved against it.
+
+## Snippets
+
+`Snippet, Create` asks for a name, an optional keyword and the text, which can run over several lines. Snippets are stored in `~/.config/redhot/redhot-snippets.json` and appear in search with a `¶` icon. The item value is `redhot-snippets:<id>`, and aliases and hotkeys work as they do for quicklinks. Snippets stay on each Mac and aren't synced.
+
+**From search.** Enter fills the placeholders and copies the result. Like clipboard history, it doesn't paste, because Redhot's own window is in front.
+
+**Placeholders.** `{date}` is `yyyy-MM-dd` and `{time}` is `HH:mm`, both local. A fixed format is what lets TypeScript and Swift give the same answer. Each side has its own short version: the copy has to work with no helper running, and expansion can't wait for Node to start, because anything typed in that gap would land in the wrong place. They fill in one pass, so a `{date}` inside the copied text stays as it is. `{cursor}` is dropped from a copy.
+
+**Expansion.** The helper reads the same JSON file at startup and when the CLI sends `snippets reload`.
+
+1. `SnippetExpander` creates a `CGEventTap` only while a keyword exists and `AXIsProcessTrusted()` is true. It's rechecked every 5 seconds, so granting the permission needs no restart. It's also removed when the permission goes away, because a tap left behind can stop the keyboard working.
+2. The tap runs on its own thread, so a busy main thread can't slow typing in every app. It's an active tap that changes nothing, because a listen-only one would need Input Monitoring too.
+3. `SnippetMatcher` keeps only the last few characters, as many as the longest keyword needs. Backspace removes one. A click, an app switch, Cmd or Ctrl, and keys like the arrows, Return and Esc clear it, because whatever comes next may not be next to what came before.
+4. When a keyword completes, the rest runs on a queue while typing is ignored: the keyword is deleted with backspaces, the snippet goes on the clipboard, Cmd+V is sent, and `{cursor}` is reached with left arrows, counted in the characters a person sees. After 300 ms the old clipboard goes back, unless something new was copied. Both clipboard writes carry `org.nspasteboard.TransientType`, so clipboard history records neither.
+
+**Keywords.** They're matched exactly, as soon as the last character is typed. The form refuses one that starts another, because the shorter would always win. One starting with a letter or number needs a non-word character before it, so `btw` can't fire inside `subtwo`.
+
+**The form.** It sends `snippets pause` while open, or retyping an existing keyword would expand it there. The pause runs out after 5 minutes, so a crashed CLI can't leave expansion off.
+
+**Password fields.** While secure input is on, the tap sees no keys, and the matcher is cleared so nothing typed before can complete a keyword after. A field that only declares itself through Accessibility, with the `AXSecureTextField` subrole, is checked before anything is deleted. Either way it fails quietly. A terminal password prompt looks like normal typing unless Terminal's Secure Keyboard Entry is on.
+
+**Privacy.** `snippet.expand` logs that it ran and how long it took. Typed text, keywords and snippet text are never logged.
+
+**Limits.** Cmd+V and backspace are sent by US keyboard position, like hotkeys, so a layout such as Dvorak would need Cmd+V looked up. Input methods aren't detected, so a word-style keyword could fire on letters that are being composed, which a keyword starting with punctuation avoids.
 
 ## Script commands
 

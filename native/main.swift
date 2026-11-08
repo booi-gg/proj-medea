@@ -32,6 +32,14 @@ let clipboardWatcher = ClipboardWatcher(pasteboard: .general) { clip in
 }
 clipboardWatcher.start()
 
+// The CLI writes this file, in paths.ts, and asks for a reload over the socket after each change.
+let snippetExpander = SnippetExpander(
+  path: FileManager.default.homeDirectoryForCurrentUser
+    .appendingPathComponent(".config/redhot/redhot-snippets.json")
+    .path
+)
+snippetExpander.start()
+
 // The CLI sends this signal after saving a hotkey, so it works without a restart.
 signal(SIGUSR1, SIG_IGN)
 let reloadSignal = DispatchSource.makeSignalSource(signal: SIGUSR1, queue: .main)
@@ -45,7 +53,7 @@ let helperSocket = HelperSocket(
     .appendingPathComponent("helper.sock")
     .path,
   onRequest: { request, reply in
-    if let answer = NoticePanel.shared.answer(request) {
+    if let answer = NoticePanel.shared.answer(request) ?? snippetExpander.answer(request) {
       reply(answer)
     } else {
       windows.answer(request, reply: reply)

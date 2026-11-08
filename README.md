@@ -10,6 +10,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Aliases.** Give any app or command up to two short names, like `code` for Visual Studio Code.
 - **Hotkeys.** Bind any app, command, quicklink or window action to a global shortcut.
 - **Quicklinks.** Save URLs, deeplinks or folders, with `{argument}` and `{clipboard}` placeholders.
+- **Snippets.** Save text and type a keyword like `;addr` in any app to replace it, or search for a snippet and copy it.
 - **Web search.** When nothing matches, search Google, DuckDuckGo or Kagi. Type an alias and some text, like `yt lofi`, to search with a quicklink.
 - **Script commands.** Turn any shell, Python or Node script into a search result, with arguments, output and hotkeys.
 - **File search.** Type `f`, a space and a file name to find it with Spotlight, then open it, reveal it in Finder or copy its path.
@@ -95,6 +96,21 @@ When nothing matches what you typed, search offers one row, `Search Google for '
 A quicklink can act as a search engine too. Give one with a single question an alias, then type the alias, a space and your search: `gh redhot` fills it in and opens the link without asking. A quicklink that asks more than one question opens and asks as usual.
 
 **Web search** in Settings also adds ready-made quicklinks for GitHub (`gh`), YouTube (`yt`), Google (`g`), Wikipedia (`wiki`), npm (`npm`) and Stack Overflow (`so`). Anything you've already saved isn't offered, and if an alias is taken the link is added without it.
+
+### Snippets
+
+Search `Snippet, Create` and give it a name, the text and, if you like, a keyword. Enter on a snippet in search copies it. Tab has Edit and Delete.
+
+Typing a keyword in any app replaces it with the snippet. That needs the menu bar item and Accessibility permission, which Redhot asks for when you save your first keyword. Your clipboard is put back afterwards. Expansion doesn't happen in password fields.
+
+| Placeholder   | Result                                                          |
+| ------------- | --------------------------------------------------------------- |
+| `{date}`      | Today, like `2026-11-08`                                        |
+| `{time}`      | The time, like `09:05`                                          |
+| `{clipboard}` | The clipboard text                                              |
+| `{cursor}`    | Where the cursor ends up after expanding. Left out when copying |
+
+A keyword that starts with a letter or number only expands at the start of a word, so `btw` won't fire inside `subtwo`. One that starts with punctuation, like `;addr`, expands anywhere.
 
 ### Script commands
 
@@ -270,6 +286,7 @@ redhot sync [now|status|open]
 | ---------------------------------------------- | ----------------------------------------------- |
 | `~/.config/redhot/config.json`                 | Aliases, hotkeys and settings                   |
 | `~/.config/redhot/redhot-quicklinks.json`      | Quicklinks                                      |
+| `~/.config/redhot/redhot-snippets.json`        | Snippets                                        |
 | `~/.config/redhot/scripts/`                    | Your script commands                            |
 | `~/.config/redhot/redhot-clipboard-history*`   | Clipboard history and its images                |
 | `~/Library/Application Support/Redhot/`        | The compiled helper, launcher script and socket |

@@ -12,6 +12,8 @@ export const helperSourcePaths = [
   "WindowGeometry.swift",
   "WindowManager.swift",
   "ScreenLock.swift",
+  "SnippetMatcher.swift",
+  "SnippetExpander.swift",
   "NoticePanel.swift",
   "Log.swift",
 ].map((name) => join(projectDir, "native", name));
@@ -38,6 +40,7 @@ export const helperSocketPath = join(buildDir, "helper.sock");
 export const configDir = join(homedir(), ".config", "redhot");
 export const configPath = join(configDir, "config.json");
 export const quicklinksPath = join(configDir, "redhot-quicklinks.json");
+export const snippetsPath = join(configDir, "redhot-snippets.json");
 export const scriptsDir = join(configDir, "scripts");
 export const syncStatePath = join(configDir, "sync-state.json");
 export const syncOutboxDir = join(configDir, "sync-outbox");

@@ -4,6 +4,13 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+### Fixed
+
+- In Terminal.app, the search window failed with `Command not found: .../Library/Application` in 0.1.1, because the installed launcher's folder has a space in its name.
+- Running Redhot from a checkout and an installed copy on the same Mac no longer adds `Redhot 1`, `Redhot 2` and so on to Terminal's profiles. The checkout uses its own `Redhot Dev` profile.
+
+## 0.1.1
+
 ### Changed
 
 - Several items can now share an alias.

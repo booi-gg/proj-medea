@@ -19,7 +19,7 @@ export const imagePreviewSourcePath = join(projectDir, "native", "ImagePreview.s
 // An installed copy can't write to its own folder, which may be root-owned and is replaced on every
 // upgrade. A checkout keeps its own .build, so testing it never touches the installed copy.
 // start.js repeats this, because it can't import a .ts file.
-const isInstalled = projectDir.split(sep).includes("node_modules");
+export const isInstalled = projectDir.split(sep).includes("node_modules");
 export const buildDir = isInstalled
   ? join(homedir(), "Library", "Application Support", "Redhot")
   : join(projectDir, ".build");

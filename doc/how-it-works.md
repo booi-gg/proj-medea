@@ -465,7 +465,7 @@ A link can have up to 3 arguments. Values are percent-encoded when the link star
 
 These rows aren't registered as a Redhot app. Like the calculator's answer, each comes from what's typed, so it has no saved value for an alias or hotkey to point at, and Tab does the same as Enter.
 
-**The fallback.** `rankWithAnswers()` adds `toWebSearchItem()` only when there are no answers and no results. Loose matching finds something for most short text, so the row mostly appears for longer searches. The engine is `webSearchEngine` in `config.json`. It stays on each Mac, like log size and update checks, so it isn't synced.
+**The fallback.** `rankWithAnswers()` adds `toWebSearchItem()` only when there are no answers and no results. It goes under a `No results` line, an option marked `isInert`, so focus starts there and it takes the down arrow and then Enter to search. An inert line shows no focus marker, and the prompt's `validate` refuses Enter on it, so a stray Enter can't send what was typed to a search engine. Tab is refused the same way. Loose matching finds something for most short text, so the row mostly appears for longer searches. The engine is `webSearchEngine` in `config.json`. It stays on each Mac, like log size and update checks, so it isn't synced.
 
 **An alias and some text.** `findAliasSearch()` splits what's typed at the first space and looks for a quicklink with that alias and exactly one question. Named arguments that share a value count as one. It's an answer, so it goes above ordinary results, and the search arrow turns red to show it's active. When several quicklinks share an alias, the first in the file wins. The `f` and `port` prefixes are checked first, so an alias of `f` can't be used this way.
 

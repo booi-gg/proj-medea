@@ -46,6 +46,14 @@ const PICK_ITEM_PLACEHOLDER = "Choose an app or command";
 const APP_ICON = styleText("white", "◆");
 const COMMAND_ICON = toRedhotIcon("⌘");
 const ACTIVE_SEARCH_ICON = toRedhotIcon("❯");
+const NO_MATCHES_OPTION: LauncherOption = {
+  value: "command:no-matches",
+  name: "",
+  aliases: [],
+  label: "No results",
+  footer: "↓ search the web",
+  isInert: true,
+};
 
 type GetItems = () => LauncherItem[];
 
@@ -157,8 +165,15 @@ const toAnswerItems = (query: string): LauncherItem[] => {
   ].filter((item) => item !== undefined);
 };
 
-// Answers come from the query, so they go above ordinary search results. Nothing typed is wasted:
-// when there's no answer and no result, the web is offered instead.
+const toAnswerOption = (item: LauncherItem): LauncherOption => ({
+  ...item,
+  aliases: [],
+  label: formatRow(item, [], ""),
+});
+
+// Answers come from the query, so they go above ordinary search results. When there's no answer and
+// no result, the web is offered a row down from where focus starts, so a stray Enter can't send what
+// was typed to a search engine.
 export const rankWithAnswers = (
   query: string,
   options: readonly LauncherOption[],
@@ -167,14 +182,9 @@ export const rankWithAnswers = (
   const answers = toAnswerItems(query);
   const isEmpty = answers.length === 0 && results.length === 0;
   const fallback = isEmpty ? toWebSearchItem(query) : undefined;
-  return [
-    ...[...answers, ...(fallback === undefined ? [] : [fallback])].map((item) => ({
-      ...item,
-      aliases: [],
-      label: formatRow(item, [], ""),
-    })),
-    ...results,
-  ];
+  return fallback === undefined
+    ? [...answers.map(toAnswerOption), ...results]
+    : [NO_MATCHES_OPTION, toAnswerOption(fallback)];
 };
 
 const getActionSearchIcon = (query: string): string | undefined =>

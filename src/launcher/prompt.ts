@@ -25,6 +25,10 @@ const REDRAW_KEY = "\u0018";
 // Never typed, so the options always count as changed.
 const REFRESH_TEXT = "\0";
 const NO_RESULTS_TEXT = "No results";
+// Sets a line of text apart from the result under it.
+const INERT_ROW_GAP = "\n";
+// Clack only needs this to be something. It's never shown.
+const NOT_CHOOSABLE = "not-choosable";
 
 export interface LauncherOption {
   value: string;
@@ -33,6 +37,8 @@ export interface LauncherOption {
   label: string;
   /** Replaces the list's key hints while this result is focused. */
   footer?: string;
+  /** A line of text and not a result. Focus can rest here, showing no marker, and Enter does nothing. */
+  isInert?: boolean;
 }
 
 export interface Selection {
@@ -137,6 +143,9 @@ const renderRows = (
 ): string[] => {
   const firstVisible = Math.max(0, cursor - maxRows + 1);
   return results.slice(firstVisible, firstVisible + maxRows).map((item) => {
+    if (item.isInert === true) {
+      return `    ${styleText("dim", item.label)}${INERT_ROW_GAP}`;
+    }
     const isFocused = item === results[cursor];
     return isFocused ? `  ${FOCUS_ICON} ${item.label}` : `    ${styleText("dim", item.label)}`;
   });
@@ -250,6 +259,7 @@ export const promptForSelection = async (
   let lastQuery = initialQuery;
   let wantsSettings = false;
   let focusedValue: string | undefined;
+  let isFocusInert = false;
   // Clack reads the options once while it's being built, before the first text is in place.
   let isOpen = false;
   let focusToRestore = initialFocus;
@@ -278,6 +288,8 @@ export const promptForSelection = async (
       signal === undefined ? replacement.signal : AbortSignal.any([signal, replacement.signal]),
     // rankItems has already chosen the results, so clack's own filter must not remove any.
     filter: () => true,
+    // Refusing here also covers Enter arriving in one read with the text typed before it.
+    validate: () => (isFocusInert ? NOT_CHOOSABLE : undefined),
     options() {
       // Clack keeps focus on the old item while it stays listed. Enter must pick the top result.
       if (this.userInput !== lastQuery) {
@@ -301,6 +313,7 @@ export const promptForSelection = async (
       }
       const focused = this.filteredOptions[this.cursor];
       focusedValue = focused?.value;
+      isFocusInert = focused?.isInert === true;
       onFocus?.(focusedValue);
       const searchBar = renderSearchBar(
         this.userInput,
@@ -325,7 +338,8 @@ export const promptForSelection = async (
   const stopReadingKeys = readKeysInto(
     input,
     () => {
-      wantsSettings = true;
+      // The Enter that follows is refused, so it mustn't count against the next one.
+      wantsSettings = !isFocusInert;
     },
     runExtraKey,
   );

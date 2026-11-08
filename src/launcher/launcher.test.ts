@@ -13,7 +13,15 @@ const SAFARI: LauncherOption = {
 
 test("search offers the web only when nothing matches", () => {
   const values = rankWithAnswers("zzqxqzx wvvkj", [SAFARI]).map(({ value }) => value);
-  assert.deepEqual(values, [WEB_SEARCH_FALLBACK_VALUE]);
+  assert.ok(values.includes(WEB_SEARCH_FALLBACK_VALUE));
+});
+
+test("with no matches focus starts on a line Enter can't run, with the web one row down", () => {
+  const [first, second] = rankWithAnswers("zzqxqzx wvvkj", [SAFARI]);
+  assert.equal(first?.isInert, true);
+  assert.equal(first?.footer, "↓ search the web");
+  assert.equal(second?.value, WEB_SEARCH_FALLBACK_VALUE);
+  assert.notEqual(second?.isInert, true);
 });
 
 test("search keeps the web out of the way when something matches", () => {

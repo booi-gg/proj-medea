@@ -95,7 +95,7 @@ For example, `https://github.com/search?q={query}` asks for a search term and op
 
 ### Web search
 
-When nothing matches what you typed, search offers one row, `Search Google for 'xyz'`, and Enter opens it in your browser. Choose DuckDuckGo or Kagi instead under **Web search** in Settings.
+When nothing matches what you typed, search says `No results` and offers `Search Google for 'xyz'` below it. Press the down arrow and then Enter to open it in your browser. Choose DuckDuckGo or Kagi instead under **Web search** in Settings.
 
 A quicklink can act as a search engine too. Give one with a single question an alias, then type the alias, a space and your search: `gh redhot` fills it in and opens the link without asking. A quicklink that asks more than one question opens and asks as usual.
 

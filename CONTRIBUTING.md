@@ -76,6 +76,6 @@ Run `pnpm release` on `main` with a clean working tree when you're ready to ship
 | Anything else, like `fix:` or `update:`                | 0.1.3 → 0.1.4 |
 | Only `docs:`, `test:`, `ci:`, `style:` or `chore:`     | No release    |
 
-It renames "Unreleased" in the changelog to the new version, commits `chore(release): bump version 0.1.3 -> 0.1.4` and tags it `v0.1.4`. Then run `git push --follow-tags` and `npm publish`. Pushes to `main` only run the checks in [.github/workflows/ci.yml](.github/workflows/ci.yml), so CI never adds commits of its own.
+It renames "Unreleased" in the changelog to the new version, commits `chore(release): bump version 0.1.3 -> 0.1.4`, tags it `v0.1.4`, pushes both and runs `npm publish`. If the publish fails, fix the problem and run `npm publish` again. Pushes to `main` only run the checks in [.github/workflows/ci.yml](.github/workflows/ci.yml), so CI never adds commits of its own.
 
 By contributing, you agree that your work is released under the [MIT License](LICENSE) and that you'll follow the [Code of Conduct](CODE_OF_CONDUCT.md).

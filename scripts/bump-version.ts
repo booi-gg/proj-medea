@@ -127,7 +127,10 @@ const main = (): void => {
   git(["commit", "--all", "--message", `${RELEASE_SUBJECT} ${current} -> ${next}`]);
   // Annotated, because git push --follow-tags skips lightweight tags.
   git(["tag", "--annotate", `v${next}`, "--message", `v${next}`]);
-  process.stdout.write(`Released ${next}. Next: git push --follow-tags, then npm publish.\n`);
+  git(["push", "--follow-tags"]);
+  // Inherits the terminal, so npm can ask for a login or one-time password.
+  execFileSync("npm", ["publish"], { stdio: "inherit" });
+  process.stdout.write(`Released ${next}.\n`);
 };
 
 if (import.meta.main) {

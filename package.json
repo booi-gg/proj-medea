@@ -1,6 +1,6 @@
 {
   "name": "@booi-gg/redhot",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A keyboard launcher for macOS that runs in your terminal: apps, hotkeys, quicklinks, clipboard history and window actions",
   "keywords": [
     "cast",

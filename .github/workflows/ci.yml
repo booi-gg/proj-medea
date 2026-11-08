@@ -1,0 +1,36 @@
+name: CI
+
+# On every push to main: format, lint, type-check and test. Releases are made by hand with
+# `pnpm release`, so this workflow never pushes anything back.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    # The tests use macOS tools like plutil and zsh.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      # The pre-commit hook is for people committing, not for this run.
+      - run: pnpm install
+        env:
+          VP_GIT_HOOKS: "0"
+
+      - run: pnpm check
+
+      - run: pnpm typecheck
+
+      - run: pnpm test

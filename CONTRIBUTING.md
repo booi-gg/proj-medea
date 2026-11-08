@@ -67,7 +67,7 @@ Tests sit beside the file they cover, as `name.test.ts`, and run with Node's bui
 
 ## Releases
 
-Every push to `main` runs [.github/workflows/release.yml](.github/workflows/release.yml). It runs the type check and tests, then `scripts/bump-version.ts` picks the next version from the commit messages since the last `chore(release): bump version` commit:
+Run `pnpm release` on `main` with a clean working tree when you're ready to ship. It runs the checks and tests, then `scripts/bump-version.ts` picks the next version from the commit messages since the last `chore(release): bump version` commit:
 
 | Commit message                                         | Version       |
 | ------------------------------------------------------ | ------------- |
@@ -76,6 +76,6 @@ Every push to `main` runs [.github/workflows/release.yml](.github/workflows/rele
 | Anything else, like `fix:` or `update:`                | 0.1.3 → 0.1.4 |
 | Only `docs:`, `test:`, `ci:`, `style:` or `chore:`     | No release    |
 
-It renames "Unreleased" in the changelog to the new version, commits `chore(release): bump version 0.1.3 -> 0.1.4`, tags it `v0.1.4` and pushes both. Run `git pull` after a push to get that commit. Publishing stays manual: pull, then `npm publish`.
+It renames "Unreleased" in the changelog to the new version, commits `chore(release): bump version 0.1.3 -> 0.1.4` and tags it `v0.1.4`. Then run `git push --follow-tags` and `npm publish`. Pushes to `main` only run the checks in [.github/workflows/ci.yml](.github/workflows/ci.yml), so CI never adds commits of its own.
 
 By contributing, you agree that your work is released under the [MIT License](LICENSE) and that you'll follow the [Code of Conduct](CODE_OF_CONDUCT.md).

@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { appendFileSync, readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export type BumpLevel = "major" | "minor" | "patch";
@@ -11,6 +11,7 @@ export interface Commit {
 
 // The subject a release commit starts with. A push of only release commits releases nothing.
 export const RELEASE_SUBJECT = "chore(release): bump version";
+const RELEASE_BRANCH = "main";
 const SUBJECT_PATTERN = /^(?<type>[a-z]+)(?:\([^)]*\))?(?<breaking>!)?:/iu;
 const BREAKING_FOOTER = /^BREAKING[ -]CHANGE:/mu;
 // Changes that don't touch what npm ships. A push of only these releases nothing.
@@ -97,20 +98,23 @@ const readUnreleasedCommits = (): Commit[] => {
     .filter(({ subject }) => !subject.startsWith(RELEASE_SUBJECT));
 };
 
-const writeOutput = (values: Record<string, string>): void => {
-  const lines = Object.entries(values).map(([key, value]) => `${key}=${value}\n`);
-  process.stdout.write(lines.join(""));
-  const outputPath = process.env.GITHUB_OUTPUT;
-  if (outputPath !== undefined) {
-    appendFileSync(outputPath, lines.join(""));
+/** A release commits every changed file, so it only runs from a clean main. */
+const assertReadyToRelease = (): void => {
+  const branch = git(["branch", "--show-current"]);
+  if (branch !== RELEASE_BRANCH) {
+    throw new Error(`Releases run from ${RELEASE_BRANCH}, but this is "${branch}".`);
+  }
+  if (git(["status", "--porcelain"]) !== "") {
+    throw new Error("Commit or stash your changes before releasing.");
   }
 };
 
 const main = (): void => {
+  assertReadyToRelease();
   const root = git(["rev-parse", "--show-toplevel"]);
   const level = toBumpLevel(readUnreleasedCommits());
   if (level === undefined) {
-    writeOutput({ released: "false" });
+    process.stdout.write("Nothing to release.\n");
     return;
   }
   const packagePath = join(root, "package.json");
@@ -120,7 +124,10 @@ const main = (): void => {
   writeFileSync(packagePath, setPackageVersion(packageText, next));
   const changelogPath = join(root, "CHANGELOG.md");
   writeFileSync(changelogPath, releaseChangelog(readFileSync(changelogPath, "utf8"), next));
-  writeOutput({ released: "true", level, current, next });
+  git(["commit", "--all", "--message", `${RELEASE_SUBJECT} ${current} -> ${next}`]);
+  // Annotated, because git push --follow-tags skips lightweight tags.
+  git(["tag", "--annotate", `v${next}`, "--message", `v${next}`]);
+  process.stdout.write(`Released ${next}. Next: git push --follow-tags, then npm publish.\n`);
 };
 
 if (import.meta.main) {

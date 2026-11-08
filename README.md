@@ -21,6 +21,9 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Colour picker.** Pick a colour from anywhere on screen with the macOS magnifier, then copy it as hex, RGB or HSL. `Colour History` keeps your last 12.
 - **Calculator.** Type `2 * (4 + 1)` and press Enter to copy the answer.
 - **Currency conversion.** Type `356 USD to INR` or `$20 in €`. Rates are downloaded daily and work offline.
+- **Units.** Type `5 km in miles`, `72 f to c` or `2 GB in MB`.
+- **Time zones.** Type `3pm PST in Tokyo` or `time in London`.
+- **Dates.** Type `days until dec 25` or `today + 90 days`.
 - **Window actions.** Halves, quarters, thirds, maximize, center, restore and move to the next display, with optional Rectangle-style default hotkeys.
 - **iCloud Drive sync** (experimental). Share settings, quicklinks, snippets and logs between your Macs through a folder you pick, and choose which of them each Mac shares.
 - **Start at login,** so the shortcut and clipboard history survive a reboot.

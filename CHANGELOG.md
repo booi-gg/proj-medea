@@ -6,7 +6,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ### Added
 
-- `Colour Picker` picks a colour from anywhere on screen and copies it as hex, RGB or HSL. `Colour History` keeps your last 12.
+- Units in search: `5 km in miles`, `72 f to c`, `2 GB in MB`.
+- Time zones in search: `3pm PST in Tokyo`, `time in London`.
+- Dates in search: `days until dec 25`, `today + 90 days`.
+- `Colour Picker` picks a colour from anywhere on screen and copies it as hex, RGB or HSL. `Ctrl` + `P` picks again. `Colour History` keeps your last 12.
 - `Emoji Picker` is a new system command that opens the macOS emoji picker in the app you were using. It needs the menu bar item and Accessibility permission.
 
 ## 0.6.2

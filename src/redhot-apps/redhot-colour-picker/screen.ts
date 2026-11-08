@@ -1,7 +1,7 @@
 import { styleText } from "node:util";
 import { supportsTrueColor } from "../../launcher/banner.ts";
 import { promptForSelection } from "../../launcher/prompt.ts";
-import type { LauncherOption } from "../../launcher/prompt.ts";
+import type { ExtraKey, LauncherOption } from "../../launcher/prompt.ts";
 import { drawScreen } from "../../launcher/screen.ts";
 import { copyText } from "../../shell.ts";
 import { fromHex, toFormats, toHex, toHslText, toRgbText, toSwatch } from "./colour.ts";
@@ -9,6 +9,9 @@ import type { Rgb } from "./colour.ts";
 
 const FOOTER = "↵ copy";
 const LIST_FOOTER = "↵ choose format";
+const CTRL_P = "\u0010";
+const PICK_AGAIN_HINT = "^P";
+const PICK_AGAIN_LABEL = "pick again";
 const SWATCH_WIDTH = 12;
 const LIST_SWATCH_WIDTH = 4;
 const FORMAT_LABEL_WIDTH = 5;
@@ -25,20 +28,46 @@ const toSwatchNotice = (colour: Rgb): string => {
   return [swatch, `${swatch}  ${toHex(colour)}`, swatch].join("\n  ");
 };
 
-/** Offers the colour as hex, RGB and HSL. Resolves to a line to show, or "" when cancelled. */
-export const chooseFormat = async (colour: Rgb, title: ScreenTitle): Promise<string> => {
+/**
+ * Offers the colour as hex, RGB and HSL. Resolves to a line to show, or "" when cancelled.
+ * With pickAgain, a key leaves this list without copying and resolves to pickAgain's result.
+ */
+export const chooseFormat = async (
+  colour: Rgb,
+  title: ScreenTitle,
+  pickAgain?: () => Promise<string>,
+): Promise<string> => {
   drawScreen({ ...title, notice: toSwatchNotice(colour) });
+  let wantsPickAgain = false;
+  const keyPressed = new AbortController();
+  const pickAgainKey: ExtraKey = {
+    keys: [CTRL_P],
+    hint: PICK_AGAIN_HINT,
+    getLabel: () => PICK_AGAIN_LABEL,
+    run: () => {
+      wantsPickAgain = true;
+      keyPressed.abort();
+    },
+  };
+  // A result's own footer replaces the list's key hints, so the key has to be named here too.
+  const footer =
+    pickAgain === undefined ? FOOTER : `${FOOTER}   ${PICK_AGAIN_HINT} ${PICK_AGAIN_LABEL}`;
   const options: LauncherOption[] = toFormats(colour).map(({ label, text }) => ({
     value: text,
     name: label,
     aliases: [text],
     label: `${label.padEnd(FORMAT_LABEL_WIDTH)}${text}`,
-    footer: FOOTER,
+    footer,
   }));
   const { cancelled, value } = await promptForSelection(() => options, "Copy as", {
     listWhenEmpty: true,
     replaceable: true,
+    signal: keyPressed.signal,
+    extraKeys: pickAgain === undefined ? [] : [pickAgainKey],
   });
+  if (wantsPickAgain && pickAgain !== undefined) {
+    return pickAgain();
+  }
   if (cancelled || value === undefined) {
     return "";
   }

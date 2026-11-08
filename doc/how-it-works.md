@@ -69,6 +69,14 @@ src/
 │   ├── types.ts          What an app gives the launcher
 │   ├── icon.ts           Gives Redhot's own items their reserved icon colour
 │   ├── registry.ts       The list of installed apps
+│   ├── answer-item.ts    Builds a row that copies something worked out from what was typed
+│   ├── redhot-units/
+│   │   ├── index.ts      The answer row shown in search
+│   │   └── units.ts      The table of units and the conversion
+│   ├── redhot-time/
+│   │   ├── index.ts      The answer rows shown in search
+│   │   ├── zones.ts      City and abbreviation names, and converting between zones
+│   │   └── dates.ts      Reads date phrases and does the sums
 │   ├── redhot-calculator/
 │   │   ├── index.ts      The answer row shown in search
 │   │   └── calculate.ts  Parses and works out a sum
@@ -302,7 +310,13 @@ The window starts with the screen cleared, the REDHOT logo from `src/launcher/ba
 
 **Currency conversion.** Type `356 USD to INR` or `356 INR in USD` to see a conversion at the top of search. Target suggestions appear after `to` and narrow as you type: `356 INR to SD` suggests matching codes, with USD first. Enter or Tab copies the rounded number for the selected target. Literal symbols work too, including `$356 to INR`, `356₹ to $`, `€`, `£`, `¥` and `₩`; `$` means USD and `¥` means JPY. Unknown currency codes leave normal search results alone.
 
-The search arrow changes from white to Redhot's red when the query is a calculator expression or a currency conversion, including a partial target such as `350 usd to`.
+**Units.** `5 km in miles`, `72 f to c` and `2 GB in MB` use a table of sizes in `units.ts`, with temperature as a special case. Both units must measure the same thing. KB and GB are decimal, as Finder counts them, and KiB and GiB are binary. `mb` means megabytes as people usually type it, and only `Mb` with that exact capitalisation means megabits. Enter copies only the number. A unit conversion replaces any currency row, because `5 miles to km` has the same shape as one.
+
+**Time zones.** `3pm PST in Tokyo`, `3pm in Tokyo` and `time in London` use `Intl.DateTimeFormat`, so no library is loaded. `zones.ts` maps about 90 cities and the common abbreviations to zones. An abbreviation means the place, so `PST` follows Los Angeles through daylight saving. The time is taken as today in the source place, and the row names the day when the other place is on a different one. `CST` means US Central and `IST` means India, the most likely readings.
+
+**Dates.** `days until dec 25`, `days since jan 1`, `today + 90 days`, `90 days from now` and `3 weeks ago` are read by a small parser in `dates.ts`. Dates are kept as midnight UTC on the calendar day, so daylight saving can't throw a count off by one. A date with no year means the next one when counting up to it, and the last one when counting since it.
+
+The search arrow changes from white to Redhot's red when the query is any of these answers, including a partial currency target such as `350 usd to`.
 
 The search path reads `~/.config/redhot/redhot-currency-rates.json` synchronously and never makes a network call. When a search window opens, Redhot refreshes rates older than a day in the background from Frankfurter v2's fixed USD endpoint. The file is replaced atomically after a valid response, so a failed request leaves old rates usable. The row shows the date of each rate used, which can differ between currencies. These are daily reference rates, not live or bank exchange rates. On first use, a conversion query explains that rates are still unavailable until a download finishes; another keystroke updates the search results.
 
@@ -582,7 +596,7 @@ Its own screen, so app search never waits on Spotlight. Typing `f` and a space i
 
 `Colour Picker` draws its screen, then runs `.build/redhot-colour-sampler`, built from `native/ColourSampler.swift`. That shows `NSColorSampler`, macOS's own magnifier, and prints `red green blue` in sRGB, or nothing when cancelled. It's a separate program and not part of the helper, because helper requests time out after 3 seconds and picking takes as long as you like. It also means no menu bar item is needed.
 
-A picked colour goes into `~/.config/redhot/redhot-colour-history.json`, newest first, up to 12, on this Mac only. A list then offers Hex, RGB and HSL under a swatch, with Hex first, so one Enter copies it. Swatches use 24-bit colour when `COLORTERM` says the terminal has it, and otherwise the nearest of the 256-colour palette, because a terminal without 24-bit colour would misread that code. `Colour History` lists past colours and leads to the same format list.
+A picked colour goes into `~/.config/redhot/redhot-colour-history.json`, newest first, up to 12, on this Mac only. A list then offers Hex, RGB and HSL under a swatch, with Hex first, so one Enter copies it. Swatches use 24-bit colour when `COLORTERM` says the terminal has it, and otherwise the nearest of the 256-colour palette, because a terminal without 24-bit colour would misread that code. `Ctrl` + `P` leaves that list without copying and opens the magnifier again. `Colour History` lists past colours and leads to the same format list, without that key.
 
 **Limit.** Redhot's window stays on screen while you pick, so it covers whatever is behind it.
 

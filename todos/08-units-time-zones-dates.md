@@ -1,5 +1,7 @@
 # Units, time zones and dates
 
+**Status:** built. See "The search prompt" in doc/how-it-works.md.
+
 **Effort:** small to medium
 
 ## What

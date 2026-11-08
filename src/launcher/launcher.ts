@@ -17,6 +17,8 @@ import { PROCESS_SEARCH_VALUE } from "../redhot-apps/redhot-processes/index.ts";
 import { toPort } from "../redhot-apps/redhot-processes/list.ts";
 import { runProcessScreen } from "../redhot-apps/redhot-processes/screen.ts";
 import { findRedhotItem, listRedhotItems } from "../redhot-apps/registry.ts";
+import { toDateItem, toTimeZoneItem } from "../redhot-apps/redhot-time/index.ts";
+import { toUnitItem } from "../redhot-apps/redhot-units/index.ts";
 import { toAliasSearchItem, toWebSearchItem } from "../redhot-apps/redhot-web-search/index.ts";
 import type { LauncherItem } from "../redhot-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
@@ -142,10 +144,18 @@ const toOptions = (items: readonly LauncherItem[]): LauncherOption[] => {
   });
 };
 
-const toAnswerItems = (query: string): LauncherItem[] =>
-  [toCalculationItem(query), ...toConversionItems(query), toAliasSearchItem(query)].filter(
-    (item) => item !== undefined,
-  );
+const toAnswerItems = (query: string): LauncherItem[] => {
+  const unitItem = toUnitItem(query);
+  // "5 miles to km" has the shape of a currency conversion too, and would say rates are missing.
+  const conversions = unitItem === undefined ? toConversionItems(query) : [unitItem];
+  return [
+    toCalculationItem(query),
+    ...conversions,
+    toTimeZoneItem(query),
+    toDateItem(query),
+    toAliasSearchItem(query),
+  ].filter((item) => item !== undefined);
+};
 
 // Answers come from the query, so they go above ordinary search results. Nothing typed is wasted:
 // when there's no answer and no result, the web is offered instead.
@@ -168,9 +178,14 @@ export const rankWithAnswers = (
 };
 
 const getActionSearchIcon = (query: string): string | undefined =>
-  calculate(query) !== undefined ||
-  parseConversion(query) !== undefined ||
-  toAliasSearchItem(query) !== undefined
+  [
+    calculate(query),
+    parseConversion(query),
+    toUnitItem(query),
+    toTimeZoneItem(query),
+    toDateItem(query),
+    toAliasSearchItem(query),
+  ].some((answer) => answer !== undefined)
     ? ACTIVE_SEARCH_ICON
     : undefined;
 

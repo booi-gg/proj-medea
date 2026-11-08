@@ -26,7 +26,7 @@ const pickColour = async (): Promise<string> => {
     return "";
   }
   await rememberColour(toHex(colour));
-  return chooseFormat(colour, PICK_TITLE);
+  return chooseFormat(colour, PICK_TITLE, pickColour);
 };
 
 const showHistory = async (): Promise<string> => {

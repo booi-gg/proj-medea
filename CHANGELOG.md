@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+## 0.1.5
+
 ### Added
 
 - `redhot --version`, `redhot -v` and `redhot version` print the installed version.

@@ -25,7 +25,7 @@ const CLOSE_WINDOW_SCRIPT = `on run argv
 end run`;
 
 /**
- * Terminal keeps a dead window open after a program exits, and Ghostty closes its own. Windows
+ * Terminal keeps a dead window open after a program exits, so Redhot closes its own. Windows
  * Redhot didn't open are left alone, so "pnpm start" can't close the window you ran it from.
  */
 const canCloseOwnWindow = (): boolean =>

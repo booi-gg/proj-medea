@@ -4,10 +4,9 @@ import { createServer } from "node:net";
 import { dirname } from "node:path";
 import { socketPath } from "../paths.ts";
 import { writeLog } from "../log.ts";
-import { getOwnTtyPath } from "../shell.ts";
 import { sendSocketRequest } from "../socket.ts";
 import { closeOwnWindow } from "./close-window.ts";
-import { getSelectedLauncher } from "./terminals.ts";
+import { raiseTerminal } from "./terminals.ts";
 
 const REQUEST_TIMEOUT_MS = 1000;
 const QUIT_REQUEST = "quit";
@@ -17,14 +16,13 @@ const RUN_REQUEST_PREFIX = "run ";
 const RAISE_WINDOW_SEQUENCE = "\u001B[1t\u001B[5t";
 const SHOW_CURSOR_SEQUENCE = "\u001B[?25h";
 
-// A terminal that can't be focused must not take the open CLI down with it.
-const focusOwnWindow = async (ttyPath: string): Promise<void> => {
+// Terminal failing to come forward must not take the open CLI down with it.
+const focusOwnWindow = async (): Promise<void> => {
   try {
-    const launcher = await getSelectedLauncher();
-    await launcher.focus(ttyPath);
+    await raiseTerminal();
   } catch (error) {
     writeLog("terminal.focus-failed", { error }, { level: "warn" });
-    // The escape sequence has already raised the window where the terminal honours it.
+    // The escape sequence has already raised the window.
   }
 };
 
@@ -40,8 +38,6 @@ export const listenForRequests = async ({
 }: RequestHandlers): Promise<() => void> => {
   await mkdir(dirname(socketPath), { recursive: true });
   await rm(socketPath, { force: true });
-  const ttyPath = await getOwnTtyPath();
-
   const server = createServer((connection) => {
     // A caller that disconnects early must not crash the open CLI.
     connection.on("error", () => connection.destroy());
@@ -65,7 +61,7 @@ export const listenForRequests = async ({
       } else {
         onFocus();
       }
-      await focusOwnWindow(ttyPath);
+      await focusOwnWindow();
     });
   });
   server.listen(socketPath);

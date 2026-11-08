@@ -15,7 +15,14 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 - The menu bar icon and Redhot's alerts use the Redhot logo, the R from the banner, instead of a terminal symbol.
 
+### Removed
+
+- Ghostty support and the **Set Terminal** menu. Redhot now opens only in macOS's Terminal.
+
 ### Fixed
+
+- In Terminal.app, the title bar shows only "Redhot", not the program and the long path to the launcher.
+- Terminal no longer piles up `Redhot 1`, `Redhot 2` and so on after an upgrade. A Redhot window that opens on a numbered copy takes over the Redhot profile and removes copies nothing uses.
 
 - In Terminal.app, the search window failed with `Command not found: .../Library/Application` in 0.1.1, because the installed launcher's folder has a space in its name.
 - Running Redhot from a checkout and an installed copy on the same Mac no longer adds `Redhot 1`, `Redhot 2` and so on to Terminal's profiles. The checkout uses its own `Redhot Dev` profile.

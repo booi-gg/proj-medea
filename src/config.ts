@@ -15,7 +15,6 @@ export type LogMaxSizeMb = (typeof LOG_SIZE_CHOICES)[number];
 export const DEFAULT_LOG_MAX_SIZE_MB: LogMaxSizeMb = 50;
 
 export interface Config {
-  terminal?: string;
   aliases: AliasMap;
   hotkeys: HotkeyMap;
   clipboardHistoryMonths?: HistoryMonths;
@@ -69,12 +68,10 @@ export const parseConfig = (configText: string): Config => {
     if (!isObject(parsed)) {
       return EMPTY_CONFIG;
     }
-    const terminal = typeof parsed.terminal === "string" ? parsed.terminal : undefined;
     const clipboardHistoryMonths = toHistoryMonths(parsed.clipboardHistoryMonths);
     const logMaxSizeMb = toLogMaxSizeMb(parsed.logMaxSizeMb);
     const { checkForUpdates } = parsed;
     return {
-      terminal,
       aliases: parseAliasMap(parsed.aliases),
       hotkeys: parseHotkeyMap(parsed.hotkeys),
       ...(clipboardHistoryMonths === undefined ? {} : { clipboardHistoryMonths }),

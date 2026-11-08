@@ -28,7 +28,7 @@ The main limit is speed and feel. Raycast appears instantly as a floating panel,
 1. **Shortcut:** done. The helper listens for `Cmd+Shift+Space` and opens the CLI.
 2. **Search launcher:** done. Type to find apps and built-in commands, then press Enter.
 3. **Commands:** started. Redhot apps live in `src/redhot-apps/`, with Quicklinks and Clipboard History built. Loading scripts from a user folder is still to do.
-4. **Terminal choice:** done for Terminal and Ghostty, from the menu bar. Other terminals need a tested recipe in `src/terminals/terminals.ts`.
+4. **Terminal:** Redhot opens only in macOS's Terminal. Choosing other terminals was removed to keep the scope small. Each would need a tested recipe in `src/terminals/terminals.ts`.
 5. **Background features:** done. Clipboard history records in the background, and Start at login in Settings brings the helper back after a reboot.
 6. **Permission features:** window actions are built, and need testing by a person. Snippets are still to do. A rebuilt ad-hoc binary may lose granted permissions, so `pnpm menubar:sign` gives it a stable signature. A signed `.app` may still be needed if terminal-started and login-started helpers turn out to be treated differently.
 
@@ -49,7 +49,6 @@ These need a person, because macOS blocks synthetic input from the development s
 
 - A physical click on the menu bar icon. The menu items and their actions were tested from inside the process.
 - A physical `Cmd+Shift+Space` press. Registration succeeded with status `0`.
-- The Automation prompt from the real helper. Ghostty was tested from the development session, which has its own permission.
 - Moving a real window. The geometry, socket and hotkey wiring were tested, but the Accessibility calls need a grant only a person can give.
 - `pnpm menubar:sign`, and whether a grant survives a rebuild with it.
 

@@ -164,11 +164,6 @@ struct ItemHotKey: Decodable {
   let windowCommand: String?
 }
 
-struct TerminalChoice: Decodable {
-  let name: String
-  let selected: Bool
-}
-
 struct UpdateStatus: Decodable {
   let current: String
   let latest: String?
@@ -408,7 +403,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     .path
   private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
   private let menu = NSMenu()
-  private let terminalMenu = NSMenu()
   private var clipsToRecord: [(clip: Clip, trace: String)] = []
   private var isRecordingClip = false
   private var syncTimer: Timer?
@@ -456,10 +450,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     logsItem.target = self
     menu.addItem(logsItem)
 
-    let terminalItem = NSMenuItem(title: "Set Terminal", action: nil, keyEquivalent: "")
-    terminalItem.submenu = terminalMenu
-    menu.addItem(terminalItem)
-
     menu.addItem(.separator())
 
     updateItem.action = #selector(handleUpdate)
@@ -477,7 +467,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     menu.delegate = self
     statusItem.menu = menu
-    reloadTerminals()
     syncTimer = Timer.scheduledTimer(withTimeInterval: 120, repeats: true) { [weak self] _ in
       self?.runCli(["sync", "now"])
     }
@@ -493,7 +482,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
   func menuWillOpen(_ menu: NSMenu) {
     RedhotLog.event("menu.open")
-    reloadTerminals()
   }
 
   @objc private func handleOpen() {
@@ -577,12 +565,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
   }
 
-  @objc private func handleTerminalChoice(_ sender: NSMenuItem) {
-    RedhotLog.event("terminal.select")
-    runCli(["set-terminal", sender.title]) { [weak self] _, _ in
-      self?.reloadTerminals()
-    }
-  }
 
   func showCli() {
     let span = RedhotLog.start("launcher.show")
@@ -670,29 +652,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
       RedhotLog.end(span, ok: ok)
       self?.isRecordingClip = false
       self?.recordNextClip()
-    }
-  }
-
-  private func reloadTerminals() {
-    runCli(["terminals"]) { [weak self] output, _ in
-      guard let choices = try? JSONDecoder().decode([TerminalChoice].self, from: output) else {
-        return
-      }
-      self?.rebuildTerminalMenu(choices)
-    }
-  }
-
-  private func rebuildTerminalMenu(_ choices: [TerminalChoice]) {
-    terminalMenu.removeAllItems()
-    for choice in choices {
-      let item = NSMenuItem(
-        title: choice.name,
-        action: #selector(handleTerminalChoice(_:)),
-        keyEquivalent: ""
-      )
-      item.target = self
-      item.state = choice.selected ? .on : .off
-      terminalMenu.addItem(item)
     }
   }
 

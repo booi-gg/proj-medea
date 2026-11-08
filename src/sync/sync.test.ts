@@ -38,7 +38,7 @@ test("syncs portable settings and links while preserving Mac-specific choices", 
   await writeFile(
     first.config,
     JSON.stringify({
-      terminal: "Ghostty",
+      checkForUpdates: true,
       aliases: { "command:exit": ["bye"], "/Applications/Foo.app": ["foo"] },
       hotkeys: { "redhot-logs:view": "cmd+l" },
       clipboardHistoryMonths: 4,
@@ -58,7 +58,7 @@ test("syncs portable settings and links while preserving Mac-specific choices", 
   await writeFile(
     second.config,
     JSON.stringify({
-      terminal: "Terminal",
+      checkForUpdates: false,
       aliases: {},
       hotkeys: {},
     }),
@@ -70,7 +70,7 @@ test("syncs portable settings and links while preserving Mac-specific choices", 
 
   const config = JSON.parse(await readFile(second.config, "utf8"));
   const links = JSON.parse(await readFile(second.quicklinks, "utf8"));
-  assert.equal(config.terminal, "Terminal");
+  assert.equal(config.checkForUpdates, false);
   assert.deepEqual(config.aliases, { "command:exit": ["bye"] });
   assert.deepEqual(config.hotkeys, { "redhot-logs:view": "cmd+l" });
   assert.equal(config.clipboardHistoryMonths, 4);

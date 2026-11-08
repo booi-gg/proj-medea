@@ -39,13 +39,6 @@ body:
       description: Output of `node --version`
     validations:
       required: true
-  - type: dropdown
-    id: terminal
-    attributes:
-      label: Terminal
-      options: [Terminal, Ghostty]
-    validations:
-      required: true
   - type: textarea
     id: logs
     attributes:

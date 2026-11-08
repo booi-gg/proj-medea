@@ -27,7 +27,7 @@ redhot-status (keeps running)
 Open Redhot in the menu, or Cmd+Shift+Space
    ├─ CLI already open: the helper asks it over its socket, and it raises its own window
    └─ no CLI open: node src/start.js show
-        └─ start open-redhot.command in the chosen terminal
+        └─ start open-redhot.command in Terminal
              └─ node src/start.js
                   └─ search prompt
                        └─ Enter opens the app, then search returns
@@ -171,7 +171,6 @@ Left or right clicking the icon opens a menu.
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------- |
 | Open Redhot        | Asks the open CLI over `.build/cli.sock`, or runs `node src/start.js show` if none answers                                            |
 | Open Logs Folder   | Opens `~/Library/Logs/Redhot/` in Finder                                                                                              |
-| Set Terminal       | `node src/start.js terminals` fills the list, and picking one runs `node src/start.js set-terminal <name>`                            |
 | Check for Updates… | Runs `update-status --now` and answers in an alert. It reads **Update to 0.x.y…** when a newer version is out, and then runs `update` |
 | Exit               | Quits the helper, which removes the icon and the shortcut                                                                             |
 
@@ -181,29 +180,21 @@ An installed copy checks npm for a newer version and can install it. A checkout,
 
 - `redhot update-status` prints `{ current, latest, updateAvailable }`. It asks `https://registry.npmjs.org/@booi-gg/redhot/latest` with a 5 second timeout and saves the answer in `update-check.json` in the build folder. Automatic checks reuse an answer for a day, stay quiet when npm can't be reached and skip npm entirely when **Check for updates** is off in Settings. `--now` always asks npm and fails loudly.
 - The helper runs `update-status` at startup and every hour, which reaches npm at most once a day, and renames its menu item to **Update to 0.x.y…** when a newer version is out.
-- `redhot update` writes `update-redhot.command` and opens it in the chosen terminal, like an item window. That runs `update-in-window`, which shows the banner and a spinner while it installs.
+- `redhot update` writes `update-redhot.command` and opens it in Terminal, like an item window. That runs `update-in-window`, which shows the banner and a spinner while it installs.
 - The package manager comes from where Redhot is installed, in `src/update/installer.ts`: a `.pnpm` or `pnpm/global` folder means pnpm, `.bun` means Bun, and anything else npm, preferring the npm beside the Node running Redhot.
 - The install replaces the running copy's files, so the window loads everything it needs first. It then quits an open search window, which still runs the old code, and runs `restart` from the new copy, which rebuilds the helper from the new Swift sources. pnpm keeps each version in its own folder, so the new copy is found with `pnpm root --global`.
 - On success the window closes after a moment. On failure it shows the last lines of the installer's output and the command to run by hand, and closes on a key press.
 
-## Choosing a terminal
+## Opening in Terminal
 
-`src/terminals/terminals.ts` lists the terminals Redhot knows how to launch, filtered to the ones installed. The choice is saved in `~/.config/redhot/config.json`. Missing or broken config falls back to Terminal.
+Redhot opens only in macOS's own Terminal, in `src/terminals/terminals.ts`. Other terminals start programs differently, and each would need its own tested recipe.
 
-Changing the terminal tells the running CLI to quit, because it lives in the old terminal. The next open uses the new one.
+- **Open:** `open -a Terminal Redhot.terminal`, a profile that runs the launcher with no shell. It falls back to `open -a Terminal <launcher>`. Item windows and the update window open their `.command` file. No permission is needed.
+- **Bring back:** the CLI raises its own window with an escape sequence, then runs `open -a Terminal`.
 
-Each terminal has its own recipe in `launchers`, because they start programs differently:
+**Terminal's profile.** Opening a `.command` file starts a login shell, which prints `Last login` and types the launcher's path before Redhot can clear the screen. So the search window opens from a `Redhot.terminal` profile instead, written by `writeTerminalProfile()`. It sets `RunCommandAsShell`, which makes the launcher the window's only process, and an 80×18 window. Terminal names the profile after the file and saves it, so a "Redhot" profile appears in Terminal's settings after the first window. Terminal splits the profile's command at every space and ignores quotes, so `toTerminalCommand()` runs the launcher through `/bin/zsh -fc $'...'` with every unsafe byte of the path written as `\xHH`: the installed launcher lives in `Application Support`. Terminal saves a copy, "Redhot 1", whenever the opened file differs from the saved profile of the same name, so a checkout uses a "Redhot Dev" profile and never fights the installed copy. A saved profile still goes out of date after an upgrade or a change to the default profile, and from then on every window would add a copy. So `repairTerminalProfiles()` runs beside search in each Redhot window: a window on a numbered copy deletes the old profile and takes its name, and copies no window uses are deleted. A profile in use or set as the default is never touched. Redhot runs inside Terminal, so this AppleScript needs no permission.
 
-| Terminal | Open                                                                                                                                                  | Bring back                                                                     |
-| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| Terminal | `open -a Terminal Redhot.terminal`, a profile that runs the launcher with no shell. Falls back to `open -a Terminal <launcher>`. No permission needed | The CLI raises its own window with an escape sequence, then `open -a Terminal` |
-| Ghostty  | AppleScript `new window` with `initial input` of `exec <launcher>`, which needs Automation permission once                                            | AppleScript `focus` on the terminal whose `tty` matches the CLI                |
-
-If AppleScript is refused, Ghostty falls back to `open -a Ghostty <launcher>`, which appears to ask for confirmation on each launch, and to plain activation for bringing it back. Because the fallback is silent, a broken script can look like a working one. In AppleScript, read `argv` into a variable before the `tell` block: Ghostty can't evaluate it in a `whose` clause.
-
-Ghostty uses `initial input` and not `command` because it keeps a window open after a `command` exits, even with `wait after command` set to false. With `exec`, the CLI replaces the shell, so the window closes when the CLI exits. A new Ghostty session takes about 1.5 seconds, because the shell starts first.
-
-**Terminal's profile.** Opening a `.command` file starts a login shell, which prints `Last login` and types the launcher's path before Redhot can clear the screen. So the search window opens from a `Redhot.terminal` profile instead, written by `writeTerminalProfile()`. It sets `RunCommandAsShell`, which makes the launcher the window's only process, and an 80×18 window. Terminal names the profile after the file and saves it, so a "Redhot" profile appears in Terminal's settings after the first window. Terminal splits the profile's command at every space and ignores quotes, so `toTerminalCommand()` runs the launcher through `/bin/zsh -fc $'...'` with every unsafe byte of the path written as `\xHH`: the installed launcher lives in `Application Support`. Terminal saves a copy, "Redhot 1", whenever the opened file differs from the saved profile of the same name, so a checkout uses a "Redhot Dev" profile and never fights the installed copy.
+**The title bar.** Terminal adds the running program and its arguments after a window's title, which would show the launcher's long path. The profile turns those parts off with the `Show…InTitle` keys and sets `WindowTitle` to Redhot, so the title is only what Redhot sets.
 
 - The file is a copy of the default profile, so the window keeps the person's colours and font.
 - Terminal saves a second profile, "Redhot 1", whenever an opened file differs from the saved Redhot profile. So the file comes out the same every time, and editing the Redhot profile in Terminal's settings would only make copies. The saved profile is never read back, because Terminal writes its settings late and it can be out of date.
@@ -269,7 +260,6 @@ Aliases are stored in `~/.config/redhot/config.json`, keyed by app path or comma
 
 ```json
 {
-  "terminal": "Ghostty",
   "aliases": {
     "/Applications/Visual Studio Code.app": ["code", "ide"],
     "command:exit": ["q"]
@@ -279,18 +269,13 @@ Aliases are stored in `~/.config/redhot/config.json`, keyed by app path or comma
 
 `updateConfig()` merges changes, so saving a terminal can't wipe aliases, or the other way round. Each item can have up to two aliases of up to 8 characters, so a row stays inside its title column. Aliases are lowercase with no spaces. Several items can share one, and typing it lists them all. These limits apply when saving in settings, so a hand-edited config can go over them.
 
-**Opening settings.** Shift+Enter or Tab on a result opens that item's settings in the search window, and Done or Esc goes back to search. The `Alias, Add` and `Hotkey, Create` commands do the same after you pick an item. An error in settings shows above the search bar instead of closing Redhot.
+**Opening settings.** Tab on a result opens that item's settings in the search window, and Done or Esc goes back to search. The `Alias, Add` and `Hotkey, Create` commands do the same after you pick an item. An error in settings shows above the search bar instead of closing Redhot.
 
 Search reads aliases on every keystroke, so a new alias works as soon as you're back in search.
 
 **Reading keys.** `readKeysInto()` in `prompt.ts` reads raw bytes before clack does, because Node can't parse Shift+Enter and would type junk into the search bar. A settings key is forwarded as a normal Enter, with a flag saying settings were asked for.
 
-| Terminal | Shift+Enter                                                                                        | Tab   |
-| -------- | -------------------------------------------------------------------------------------------------- | ----- |
-| Ghostty  | Sends `ESC[27;2;13~` by default, so it works                                                       | Works |
-| Terminal | Not on the published lists of terminals that send a distinct code, so assume it behaves like Enter | Works |
-
-The footer hint shows `⇧↵` in Ghostty and `tab` elsewhere. `stdin` has to be resumed for each prompt: a paused stream stays paused when a listener is added, and the process would exit with code 13.
+Terminal sends the same bytes for Shift+Enter and Enter, so Tab is the settings key, and the footer says so. The Shift+Enter codes other terminals send are still read, so running `redhot` in one of them never types junk into the search bar. `stdin` has to be resumed for each prompt: a paused stream stays paused when a listener is added, and the process would exit with code 13.
 
 ## Hotkeys
 
@@ -517,9 +502,9 @@ The third Redhot app. Search `Settings` for a list of toggles, where Enter flips
 
 ## Closing the window
 
-Terminal keeps a dead window open after a program exits, showing `[Process completed]`. Ghostty closes its own, so this only applies to Terminal.
+Terminal keeps a dead window open after a program exits, showing `[Process completed]`, so Redhot closes its own.
 
-When Redhot ends, through the Exit command or **End program**, the window closes without asking. So does a window that quits because you changed terminal.
+When Redhot ends, through the Exit command or **End program**, the window closes without asking.
 
 - Launcher scripts set `REDHOT_WINDOW=1`, and only those windows can close. Running `pnpm start` in your own terminal never closes it.
 - The window is found while Node is alive and closed 0.6 seconds later, so Terminal doesn't ask about running processes.

@@ -8,18 +8,20 @@ const COPY_NUMBER = /^\d+$/u;
 // Some windows Terminal keeps after closing them have no tabs, so each one is read on its own.
 const READ_PROFILES_SCRIPT = `on run argv
   set ttyPath to item 1 of argv
+  -- Inside the tell block, "tab" means a Terminal tab, so the separator is set out here.
+  set separator to character id 9
   set out to {}
   tell application "Terminal"
-    set end of out to "default" & tab & (name of default settings)
+    set end of out to "default" & separator & (name of default settings)
     repeat with profile in settings sets
-      set end of out to "profile" & tab & (name of profile)
+      set end of out to "profile" & separator & (name of profile)
     end repeat
     repeat with candidate in windows
       try
         repeat with candidateTab in tabs of candidate
           set profileName to name of current settings of candidateTab
-          set end of out to "used" & tab & profileName
-          if tty of candidateTab is ttyPath then set end of out to "own" & tab & profileName
+          set end of out to "used" & separator & profileName
+          if tty of candidateTab is ttyPath then set end of out to "own" & separator & profileName
         end repeat
       end try
     end repeat

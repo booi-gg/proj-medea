@@ -6,23 +6,14 @@ import { stopMenuBar } from "../menubar/helper.ts";
 import { buildDir, launcherPath } from "../paths.ts";
 import { writeLauncherScript } from "./launcher-script.ts";
 import { focusRunningCli, quitRunningCli, runInRunningCli } from "./running-cli.ts";
-import { getSelectedLauncher, saveTerminal } from "./terminals.ts";
+import { openTerminalWindow } from "./terminals.ts";
 
-/** Reuses a running CLI window, or opens a new one in the chosen terminal. */
+/** Reuses a running CLI window, or opens a new one in Terminal. */
 export const showCli = async (): Promise<void> => {
   if (await focusRunningCli()) {
     return;
   }
-  const launcher = await getSelectedLauncher();
-  await launcher.open(launcherPath);
-};
-
-// The open CLI lives in the old terminal, so it quits and the next open uses the new one.
-export const setTerminal = async (name: string | undefined): Promise<void> => {
-  const changed = await saveTerminal(name);
-  if (changed) {
-    await quitRunningCli();
-  }
+  await openTerminalWindow(launcherPath);
 };
 
 // One script per item, so two quick requests can't open the wrong item.
@@ -30,16 +21,14 @@ const openItemWindow = async (itemValue: string): Promise<void> => {
   const itemHash = createHash("sha1").update(itemValue).digest("hex").slice(0, 12);
   const scriptPath = join(buildDir, `run-${itemHash}.command`);
   await writeLauncherScript(scriptPath, ["run-in-window", itemValue]);
-  const launcher = await getSelectedLauncher();
-  await launcher.open(scriptPath);
+  await openTerminalWindow(scriptPath);
 };
 
 /** Opens a window that installs the newest version, so the person can watch it happen. */
 export const openUpdateWindow = async (): Promise<void> => {
   const scriptPath = join(buildDir, "update-redhot.command");
   await writeLauncherScript(scriptPath, ["update-in-window"]);
-  const launcher = await getSelectedLauncher();
-  await launcher.open(scriptPath);
+  await openTerminalWindow(scriptPath);
 };
 
 // Loads every Redhot app, so it stays out of commands that never run one.

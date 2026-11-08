@@ -2,12 +2,11 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { parseConfig } from "./config.ts";
 
-test("reads the terminal and aliases", () => {
+test("reads aliases and hotkeys, and drops the old terminal choice", () => {
   const config = parseConfig(
     '{ "terminal": "Ghostty", "aliases": { "/a.app": ["a", "b"] }, "hotkeys": { "/a.app": "shift+cmd+k" } }',
   );
   assert.deepEqual(config, {
-    terminal: "Ghostty",
     aliases: { "/a.app": ["a", "b"] },
     hotkeys: { "/a.app": "shift+cmd+k" },
   });
@@ -31,7 +30,6 @@ test("ignores malformed hotkeys", () => {
 
 test("a config from before aliases still works", () => {
   assert.deepEqual(parseConfig('{ "terminal": "Terminal" }'), {
-    terminal: "Terminal",
     aliases: {},
     hotkeys: {},
   });

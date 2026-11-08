@@ -3,7 +3,7 @@ import { enableCompileCache } from "node:module";
 import { homedir } from "node:os";
 import { join, sep } from "node:path";
 
-// Redhot drives AppKit, Terminal and Ghostty, so stop before touching anything on other systems.
+// Redhot drives AppKit and Terminal, so stop before touching anything on other systems.
 // The "os" field in package.json blocks most installs, but `npm --force` and some package managers
 // still let one through.
 const PLATFORM_NAMES = { win32: "Windows", linux: "Linux" };

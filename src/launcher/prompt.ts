@@ -8,11 +8,12 @@ import type { SplitLayout } from "./split-view.ts";
 const MAX_VISIBLE_RESULTS = 8;
 const ENTER_KEY = "\r";
 const TAB_KEY = "\t";
-// Ghostty sends the first by default. The second is the kitty keyboard protocol's form.
+// Shift+Enter from terminals that tell it apart, read so it never types junk into search. The first
+// is xterm's form, the second the kitty keyboard protocol's.
 const SHIFT_ENTER_KEYS = ["\u001B[27;2;13~", "\u001B[13;2u"];
 const SETTINGS_KEYS = [TAB_KEY, ...SHIFT_ENTER_KEYS];
 // Terminal sends the same bytes for Shift+Enter and Enter, so Tab is the key that always works.
-const SETTINGS_KEY_HINT = process.env.TERM_PROGRAM === "ghostty" ? "⇧↵" : "tab";
+const SETTINGS_KEY_HINT = "tab";
 const SEARCH_ICON = styleText("white", "❯");
 const FOCUS_ICON = styleText("white", "▸");
 const END_OF_TEXT_CURSOR = "█";

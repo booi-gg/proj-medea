@@ -2,7 +2,7 @@
 
 A keyboard launcher for macOS that runs in your terminal. Press `Cmd+Shift+Space`, type a few letters and press Enter to open an app, run a command, follow a link or bring back something you copied.
 
-Redhot has two parts. A small Swift helper lives in the menu bar and owns the global shortcut, your hotkeys, the clipboard watcher and window moves. The search window is a TypeScript CLI that opens in Terminal or Ghostty.
+Redhot has two parts. A small Swift helper lives in the menu bar and owns the global shortcut, your hotkeys, the clipboard watcher and window moves. The search window is a TypeScript CLI that opens in macOS's Terminal.
 
 ## Features
 
@@ -22,7 +22,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - macOS. Redhot is developed on macOS 26 and uses AppKit, so it won't run on Linux or Windows.
 - [Node.js](https://nodejs.org) 22.1 or later.
 - The Xcode Command Line Tools, because the helper is compiled on your Mac the first time it starts. Install them with `xcode-select --install`.
-- Terminal or [Ghostty](https://ghostty.org).
+- Terminal, the one that comes with macOS. Redhot always opens there, whichever terminal you use day to day.
 
 ## Install
 
@@ -103,17 +103,14 @@ Search `Settings` for:
 - **Window actions**, which shows whether Accessibility is granted and opens the right System Settings page.
 - **iCloud Drive Sync**, which picks an iCloud Drive folder to share settings and quicklinks between Macs.
 
-Choose your terminal from the menu bar icon under **Set Terminal**.
-
-In Terminal.app, Redhot opens an 80×18 window from its own **Redhot** profile, which it copies from your default profile, so it keeps your colours and font. Change the default profile to change how Redhot looks, not the Redhot profile, which Redhot rewrites. `Cmd` + `=` makes the text bigger in an open window.
+In Terminal.app, Redhot opens an 80×18 window from its own **Redhot** profile, which it copies from your default profile, so it keeps your colours and font. Change the default profile to change how Redhot looks, not the Redhot profile, which Redhot rewrites and tidies up after. `Cmd` + `=` makes the text bigger in an open window.
 
 ## Permissions
 
-| Permission             | Needed for                | Notes                                                                                                                              |
-| ---------------------- | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| Accessibility          | Window actions only       | Granted to `redhot-status`. Run `redhot sign` once so the grant survives upgrades; otherwise remove and re-add it after an update. |
-| Automation (Ghostty)   | Opening search in Ghostty | Asked for once.                                                                                                                    |
-| Background item notice | Start at login            | macOS shows a notice. Nothing to grant.                                                                                            |
+| Permission             | Needed for          | Notes                                                                                                                              |
+| ---------------------- | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Accessibility          | Window actions only | Granted to `redhot-status`. Run `redhot sign` once so the grant survives upgrades; otherwise remove and re-add it after an update. |
+| Background item notice | Start at login      | macOS shows a notice. Nothing to grant.                                                                                            |
 
 `redhot sign` creates a `Redhot Local Signing` certificate in your login keychain and signs every later build with it.
 
@@ -161,7 +158,7 @@ If you ran `redhot sign`, also delete the `Redhot Local Signing` certificate in 
 
 - Search opens in a terminal window, so it isn't as instant as a floating panel.
 - Clipboard history copies but doesn't paste for you.
-- Only Terminal and Ghostty are supported so far.
+- Redhot only opens in macOS's Terminal.
 - iCloud Drive sync hasn't yet been tested between two real Macs.
 - If you move Node or the install, run `redhot stop` and `redhot start` again.
 

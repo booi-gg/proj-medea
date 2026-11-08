@@ -7,13 +7,11 @@ const VERSION_COMMANDS = new Set(["--version", "-v", "version"]);
 
 const PROCESS_COMMANDS = new Set([
   "show",
-  "terminals",
   "hotkeys",
   "run",
   "run-in-window",
   "record-clipboard",
   "record-clipboard-image",
-  "set-terminal",
   "start",
   "stop",
   "status",
@@ -56,11 +54,6 @@ const main = async (): Promise<void> => {
     await showCli();
     return;
   }
-  if (command === "terminals") {
-    const { listTerminals } = await import("./terminals/terminals.ts");
-    process.stdout.write(`${JSON.stringify(await listTerminals())}\n`);
-    return;
-  }
   if (command === "hotkeys") {
     const { readConfig } = await import("./config.ts");
     const { toHelperHotkeys } = await import("./launcher/hotkeys.ts");
@@ -93,11 +86,6 @@ const main = async (): Promise<void> => {
   if (command === "record-clipboard-image") {
     const { recordImage } = await import("./redhot-apps/redhot-clipboard-history/store.ts");
     await recordImage(await buffer(process.stdin), process.env.REDHOT_IMAGE_NAME);
-    return;
-  }
-  if (command === "set-terminal") {
-    const { setTerminal } = await import("./terminals/actions.ts");
-    await setTerminal(argument);
     return;
   }
   if (command === "logs") {

@@ -394,6 +394,8 @@ Any executable in `~/.config/redhot/scripts/` with a `@redhot.title` comment nea
 
 The item value is `redhot-scripts:script/<path in the folder>`, so renaming or moving the file loses its alias and hotkey. The `script/` prefix keeps a file called `create` from taking the create command's value.
 
+**Scripts, Show All.** Reuses the list behind `Hotkeys, Show All` (`runHotkeyList()`), with its own placeholder and row, because script titles are longer and many icons are wide emoji. Enter runs a script, Tab opens its settings, and the list stays open between runs.
+
 **Broken headers.** A file with a title but a bad mode or argument still shows, with the kind `Script ▲`. Running it shows what's wrong instead of running it, so a typo doesn't make the script silently disappear.
 
 **Running.** `runScriptFile()` runs the file directly with `execFile`, so its `#!` line picks the language, with each answer as an argument and no shell in between. It runs in the script's folder, or `currentDirectoryPath`. The `PATH` gets Node's folder, `/opt/homebrew/bin` and `/usr/local/bin` added, because a Terminal window opened from Redhot's profile starts with the bare system `PATH`. Output is capped at 4 MB.

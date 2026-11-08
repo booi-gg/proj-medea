@@ -4,6 +4,8 @@ import { join } from "node:path";
 import { styleText } from "node:util";
 import { confirm, isCancel, log, password, select, spinner, text } from "@clack/prompts";
 import stringWidth from "string-width";
+import { formatHotkey } from "../../launcher/hotkeys.ts";
+import type { HotkeyEntry } from "../../launcher/hotkey-list.ts";
 import { drawScreen } from "../../launcher/screen.ts";
 import { scriptsDir } from "../../paths.ts";
 import { runCommand } from "../../shell.ts";
@@ -19,9 +21,16 @@ import type { Script } from "./store.ts";
 const APP_ID = "redhot-scripts";
 const CREATE_ID = "create";
 const OPEN_FOLDER_ID = "open-folder";
+const SHOW_ALL_ID = "show-all";
 const SCRIPT_ICON = toRedhotIcon("$");
 const CREATE_NAME = "Script, Create";
 const OPEN_FOLDER_NAME = "Scripts, Open Folder";
+const SHOW_ALL_NAME = "Scripts, Show All";
+const ICON_COLUMN_WIDTH = 2;
+const NAME_COLUMN_WIDTH = 38;
+const HOTKEY_COLUMN_WIDTH = 8;
+const GROUP_COLUMN_WIDTH = 22;
+const ELLIPSIS = "…";
 const NON_WORD = /[^a-z0-9]+/gu;
 const EDGE_DASHES = /^-+|-+$/gu;
 // An emoji or a single symbol. Image paths and URLs can't be drawn in a terminal.
@@ -156,6 +165,60 @@ const toItem = (script: Script): LauncherItem => ({
   run: () => runScript(script),
 });
 
+/** Cuts text to a width on screen, then pads it, so wide emoji and long titles keep columns straight. */
+const fitToWidth = (text: string, width: number): string => {
+  let fitted = text;
+  if (stringWidth(fitted) > width) {
+    while (stringWidth(`${fitted}${ELLIPSIS}`) > width) {
+      fitted = fitted.slice(0, -1);
+    }
+    fitted = `${fitted}${ELLIPSIS}`;
+  }
+  return `${fitted}${" ".repeat(Math.max(0, width - stringWidth(fitted)))}`;
+};
+
+export const toScriptRow = (
+  { icon, name, hint }: HotkeyEntry,
+  hotkey: string | undefined,
+): string => {
+  const symbols = fitToWidth(hotkey === undefined ? "" : formatHotkey(hotkey), HOTKEY_COLUMN_WIDTH);
+  const group = hint === undefined ? "" : fitToWidth(hint, GROUP_COLUMN_WIDTH);
+  return [
+    fitToWidth(icon, ICON_COLUMN_WIDTH),
+    fitToWidth(name, NAME_COLUMN_WIDTH),
+    styleText("yellow", symbols),
+    styleText("gray", group),
+  ]
+    .join(" ")
+    .trimEnd();
+};
+
+const toListEntry = (script: Script): HotkeyEntry => {
+  const group = script.problem === undefined ? script.packageName : "▲ Needs fixing";
+  return {
+    value: toScriptValue(script),
+    name: script.title,
+    icon: toIcon(script.icon),
+    ...(group === undefined ? {} : { hint: group }),
+    run: () => runScript(script),
+  };
+};
+
+// Loaded late because the list needs the registry, which loads this file.
+const showAllScripts = async (): Promise<string> => {
+  if (listScripts().length === 0) {
+    return `No scripts yet. Search ${CREATE_NAME} to make one`;
+  }
+  const { runHotkeyList } = await import("../../launcher/hotkey-list.ts");
+  return runHotkeyList({
+    title: SHOW_ALL_NAME,
+    icon: SCRIPT_ICON,
+    placeholder: "Search scripts",
+    getEntries: () => listScripts().map(toListEntry),
+    toRow: toScriptRow,
+  });
+};
+
 export const toFileName = (title: string, taken: (name: string) => boolean): string => {
   const base =
     title.toLowerCase().replaceAll(NON_WORD, "-").replaceAll(EDGE_DASHES, "") || "script";
@@ -228,6 +291,16 @@ const createItem: LauncherItem = {
   run: createScript,
 };
 
+const showAllItem: LauncherItem = {
+  value: toValue(SHOW_ALL_ID),
+  name: SHOW_ALL_NAME,
+  icon: SCRIPT_ICON,
+  kind: "Command",
+  hint: "Browse and run your scripts",
+  needsWindow: true,
+  run: showAllScripts,
+};
+
 const openFolderItem: LauncherItem = {
   value: toValue(OPEN_FOLDER_ID),
   name: OPEN_FOLDER_NAME,
@@ -262,6 +335,6 @@ const listSettingsActions = (itemValue: string): SettingsAction[] => {
 
 export const scripts: RedhotApp = {
   id: APP_ID,
-  listItems: () => [createItem, openFolderItem, ...listScripts().map(toItem)],
+  listItems: () => [createItem, showAllItem, openFolderItem, ...listScripts().map(toItem)],
   listSettingsActions,
 };

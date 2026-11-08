@@ -85,7 +85,7 @@ For example, `https://github.com/search?q={query}` asks for a search term and op
 
 A script command is a script with a few comments at the top that tell Redhot its name and how to show its output. Put it in `~/.config/redhot/scripts/`, and it shows up in search like any app. Give it an alias or a hotkey from its settings with Tab.
 
-Search `Script, Create` to start one: Redhot writes a template and opens it in your text editor. `Scripts, Open Folder` opens the folder in Finder.
+Search `Script, Create` to start one: Redhot writes a template and opens it in your text editor. `Scripts, Show All` lists every script to search, run with Enter, or open its settings with Tab. `Scripts, Open Folder` opens the folder in Finder.
 
 ```bash
 #!/bin/bash

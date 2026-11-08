@@ -34,6 +34,9 @@ interface HotkeyList {
   icon: string;
   /** Read again each round, so a hotkey changed in settings shows straight away. */
   getEntries: (hotkeys: HotkeyMap) => HotkeyEntry[];
+  placeholder?: string;
+  /** Replaces the usual row, for a list whose names need more room. */
+  toRow?: (entry: HotkeyEntry, hotkey: string | undefined) => string;
 }
 
 /** Fills a tall window, so the whole list can be read without scrolling. */
@@ -54,14 +57,19 @@ export const toHotkeyRow = (
   return `${picture} ${name.padEnd(NAME_COLUMN_WIDTH)} ${styled} ${words}`.trimEnd();
 };
 
-const toOption = (entry: HotkeyEntry, aliases: AliasMap, hotkeys: HotkeyMap): LauncherOption => {
+const toOption = (
+  entry: HotkeyEntry,
+  aliases: AliasMap,
+  hotkeys: HotkeyMap,
+  toRow: NonNullable<HotkeyList["toRow"]>,
+): LauncherOption => {
   const hotkey = hotkeys[entry.value];
   return {
     value: entry.value,
     name: entry.name,
     // The hotkey is searchable too, so typing "ctrl+option" finds what uses those keys.
     aliases: [...(aliases[entry.value] ?? []), ...(hotkey === undefined ? [] : [hotkey])],
-    label: toHotkeyRow(entry, hotkey),
+    label: toRow(entry, hotkey),
   };
 };
 
@@ -115,23 +123,19 @@ const runEntry = async ({ run }: HotkeyEntry): Promise<string> => {
 
 /** Shows the list once. Returns the line to show next, or undefined when finished. */
 const runListRound = async (
-  { title, icon, getEntries }: HotkeyList,
+  { title, icon, getEntries, placeholder = "Search hotkeys", toRow = toHotkeyRow }: HotkeyList,
   notice: string,
 ): Promise<string | undefined> => {
   const { aliases, hotkeys } = await readConfig();
   const entries = getEntries(hotkeys);
   drawScreen({ title, icon, notice });
-  const options = entries.map((entry) => toOption(entry, aliases, hotkeys));
-  const { cancelled, value, wantsSettings } = await promptForSelection(
-    () => options,
-    "Search hotkeys",
-    {
-      listWhenEmpty: true,
-      enterLabel: "run",
-      replaceable: true,
-      maxVisibleResults: toVisibleRows(process.stdout.rows ?? FALLBACK_WINDOW_ROWS),
-    },
-  );
+  const options = entries.map((entry) => toOption(entry, aliases, hotkeys, toRow));
+  const { cancelled, value, wantsSettings } = await promptForSelection(() => options, placeholder, {
+    listWhenEmpty: true,
+    enterLabel: "run",
+    replaceable: true,
+    maxVisibleResults: toVisibleRows(process.stdout.rows ?? FALLBACK_WINDOW_ROWS),
+  });
   const entry = entries.find((candidate) => candidate.value === value);
   if (cancelled || entry === undefined) {
     return undefined;

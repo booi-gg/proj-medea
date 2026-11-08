@@ -29,7 +29,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Dictionary.** Type `define serendipity`, `meaning of serendipity` or `what is serendipity` and press Enter to read the definition, using the dictionaries turned on in macOS's Dictionary app.
 - **Timers.** Type `timer 25m` or run `Pomodoro`. The time left shows in the menu bar, even after Redhot's window closes, and a notification appears when it's done.
 - **Menu item search.** Search the menu bar of the app you were just using, like `export pdf`, and run the item.
-- **Window actions.** Halves, quarters, thirds, maximize, center, restore and move to the next display, with optional Rectangle-style default hotkeys.
+- **Window actions.** Halves, quarters, thirds, maximize, minimize, center, restore and move to the next display, with optional Rectangle-style default hotkeys.
 - **iCloud Drive sync** (experimental). Share settings, quicklinks, snippets and logs between your Macs through a folder you pick, and choose which of them each Mac shares.
 - **Start at login,** so the shortcut and clipboard history survive a reboot.
 

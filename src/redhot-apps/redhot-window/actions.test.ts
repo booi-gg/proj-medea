@@ -49,6 +49,10 @@ test("finds the command for a window item and nothing else", () => {
   assert.equal(findWindowCommand("redhot-window:add-default-hotkeys"), undefined);
 });
 
+test("minimize is a window action with its own command", () => {
+  assert.equal(findWindowCommand(toWindowValue("minimize")), "minimize");
+});
+
 test("hands the helper a window action's command, so a press skips Node", () => {
   assert.deepEqual(toHelperHotkeys({ [toWindowValue("left-half")]: "ctrl+option+left" }), [
     {

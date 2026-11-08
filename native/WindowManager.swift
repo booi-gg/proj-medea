@@ -4,9 +4,17 @@ enum WindowCommand {
   case place(Placement)
   case center
   case restore
+  case minimize
   case moveToDisplay(step: Int)
 
   private static let placementValues = 4
+
+  var isMinimize: Bool {
+    if case .minimize = self {
+      return true
+    }
+    return false
+  }
 
   /// Reads what the CLI's action list sends, like "place 0 0 0.5 1".
   init?(_ text: String) {
@@ -22,6 +30,8 @@ enum WindowCommand {
       self = .center
     case ("restore", _):
       self = .restore
+    case ("minimize", _):
+      self = .minimize
     case ("display", "next"):
       self = .moveToDisplay(step: 1)
     case ("display", "previous"):
@@ -121,7 +131,7 @@ final class WindowManager {
 
   private static func safeCommand(_ command: String) -> String {
     let kind = command.split(separator: " ").first.map(String.init) ?? "unknown"
-    return ["place", "center", "restore", "display"].contains(kind) ? kind : "unknown"
+    return ["place", "center", "restore", "minimize", "display"].contains(kind) ? kind : "unknown"
   }
 
   private func askForAccess() {
@@ -150,7 +160,8 @@ final class WindowManager {
       do {
         let (window, isFocused) = try findWindow(target, frontPid: frontPid)
         try perform(command, on: window, areas: areas)
-        if !isFocused {
+        // Raising a window that was just minimized would bring it straight back.
+        if !isFocused, !command.isMinimize {
           raise(window)
         }
         finish(nil)
@@ -285,6 +296,15 @@ final class WindowManager {
         throw WindowFailure.nothingToRestore
       }
       _ = try setFrame(window, to: saved.original)
+    case .minimize:
+      let status = AXUIElementSetAttributeValue(
+        window,
+        kAXMinimizedAttribute as CFString,
+        kCFBooleanTrue
+      )
+      guard status == .success else {
+        throw WindowFailure.notMovable
+      }
     }
   }
 

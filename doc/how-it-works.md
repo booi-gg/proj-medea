@@ -757,7 +757,7 @@ Text is copied back with `pbcopy`. Images go through AppleScript's `set the clip
 
 ## Window actions
 
-Rectangle-style window moves: halves, quarters, thirds, two-thirds, Maximize, Center, Restore Window, and Next and Previous Display. They appear in search with a `▣` icon and the kind `Window`, and aliases and hotkeys work as they do for anything else. It's written directly on Apple's Accessibility API, which is what Rectangle uses too, so nothing else needs to be installed.
+Rectangle-style window moves: halves, quarters, thirds, two-thirds, Maximize, Minimize, Center, Restore Window, and Next and Previous Display. They appear in search with a `▣` icon and the kind `Window`, and aliases and hotkeys work as they do for anything else. It's written directly on Apple's Accessibility API, which is what Rectangle uses too, so nothing else needs to be installed.
 
 **Where the code sits.** `src/redhot-apps/redhot-window/actions.ts` is the one list of actions, so adding a placement needs no Swift. A placement is four fractions of the display, like `place 0 0 0.5 1` for the left half. The helper only understands `place`, `center`, `restore` and `display`. Moving needs the helper because it holds the permission, and Restore needs a process that stays running to remember frames.
 
@@ -779,6 +779,8 @@ Rectangle-style window moves: halves, quarters, thirds, two-thirds, Maximize, Ce
 - `AXEnhancedUserInterface` is switched off during the move and back on after, because Chrome and Electron animate each step while it's on.
 - Apps can refuse a size. Terminal snaps to its character grid, for example. A window against the right or bottom edge then moves back to that edge.
 - Accessibility calls wait on the other app, so they run on their own queue with a half-second timeout, away from the thread that answers hotkeys.
+
+**Minimize.** It sets `AXMinimized` on the window, and unlike the other actions from search, the window isn't raised afterwards, because that would bring it straight back. Restore Window doesn't undo it, so a minimized window comes back from the Dock.
 
 **Restore.** The first move saves the window's frame. Further moves keep it, unless you've moved the window yourself since. It's held in memory, so restarting the helper forgets it.
 

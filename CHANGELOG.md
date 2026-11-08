@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+## 0.4.1
+
 ### Added
 
 - File search: type `f` and a space in search, or open `Search Files`, to find files by name with Spotlight. Enter opens a file, `Ctrl+R` reveals it in Finder, `Ctrl+P` copies its path, and Tab adds Open With….

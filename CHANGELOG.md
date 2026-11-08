@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+## 0.3.0
+
 ## 0.2.1
 
 ## 0.2.0

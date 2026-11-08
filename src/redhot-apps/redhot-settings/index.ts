@@ -3,6 +3,7 @@ import { confirm, isCancel, select, spinner } from "@clack/prompts";
 import {
   DEFAULT_HISTORY_MONTHS,
   DEFAULT_LOG_MAX_SIZE_MB,
+  DEFAULT_WEB_SEARCH_ENGINE,
   HISTORY_MONTH_CHOICES,
   LOG_SIZE_CHOICES,
   readConfig,
@@ -35,6 +36,8 @@ import type { LoginItemState } from "../../menubar/login-item.ts";
 import { countEntriesToRemove, removeExpiredEntries } from "../redhot-clipboard-history/store.ts";
 import { toRedhotIcon } from "../icon.ts";
 import type { LauncherItem, RedhotApp } from "../types.ts";
+import { WEB_SEARCH_ENGINES } from "../redhot-web-search/engines.ts";
+import { runWebSearchSettings } from "../redhot-web-search/settings.ts";
 
 const APP_ID = "redhot-settings";
 const OPEN_ID = "open";
@@ -46,6 +49,7 @@ const LOG_SIZE = "log-size";
 const WINDOW_ACCESS = "window-access";
 const SYNC = "sync";
 const CHECK_FOR_UPDATES = "check-for-updates";
+const WEB_SEARCH = "web-search";
 const DONE = "done";
 const MONTHS_IN_YEAR = 12;
 
@@ -305,6 +309,7 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
       clipboardHistoryMonths = DEFAULT_HISTORY_MONTHS,
       logMaxSizeMb = DEFAULT_LOG_MAX_SIZE_MB,
       checkForUpdates = true,
+      webSearchEngine = DEFAULT_WEB_SEARCH_ENGINE,
     },
     windowAccess,
     syncStatus,
@@ -342,6 +347,11 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
         label: `Check for updates  ${checkForUpdates ? STATE_LABELS.on : STATE_LABELS.off}`,
         hint: "Asks npm once a day",
       },
+      {
+        value: WEB_SEARCH,
+        label: `Web search  ${WEB_SEARCH_ENGINES[webSearchEngine].name}`,
+        hint: "Used when search finds nothing",
+      },
       { value: DONE, label: "Done" },
     ],
   });
@@ -350,6 +360,9 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
   }
   if (choice === CHECK_FOR_UPDATES) {
     return toggleUpdateChecks(checkForUpdates);
+  }
+  if (choice === WEB_SEARCH) {
+    return runWebSearchSettings(webSearchEngine);
   }
   if (choice === WINDOW_ACCESS) {
     return fixWindowAccess(windowAccess);

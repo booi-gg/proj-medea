@@ -1,5 +1,7 @@
 # Web search fallback
 
+**Status:** built. See "Web search" in the README and doc/how-it-works.md. Left out: quicklinks with more than one question, which open and ask as usual because one piece of text can't answer them all.
+
 **Effort:** small
 
 ## What

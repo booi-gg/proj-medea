@@ -13,6 +13,9 @@ export const DEFAULT_HISTORY_MONTHS: HistoryMonths = 3;
 export const LOG_SIZE_CHOICES = [10, 50, 100, 500] as const;
 export type LogMaxSizeMb = (typeof LOG_SIZE_CHOICES)[number];
 export const DEFAULT_LOG_MAX_SIZE_MB: LogMaxSizeMb = 50;
+export const WEB_SEARCH_ENGINE_CHOICES = ["google", "duckduckgo", "kagi"] as const;
+export type WebSearchEngine = (typeof WEB_SEARCH_ENGINE_CHOICES)[number];
+export const DEFAULT_WEB_SEARCH_ENGINE: WebSearchEngine = "google";
 
 export interface Config {
   aliases: AliasMap;
@@ -20,6 +23,7 @@ export interface Config {
   clipboardHistoryMonths?: HistoryMonths;
   logMaxSizeMb?: LogMaxSizeMb;
   checkForUpdates?: boolean;
+  webSearchEngine?: WebSearchEngine;
 }
 
 const EMPTY_CONFIG: Config = { aliases: {}, hotkeys: {} };
@@ -60,6 +64,8 @@ const toHistoryMonths = (value: unknown): HistoryMonths | undefined =>
   HISTORY_MONTH_CHOICES.find((months) => months === value);
 const toLogMaxSizeMb = (value: unknown): LogMaxSizeMb | undefined =>
   LOG_SIZE_CHOICES.find((size) => size === value);
+const toWebSearchEngine = (value: unknown): WebSearchEngine | undefined =>
+  WEB_SEARCH_ENGINE_CHOICES.find((engine) => engine === value);
 
 /** Broken or missing settings read as empty, so a bad file can't stop the app. */
 export const parseConfig = (configText: string): Config => {
@@ -70,6 +76,7 @@ export const parseConfig = (configText: string): Config => {
     }
     const clipboardHistoryMonths = toHistoryMonths(parsed.clipboardHistoryMonths);
     const logMaxSizeMb = toLogMaxSizeMb(parsed.logMaxSizeMb);
+    const webSearchEngine = toWebSearchEngine(parsed.webSearchEngine);
     const { checkForUpdates } = parsed;
     return {
       aliases: parseAliasMap(parsed.aliases),
@@ -77,6 +84,7 @@ export const parseConfig = (configText: string): Config => {
       ...(clipboardHistoryMonths === undefined ? {} : { clipboardHistoryMonths }),
       ...(logMaxSizeMb === undefined ? {} : { logMaxSizeMb }),
       ...(typeof checkForUpdates === "boolean" ? { checkForUpdates } : {}),
+      ...(webSearchEngine === undefined ? {} : { webSearchEngine }),
     };
   } catch {
     return EMPTY_CONFIG;

@@ -10,6 +10,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Aliases.** Give any app or command up to two short names, like `code` for Visual Studio Code.
 - **Hotkeys.** Bind any app, command, quicklink or window action to a global shortcut.
 - **Quicklinks.** Save URLs, deeplinks or folders, with `{argument}` and `{clipboard}` placeholders.
+- **Web search.** When nothing matches, search Google, DuckDuckGo or Kagi. Type an alias and some text, like `yt lofi`, to search with a quicklink.
 - **Script commands.** Turn any shell, Python or Node script into a search result, with arguments, output and hotkeys.
 - **File search.** Type `f`, a space and a file name to find it with Spotlight, then open it, reveal it in Finder or copy its path.
 - **Folder search.** Jump to Downloads, Documents, Recents or any folder in Finder.
@@ -63,6 +64,8 @@ redhot restart
 
 The window stays open between uses, so the next `Cmd+Shift+Space` brings it straight back.
 
+After Enter on a row made from what you typed, like a web search, `yt lofi`, a calculation or a currency conversion, your text and the row stay on screen so you can change it or run it again. `Cmd+Shift+Space` brings it back as you left it, and Esc clears it for a new search.
+
 ### Aliases and hotkeys
 
 Focus any result and press Tab. From its settings:
@@ -84,6 +87,14 @@ Search `Quicklink, Create` and give it a name, a link and, if you like, an app t
 | `{clipboard}`                         | The text on your clipboard                  |
 
 For example, `https://github.com/search?q={query}` asks for a search term and opens GitHub.
+
+### Web search
+
+When nothing matches what you typed, search offers one row, `Search Google for 'xyz'`, and Enter opens it in your browser. Choose DuckDuckGo or Kagi instead under **Web search** in Settings.
+
+A quicklink can act as a search engine too. Give one with a single question an alias, then type the alias, a space and your search: `gh redhot` fills it in and opens the link without asking. A quicklink that asks more than one question opens and asks as usual.
+
+**Web search** in Settings also adds ready-made quicklinks for GitHub (`gh`), YouTube (`yt`), Google (`g`), Wikipedia (`wiki`), npm (`npm`) and Stack Overflow (`so`). Anything you've already saved isn't offered, and if an alias is taken the link is added without it.
 
 ### Script commands
 
@@ -223,6 +234,7 @@ Search `Settings` for:
 - **Check for updates**, on by default, which asks npm once a day whether a newer Redhot is out.
 - **Window actions**, which shows whether Accessibility is granted and opens the right System Settings page.
 - **iCloud Drive Sync**, which picks an iCloud Drive folder to share settings and quicklinks between Macs.
+- **Web search**, which picks the engine used when search finds nothing and adds ready-made search quicklinks.
 
 In Terminal.app, Redhot opens an 80×18 window from its own **Redhot** profile, which it copies from your default profile, so it keeps your colours and font. Change the default profile to change how Redhot looks, not the Redhot profile, which Redhot rewrites and tidies up after. `Cmd` + `=` makes the text bigger in an open window.
 

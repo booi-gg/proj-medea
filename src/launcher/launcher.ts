@@ -17,6 +17,7 @@ import { PROCESS_SEARCH_VALUE } from "../redhot-apps/redhot-processes/index.ts";
 import { toPort } from "../redhot-apps/redhot-processes/list.ts";
 import { runProcessScreen } from "../redhot-apps/redhot-processes/screen.ts";
 import { findRedhotItem, listRedhotItems } from "../redhot-apps/registry.ts";
+import { toAliasSearchItem, toWebSearchItem } from "../redhot-apps/redhot-web-search/index.ts";
 import type { LauncherItem } from "../redhot-apps/types.ts";
 import { isMenuBarRunning } from "../menubar/helper.ts";
 import { withAction, writeLog } from "../log.ts";
@@ -46,9 +47,16 @@ const ACTIVE_SEARCH_ICON = toRedhotIcon("❯");
 
 type GetItems = () => LauncherItem[];
 
+/** A search to show again as it was, after running a row made from what was typed. */
+interface KeptSearch {
+  query: string;
+  focusedValue: string;
+}
+
 interface RoundResult {
   keepRunning: boolean;
   notice: string;
+  keptSearch?: KeptSearch;
 }
 
 /** What this window is doing, which decides how a hotkey pressed elsewhere is answered. */
@@ -134,16 +142,23 @@ const toOptions = (items: readonly LauncherItem[]): LauncherOption[] => {
   });
 };
 
-// Answers come from the query, so they go above ordinary search results.
-const rankWithAnswers = (query: string, options: readonly LauncherOption[]): LauncherOption[] => {
+const toAnswerItems = (query: string): LauncherItem[] =>
+  [toCalculationItem(query), ...toConversionItems(query), toAliasSearchItem(query)].filter(
+    (item) => item !== undefined,
+  );
+
+// Answers come from the query, so they go above ordinary search results. Nothing typed is wasted:
+// when there's no answer and no result, the web is offered instead.
+export const rankWithAnswers = (
+  query: string,
+  options: readonly LauncherOption[],
+): LauncherOption[] => {
   const results = rankItems(query, options);
-  const calculation = toCalculationItem(query);
-  const answers = [
-    ...(calculation === undefined ? [] : [calculation]),
-    ...toConversionItems(query),
-  ];
+  const answers = toAnswerItems(query);
+  const isEmpty = answers.length === 0 && results.length === 0;
+  const fallback = isEmpty ? toWebSearchItem(query) : undefined;
   return [
-    ...answers.map((item) => ({
+    ...[...answers, ...(fallback === undefined ? [] : [fallback])].map((item) => ({
       ...item,
       aliases: [],
       label: formatRow(item, [], ""),
@@ -153,7 +168,9 @@ const rankWithAnswers = (query: string, options: readonly LauncherOption[]): Lau
 };
 
 const getActionSearchIcon = (query: string): string | undefined =>
-  calculate(query) !== undefined || parseConversion(query) !== undefined
+  calculate(query) !== undefined ||
+  parseConversion(query) !== undefined ||
+  toAliasSearchItem(query) !== undefined
     ? ACTIVE_SEARCH_ICON
     : undefined;
 
@@ -213,7 +230,11 @@ const opensOwnScreen = (query: string): boolean =>
   toFileSearchQuery(query) !== undefined || toPort(query) !== undefined;
 
 /** Shows the search bar once. */
-const runSearchRound = async (notice: string, session: Session): Promise<RoundResult> => {
+const runSearchRound = async (
+  notice: string,
+  session: Session,
+  keptSearch?: KeptSearch,
+): Promise<RoundResult> => {
   drawScreen({ notice });
   const [menuBarRunning, apps] = await Promise.all([isMenuBarRunning(), listApps()]);
   const fixedItems = buildCommandItems(menuBarRunning);
@@ -228,6 +249,8 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
       replaceable: true,
       getSearchIcon: getActionSearchIcon,
       onQueryChange: createQueryExit(closeReplaceableList, opensOwnScreen),
+      initialQuery: keptSearch?.query ?? "",
+      initialFocus: keptSearch?.focusedValue,
     },
   );
   if (session.nextItem !== undefined) {
@@ -252,17 +275,23 @@ const runSearchRound = async (notice: string, session: Session): Promise<RoundRe
       ),
     };
   }
+  // Esc on a kept search clears it. Asking to end Redhot would be a surprise here.
+  if (cancelled && keptSearch !== undefined) {
+    return { keepRunning: true, notice: NO_NOTICE };
+  }
   if (cancelled) {
     return (await confirmEndProgram()) ? endProgram() : { keepRunning: true, notice: NO_NOTICE };
   }
-  // An answer has no settings to open, so Tab copies it like Enter does.
-  const answer = [toCalculationItem(query), ...toConversionItems(query)].find(
+  // An answer has no settings to open, so Tab copies it like Enter does. It came from what was
+  // typed, so that stays on screen to change and run again.
+  const answer = [...toAnswerItems(query), toWebSearchItem(query)].find(
     (item) => item?.value === value,
   );
   if (answer !== undefined) {
     return {
       keepRunning: true,
       notice: await showErrorsAsNotice(() => trackItem(session, answer.value, answer.run)),
+      keptSearch: { query, focusedValue: answer.value },
     };
   }
   if (value === EXIT_VALUE && !wantsSettings) {
@@ -315,7 +344,8 @@ const switchToItem = (value: string, session: Session): void => {
   }
 };
 
-// The shortcut means search, and a window opened for one item isn't showing it.
+// The shortcut means search, and a window opened for one item isn't showing it. A kept search is
+// left alone, so coming back from the browser finds it where it was.
 const switchToSearch = (session: Session): void => {
   if (session.closeWhenDone && closeReplaceableList()) {
     session.closeWhenDone = false;
@@ -348,7 +378,7 @@ export const runLauncher = async (firstItem?: string): Promise<void> => {
     while (round.keepRunning) {
       round =
         session.nextItem === undefined
-          ? await runSearchRound(round.notice, session)
+          ? await runSearchRound(round.notice, session, round.keptSearch)
           : await runNextItem(session.nextItem, session);
     }
   } finally {

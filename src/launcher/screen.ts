@@ -51,7 +51,8 @@ const prepareWindow = (title: string | undefined): string =>
     ? `${toClearSequence(true)}${toWindowTitleSequence(title)}`
     : toClearSequence(false);
 
-const fitToColumns = (label: string, columns: number): string => {
+/** Cuts text to a width on screen, ending it with an ellipsis when anything was cut. */
+export const fitToColumns = (label: string, columns: number): string => {
   if (toTerminalWidth(label) <= columns) {
     return label;
   }

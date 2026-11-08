@@ -18,6 +18,11 @@ test("broken or empty config reads as empty", () => {
   }
 });
 
+test("keeps a known web search engine and drops anything else", () => {
+  assert.equal(parseConfig('{ "webSearchEngine": "kagi" }').webSearchEngine, "kagi");
+  assert.equal(parseConfig('{ "webSearchEngine": "bing" }').webSearchEngine, undefined);
+});
+
 test("ignores malformed aliases", () => {
   const config = parseConfig('{ "aliases": { "/a.app": "nope", "/b.app": [1], "/c.app": ["c"] } }');
   assert.deepEqual(config.aliases, { "/c.app": ["c"] });

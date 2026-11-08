@@ -4,6 +4,15 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+### Added
+
+- Web search: when search finds nothing, the row offers `Search Google for 'xyz'`, and Settings can switch that to DuckDuckGo or Kagi.
+- Quicklinks as search engines: an alias, a space and some text fills a quicklink's argument, so `yt lofi` opens YouTube straight away. Settings can add ready-made ones for GitHub, YouTube, Google, Wikipedia, npm and Stack Overflow.
+
+### Changed
+
+- Enter on a web search, calculation or currency conversion keeps what you typed on screen, so you can change it or run it again. The shortcut brings it back as you left it, and Esc clears it.
+
 ## 0.4.1
 
 ### Added

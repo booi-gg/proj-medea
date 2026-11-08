@@ -8,7 +8,7 @@ Ideas for Redhot, in the order I'd build them. Each file says what the feature i
 2. ~~[File search](02-file-search.md)~~ ✅ built: find files with Spotlight's `mdfind`
 3. ~~[System commands](03-system-commands.md)~~ ✅ built: lock, sleep, empty Trash, dark mode and more
 4. ~~[Kill a process or port](04-kill-process-or-port.md)~~ ✅ built: stop an app, a process or whatever holds a port
-5. [Web search fallback](05-web-search-fallback.md): search the web when nothing matches
+5. ~~[Web search fallback](05-web-search-fallback.md)~~ ✅ built: search the web when nothing matches
 
 ## Also worth doing
 

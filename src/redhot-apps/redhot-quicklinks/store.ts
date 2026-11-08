@@ -5,6 +5,7 @@ import { quicklinksPath } from "../../paths.ts";
 import { withAction, writeLog } from "../../log.ts";
 import { withStorageLock, writeAtomic } from "../../storage.ts";
 
+export const QUICKLINKS_APP_ID = "redhot-quicklinks";
 const FALLBACK_ID = "link";
 const NOT_SLUG_CHARACTERS = /[^a-z0-9]+/g;
 const EDGE_DASHES = /^-|-$/g;
@@ -18,6 +19,9 @@ export interface QuicklinkDraft {
 export interface Quicklink extends QuicklinkDraft {
   id: string;
 }
+
+/** The value saved aliases and hotkeys use for this link. */
+export const toQuicklinkValue = (id: string): string => `${QUICKLINKS_APP_ID}:${id}`;
 
 const isQuicklink = (value: unknown): value is Quicklink => {
   if (!isObject(value)) {
@@ -101,18 +105,19 @@ export const findNameProblem = (
   return isTaken ? "You already have a quicklink with that name" : undefined;
 };
 
-export const addQuicklink = async (
+/** Resolves to the new link's ID, which is only known once the saved links have been read. */
+export const addQuicklink = (
   draft: QuicklinkDraft,
   reservedIds: readonly string[],
-): Promise<void> => {
-  await withAction("quicklinks.add", {}, async () => {
-    await withStorageLock(async () => {
+): Promise<string> =>
+  withAction("quicklinks.add", {}, () =>
+    withStorageLock(async () => {
       const links = await readForSaving();
       const id = toQuicklinkId(draft.name, [...reservedIds, ...links.map((link) => link.id)]);
       await writeQuicklinks([...links, { id, ...draft }]);
-    });
-  });
-};
+      return id;
+    }),
+  );
 
 export const updateQuicklink = async (id: string, draft: QuicklinkDraft): Promise<void> => {
   await withAction("quicklinks.update", { item: `redhot-quicklinks:${id}` }, async () => {

@@ -112,6 +112,11 @@ src/
 │   │   ├── index.ts      Search items and the question before Restart, Shut Down and Log Out
 │   │   ├── commands.ts   The system commands and what each one runs
 │   │   └── battery.ts    Turns macOS's battery readings into one line
+│   ├── redhot-web-search/
+│   │   ├── index.ts      The fallback row and the row for an alias followed by text
+│   │   ├── alias-search.ts Works out which quicklink an alias and text would fill
+│   │   ├── engines.ts    Fallback engines and the ready-made search quicklinks
+│   │   └── settings.ts   The Web search menu in Settings
 │   ├── redhot-window/
 │   │   ├── index.ts      Search items and failure messages
 │   │   └── actions.ts    The window actions and their default hotkeys
@@ -247,6 +252,8 @@ The menu and the shortcut both start in the helper, so bringing back an open CLI
 3. **If nothing answers,** the helper runs `node src/start.js show`. `showCli()` in `src/terminals/actions.ts` tries the socket once more, then the recipe opens `.build/open-redhot.command`. The launcher uses an absolute Node path because a terminal's `PATH` can differ from your shell's. It clears the window first, because terminals type the launch command into a shell and that line would otherwise stay above Redhot.
 
 The CLI has to stay open for this to work, so `runLauncher()` loops: after an action it clears the screen and shows search again. The Exit command ends the loop. Esc at search asks first: **End program** ends it, and **Cancel** or a second Esc goes back to search.
+
+**Keeping a search.** A row made from what was typed (calculator, currency, web search, an alias and text) passes `keptSearch` to the next round, so the text and focused row come back. Apps and commands still start empty. The shortcut leaves a kept search alone, so coming back from the browser finds it where it was. Esc on one starts a new search rather than asking to end Redhot.
 
 If you open a second CLI, such as `pnpm start` in another terminal, the newest one takes over the socket.
 
@@ -420,6 +427,16 @@ The item value is `redhot-quicklinks:<id>`. The ID comes from the name when the 
 A link can have up to 3 arguments. Values are percent-encoded when the link starts with a URL scheme, and left alone in paths and in a link that starts with a placeholder. Braces that hold anything else, like `{"a":1}`, stay in the link as written.
 
 **Failures.** A link that can't open shows a red line above the search bar, and the window stays open. From a hotkey with no window, the failure shows as a [notification](#notifications). If `redhot-quicklinks.json` is broken, search shows no links and saving refuses to run, so a save can't overwrite links you could still fix.
+
+## Web search
+
+These rows aren't registered as a Redhot app. Like the calculator's answer, each comes from what's typed, so it has no saved value for an alias or hotkey to point at, and Tab does the same as Enter.
+
+**The fallback.** `rankWithAnswers()` adds `toWebSearchItem()` only when there are no answers and no results. Loose matching finds something for most short text, so the row mostly appears for longer searches. The engine is `webSearchEngine` in `config.json`. It stays on each Mac, like log size and update checks, so it isn't synced.
+
+**An alias and some text.** `findAliasSearch()` splits what's typed at the first space and looks for a quicklink with that alias and exactly one question. Named arguments that share a value count as one. It's an answer, so it goes above ordinary results, and the search arrow turns red to show it's active. When several quicklinks share an alias, the first in the file wins. The `f` and `port` prefixes are checked first, so an alias of `f` can't be used this way.
+
+**Ready-made quicklinks.** Settings adds them as ordinary quicklinks, which can be edited, deleted and synced like any other. One already saved under the same name or link isn't offered. `addQuicklink()` resolves to the new ID so the alias can be saved against it.
 
 ## Script commands
 

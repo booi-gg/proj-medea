@@ -8,16 +8,20 @@ import type { LauncherItem, RedhotApp, SettingsAction } from "../types.ts";
 import { askForAnswers, askForQuicklink } from "./form.ts";
 import { openTarget, readClipboard } from "./open-link.ts";
 import { fillLink, findArguments, usesClipboard } from "./placeholders.ts";
-import { addQuicklink, readQuicklinksSync, removeQuicklink, updateQuicklink } from "./store.ts";
+import {
+  QUICKLINKS_APP_ID,
+  addQuicklink,
+  readQuicklinksSync,
+  removeQuicklink,
+  toQuicklinkValue,
+  updateQuicklink,
+} from "./store.ts";
 import type { Quicklink } from "./store.ts";
 
-const APP_ID = "redhot-quicklinks";
 // Reserved, so no saved link can end up with the same value as the create command.
 const CREATE_ID = "create";
 const LINK_ICON = toRedhotIcon("↗");
 const CREATE_NAME = "Quicklink, Create";
-
-const toValue = (id: string): string => `${APP_ID}:${id}`;
 
 const openQuicklink = async ({ name, link, openWith }: Quicklink): Promise<string> => {
   const linkArguments = findArguments(link);
@@ -44,7 +48,7 @@ const createQuicklink = async (): Promise<string> => {
 };
 
 const toItem = (quicklink: Quicklink): LauncherItem => ({
-  value: toValue(quicklink.id),
+  value: toQuicklinkValue(quicklink.id),
   name: quicklink.name,
   icon: LINK_ICON,
   kind: "Quicklink",
@@ -53,7 +57,7 @@ const toItem = (quicklink: Quicklink): LauncherItem => ({
 });
 
 const createItem: LauncherItem = {
-  value: toValue(CREATE_ID),
+  value: toQuicklinkValue(CREATE_ID),
   name: CREATE_NAME,
   icon: LINK_ICON,
   kind: "Command",
@@ -79,14 +83,14 @@ const deleteQuicklink = async ({ id, name }: Quicklink): Promise<boolean> => {
     return true;
   }
   await removeQuicklink(id);
-  await saveAliases(toValue(id), []);
-  await saveHotkey(toValue(id), "");
+  await saveAliases(toQuicklinkValue(id), []);
+  await saveHotkey(toQuicklinkValue(id), "");
   await reloadHotkeys();
   return false;
 };
 
 const listSettingsActions = (itemValue: string): SettingsAction[] => {
-  const quicklink = readQuicklinksSync().find(({ id }) => toValue(id) === itemValue);
+  const quicklink = readQuicklinksSync().find(({ id }) => toQuicklinkValue(id) === itemValue);
   if (quicklink === undefined) {
     return [];
   }
@@ -97,7 +101,7 @@ const listSettingsActions = (itemValue: string): SettingsAction[] => {
 };
 
 export const quicklinks: RedhotApp = {
-  id: APP_ID,
+  id: QUICKLINKS_APP_ID,
   listItems: () => [createItem, ...readQuicklinksSync().map(toItem)],
   listSettingsActions,
 };

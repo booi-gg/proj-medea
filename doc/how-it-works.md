@@ -92,6 +92,9 @@ src/
 │   ├── redhot-folders/
 │   │   ├── index.ts      The Search Folders command and what counts as a folder result
 │   │   └── places.ts     Finder's usual places, like Downloads and Recents
+│   ├── redhot-projects/
+│   │   ├── index.ts      The list of editors, and the search rows
+│   │   └── sources.ts    Reads each editor's recent projects from disk
 │   ├── redhot-processes/
 │   │   ├── index.ts      The Kill Process or Port command
 │   │   ├── screen.ts     The list, its keys and the questions before stopping something
@@ -555,6 +558,19 @@ Its own screen, so app search never waits on Spotlight. Typing `f` and a space i
 **After an action.** The list opens again with the same text and results, focus on the file just used (`initialFocus`) and any message or failure above it. A window a hotkey opened closes instead, so nothing is left behind the file: the launcher tells the item through `run({ closesWhenDone })`.
 
 **Privacy.** `mdfind` is logged by program name only. Never the query or the results.
+
+## Recent projects
+
+Each editor's recent projects are rows in the main search, up to 30 per editor, for editors that are installed. Enter runs `open -a <the editor> <project>`, so a project always opens in the app it came from. A folder used in two editors gets one row each, and the kind on the row names the editor and the parent folder, like `VS Code · personal`.
+
+**Where the lists come from.**
+
+- **VS Code and Cursor.** Each project has a folder under `User/workspaceStorage`, with its location in `workspace.json`. The date on `state.vscdb` beside it says when it was last used. VS Code 1.145 no longer has `history.recentlyOpenedPathsList` in its global database, which is where this used to be. Remote projects are skipped, because they have no local path to open.
+- **Xcode.** Each project has a build folder under `~/Library/Developer/Xcode/DerivedData`, and its `info.plist` has `WorkspacePath`. Xcode's own recent list is in a place macOS blocks, and `IDERecentEditorDocuments` in its preferences lists files and not projects. So a project shows up once it's been built, and clearing DerivedData empties the list.
+
+**Speed.** `listItems` runs on every keystroke, so a scan is kept for 30 seconds. Only the 100 most recently used folders are read, however long the history is. Projects that no longer exist are left out.
+
+**Ranking.** Items marked `ranksAfterApps` come after apps in the list search ranks, so an app wins a tie and Enter on `Calendar` still opens Calendar. A project that matches better still comes first.
 
 ## Folder search
 

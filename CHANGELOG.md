@@ -4,6 +4,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+### Added
+
+- Recent projects in search: type a project's name to reopen it in VS Code, Cursor or Xcode.
+
 ## 0.6.3
 
 ### Added

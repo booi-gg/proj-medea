@@ -17,6 +17,8 @@ export interface LauncherItem {
   needsWindow?: boolean;
   /** Replaces the list's key hints while this item is focused. */
   footer?: string;
+  /** True when an app that matches just as well should come first, so Enter still opens the app. */
+  ranksAfterApps?: boolean;
   /** Resolves to a line to show above the search bar, or "" for none. */
   run: (context?: RunContext) => Promise<string>;
 }

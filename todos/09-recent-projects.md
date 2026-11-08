@@ -1,5 +1,7 @@
 # Recent projects
 
+**Status:** built, and only VS Code has been checked against real data. Cursor is assumed to store its list like VS Code. See "Recent projects" in doc/how-it-works.md, which also has where the lists actually are, because the locations below turned out to be out of date.
+
 **Effort:** small
 
 ## What

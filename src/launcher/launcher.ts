@@ -199,6 +199,18 @@ const getActionSearchIcon = (query: string): string | undefined =>
     ? ACTIVE_SEARCH_ICON
     : undefined;
 
+/** Search keeps this order between equal matches, so what's first wins a tie. */
+export const orderSearchItems = (
+  fixedItems: readonly LauncherItem[],
+  redhotItems: readonly LauncherItem[],
+  appItems: readonly LauncherItem[],
+): LauncherItem[] => [
+  ...fixedItems,
+  ...redhotItems.filter(({ ranksAfterApps }) => ranksAfterApps !== true),
+  ...appItems,
+  ...redhotItems.filter(({ ranksAfterApps }) => ranksAfterApps === true),
+];
+
 // A link that fails to open shouldn't take the search window down with it.
 const showErrorsAsNotice = async (run: () => Promise<string>): Promise<string> => {
   try {
@@ -264,7 +276,7 @@ const runSearchRound = async (
   const [menuBarRunning, apps] = await Promise.all([isMenuBarRunning(), listApps()]);
   const fixedItems = buildCommandItems(menuBarRunning);
   const appItems = apps.map(toAppItem);
-  const getItems: GetItems = () => [...fixedItems, ...listRedhotItems(), ...appItems];
+  const getItems: GetItems = () => orderSearchItems(fixedItems, listRedhotItems(), appItems);
 
   const { cancelled, value, wantsSettings, query } = await promptForSelection(
     () => toOptions(getItems()),

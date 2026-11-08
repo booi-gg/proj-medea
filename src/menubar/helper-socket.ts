@@ -25,6 +25,11 @@ export const sendHelperRequest = async (request: string): Promise<string | undef
   return reply;
 };
 
+/** Makes the running helper read the saved snippets again, so a change works straight away. */
+export const reloadSnippets = async (): Promise<void> => {
+  await sendHelperRequest("snippets reload");
+};
+
 /** The helper has to answer this, because the permission belongs to it and not to the CLI. */
 export const readWindowAccess = async (): Promise<WindowAccess> => {
   const reply = await sendHelperRequest("access");

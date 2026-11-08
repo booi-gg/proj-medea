@@ -5,6 +5,7 @@ import { drawScreen } from "../../launcher/screen.ts";
 import {
   askForWindowAccess,
   readWindowAccess,
+  reloadSnippets,
   sendHelperRequest,
 } from "../../menubar/helper-socket.ts";
 import { reloadHotkeys } from "../../menubar/helper.ts";
@@ -27,7 +28,6 @@ import type { Snippet, SnippetDraft } from "./store.ts";
 const CREATE_ID = "create";
 const ICON = toRedhotIcon("¶");
 const CREATE_NAME = "Snippet, Create";
-const RELOAD_REQUEST = "snippets reload";
 const PAUSE_REQUEST = "snippets pause";
 const RESUME_REQUEST = "snippets resume";
 
@@ -88,7 +88,7 @@ const createSnippet = async (): Promise<string> => {
     return "";
   }
   await addSnippet(draft, [CREATE_ID]);
-  await sendHelperRequest(RELOAD_REQUEST);
+  await reloadSnippets();
   return describeSaved(draft);
 };
 
@@ -116,7 +116,7 @@ const editSnippet = async (snippet: Snippet): Promise<boolean> => {
     return true;
   }
   await updateSnippet(snippet.id, draft);
-  await sendHelperRequest(RELOAD_REQUEST);
+  await reloadSnippets();
   if (draft.keyword !== undefined) {
     await ensureExpansionAccess();
   }
@@ -132,7 +132,7 @@ const deleteSnippet = async ({ id, name }: Snippet): Promise<boolean> => {
     return true;
   }
   await removeSnippet(id);
-  await sendHelperRequest(RELOAD_REQUEST);
+  await reloadSnippets();
   await saveAliases(toSnippetValue(id), []);
   await saveHotkey(toSnippetValue(id), "");
   await reloadHotkeys();

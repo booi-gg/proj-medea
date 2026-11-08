@@ -4,6 +4,15 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+### Added
+
+- iCloud Drive Sync has a **What to Sync** screen, where each Mac chooses whether to share settings, quicklinks, snippets and logs. Snippets are off until you turn them on, because their text is kept in iCloud Drive as plain files.
+- **Sync Folder** shows the current folder's name and lets you choose another.
+
+### Changed
+
+- **Sync logs** moved into What to Sync.
+
 ## 0.6.1
 
 ### Added

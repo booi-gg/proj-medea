@@ -12,6 +12,8 @@ Keep a person's Redhot setup and metadata logs available across their Macs throu
 
 The first release syncs **shared preferences, Quicklinks, and logs**. Clipboard history is a separate future feature because it contains copied text and images. Caches, generated files, macOS permissions, and machine-specific choices stay local.
 
+**What to Sync** lets each Mac switch preferences, Quicklinks, Snippets and logs on or off, and Snippets start off. A kind that's off isn't read, written or compared, so switching it off can't look like deleting it on another Mac. Changes that arrive meanwhile wait in the sync state, as the newest change per key with the oldest one's base, and apply when it's switched back on. A run of edits elsewhere then doesn't look like a conflict. One snippet is capped at 16,000 characters in the form and 48 KB when syncing, because every Mac refuses an operation over 64 KB. Macs on a version from before Snippets synced refuse those operations too, so update every Mac before turning it on.
+
 ## iCloud Drive approach
 
 - Let the user select or create a **Redhot Sync** folder inside iCloud Drive with a macOS folder picker. Save the chosen location in local-only sync state; do not assume a fixed `~/Library/Mobile Documents` path.

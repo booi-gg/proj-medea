@@ -10,6 +10,8 @@ export const SNIPPETS_APP_ID = "redhot-snippets";
 // One character would expand on nearly every press of that key.
 const MIN_KEYWORD_LENGTH = 2;
 const MAX_KEYWORD_LENGTH = 32;
+// Keeps a snippet well inside the size sync allows for one change, whatever characters it uses.
+const MAX_TEXT_LENGTH = 16_000;
 const WHITESPACE = /\s/;
 
 export interface SnippetDraft {
@@ -77,6 +79,16 @@ const readForSaving = async (): Promise<Snippet[]> => {
 
 const writeSnippets = async (snippets: readonly Snippet[]): Promise<void> => {
   await writeAtomic(snippetsPath, `${JSON.stringify(snippets, null, 2)}\n`);
+};
+
+/** Returns what is wrong with this text, or undefined when it can be saved. */
+export const findTextProblem = (input: string): string | undefined => {
+  if (input.trim() === "") {
+    return "Enter some text";
+  }
+  return input.length > MAX_TEXT_LENGTH
+    ? `Keep it under ${MAX_TEXT_LENGTH.toLocaleString("en-US")} characters`
+    : undefined;
 };
 
 /** Returns what is wrong with this name, or undefined when it can be saved. */

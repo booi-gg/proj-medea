@@ -2,21 +2,35 @@ import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { copyFile, mkdir, mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { isObject, parseConfig } from "../config.ts";
 import type { Config } from "../config.ts";
 import { reloadHotkeys } from "../menubar/helper.ts";
-import { configPath, logDir, quicklinksPath, syncOutboxDir, syncStatePath } from "../paths.ts";
+import { reloadSnippets } from "../menubar/helper-socket.ts";
+import {
+  configPath,
+  logDir,
+  quicklinksPath,
+  snippetsPath,
+  syncOutboxDir,
+  syncStatePath,
+} from "../paths.ts";
 import { runCommand } from "../shell.ts";
 import { readTextIfPresent, withStorageLock, writeAtomic } from "../storage.ts";
 import { parseQuicklinks } from "../redhot-apps/redhot-quicklinks/store.ts";
 import type { Quicklink } from "../redhot-apps/redhot-quicklinks/store.ts";
+import { parseSnippets } from "../redhot-apps/redhot-snippets/store.ts";
+import type { Snippet } from "../redhot-apps/redhot-snippets/store.ts";
 import { coordinatedCopy } from "./bridge.ts";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const LOG_RETENTION_MS = 30 * DAY_MS;
 const LOG_LIMIT_BYTES = 50 * 1024 * 1024;
 const MAX_OPERATION_BYTES = 64 * 1024;
+// Leaves room in an operation for its other fields. Every Mac refuses a change over the limit, so
+// one that got out would stop sync on all of them.
+const MAX_SYNCED_SNIPPET_BYTES = 48 * 1024;
+const ICLOUD_DRIVE_ROOT = "com~apple~CloudDocs";
 const LOG_NAME = /^redhot(?:\..+)?\.log$/;
 const SAFE_FILE_NAME = /^[a-zA-Z0-9-]+\.(?:json|jsonl)$/;
 
@@ -32,6 +46,7 @@ const readDirectory = async (path: string): Promise<string[]> => {
 export interface SyncPaths {
   config: string;
   quicklinks: string;
+  snippets: string;
   state: string;
   outbox: string;
   logs: string;
@@ -41,6 +56,7 @@ export interface SyncPaths {
 const defaultPaths: SyncPaths = {
   config: configPath,
   quicklinks: quicklinksPath,
+  snippets: snippetsPath,
   state: syncStatePath,
   outbox: syncOutboxDir,
   logs: logDir,
@@ -70,25 +86,41 @@ interface SyncConflict {
   occurredAt: string;
 }
 
-interface SyncState {
+/** What this Mac shares. Each Mac chooses for itself. */
+export interface SyncChoices {
+  settingsEnabled: boolean;
+  quicklinksEnabled: boolean;
+  snippetsEnabled: boolean;
+  logsEnabled: boolean;
+}
+
+// Snippets start off because their text goes into iCloud Drive as plain files.
+const DEFAULT_SYNC_CHOICES: SyncChoices = {
+  settingsEnabled: true,
+  quicklinksEnabled: true,
+  snippetsEnabled: false,
+  logsEnabled: true,
+};
+
+interface SyncState extends SyncChoices {
   deviceId: string;
   folder?: string;
   paused: boolean;
-  logsEnabled: boolean;
   sequence: number;
   observed: Record<string, string>;
   revisions: Record<string, Revision>;
   seenOperations: Record<string, true>;
+  /** Changes that arrived while their kind was switched off, applied when it's back on. */
+  deferred: Record<string, Operation>;
   logOffsets: Record<string, number>;
   lastSyncAt?: string;
   error?: string;
   conflicts: SyncConflict[];
 }
 
-export interface SyncStatus {
+export interface SyncStatus extends SyncChoices {
   enabled: boolean;
   paused: boolean;
-  logsEnabled: boolean;
   folder?: string;
   deviceId?: string;
   lastSyncAt?: string;
@@ -98,16 +130,27 @@ export interface SyncStatus {
 }
 
 const emptyState = (): SyncState => ({
+  ...DEFAULT_SYNC_CHOICES,
   deviceId: randomUUID(),
   paused: false,
-  logsEnabled: true,
   sequence: 0,
   observed: {},
   revisions: {},
   seenOperations: {},
+  deferred: {},
   logOffsets: {},
   conflicts: [],
 });
+
+const parseDeferred = (value: unknown): Record<string, Operation> =>
+  isObject(value)
+    ? Object.fromEntries(
+        Object.entries(value).filter(
+          (entry): entry is [string, Operation] =>
+            isOperation(entry[1]) && isValidOperation(entry[1]),
+        ),
+      )
+    : {};
 
 const parseState = (text: string): SyncState => {
   const value: unknown = JSON.parse(text);
@@ -118,7 +161,12 @@ const parseState = (text: string): SyncState => {
     deviceId: value.deviceId,
     folder: typeof value.folder === "string" ? value.folder : undefined,
     paused: value.paused === true,
+    // A state file saved before these existed synced settings and quicklinks, but not snippets.
+    settingsEnabled: value.settingsEnabled !== false,
+    quicklinksEnabled: value.quicklinksEnabled !== false,
+    snippetsEnabled: value.snippetsEnabled === true,
     logsEnabled: value.logsEnabled !== false,
+    deferred: parseDeferred(value.deferred),
     sequence: typeof value.sequence === "number" ? value.sequence : 0,
     observed: value.observed as Record<string, string>,
     revisions: isObject(value.revisions) ? (value.revisions as Record<string, Revision>) : {},
@@ -155,6 +203,9 @@ export const readSyncStatusSync = (paths: SyncPaths = defaultPaths): SyncStatus 
     return {
       enabled: state.folder !== undefined,
       paused: state.paused,
+      settingsEnabled: state.settingsEnabled,
+      quicklinksEnabled: state.quicklinksEnabled,
+      snippetsEnabled: state.snippetsEnabled,
       logsEnabled: state.logsEnabled,
       folder: state.folder,
       deviceId: state.deviceId,
@@ -165,9 +216,9 @@ export const readSyncStatusSync = (paths: SyncPaths = defaultPaths): SyncStatus 
     };
   } catch {
     return {
+      ...DEFAULT_SYNC_CHOICES,
       enabled: false,
       paused: false,
-      logsEnabled: true,
       conflicts: 0,
       pending: 0,
     };
@@ -185,8 +236,26 @@ export const readSyncStatus = async (paths: SyncPaths = defaultPaths): Promise<S
   };
 };
 
+/** The name to show for a sync folder. iCloud Drive's own top folder has an odd one on disk. */
+export const toSyncFolderName = (folder: string): string => {
+  const name = basename(folder);
+  return name === ICLOUD_DRIVE_ROOT ? "iCloud Drive" : name;
+};
+
+const isKeySynced = (choices: SyncChoices, key: string): boolean => {
+  if (key.startsWith("quicklink:")) return choices.quicklinksEnabled;
+  if (key.startsWith("snippet:")) return choices.snippetsEnabled;
+  return choices.settingsEnabled;
+};
+
+interface LocalData {
+  config: Config;
+  links: Quicklink[];
+  snippets: Snippet[];
+}
+
 const portable = (key: string): boolean => !key.startsWith("/");
-const toEntries = (config: Config, links: readonly Quicklink[]): Record<string, string> => {
+const toEntries = ({ config, links, snippets }: LocalData): Record<string, string> => {
   const entries: Record<string, string> = {};
   for (const [key, value] of Object.entries(config.aliases)) {
     if (portable(key)) entries[`alias:${key}`] = JSON.stringify(value);
@@ -200,10 +269,18 @@ const toEntries = (config: Config, links: readonly Quicklink[]): Record<string, 
   for (const { id, name, link } of links) {
     entries[`quicklink:${id}`] = JSON.stringify({ id, name, link });
   }
+  for (const { id, name, keyword, text } of snippets) {
+    entries[`snippet:${id}`] = JSON.stringify({
+      id,
+      name,
+      ...(keyword === undefined ? {} : { keyword }),
+      text,
+    });
+  }
   return entries;
 };
 
-const readLocal = async (paths: SyncPaths): Promise<{ config: Config; links: Quicklink[] }> => {
+const readLocalConfig = async (paths: SyncPaths): Promise<Config> => {
   const configText = await readTextIfPresent(paths.config);
   if (configText !== undefined) {
     const rawConfig: unknown = JSON.parse(configText);
@@ -215,15 +292,47 @@ const readLocal = async (paths: SyncPaths): Promise<{ config: Config; links: Qui
       throw new Error("The local Redhot config is damaged. Fix it before syncing.");
     }
   }
-  const config = parseConfig(configText ?? "{}");
+  return parseConfig(configText ?? "{}");
+};
+
+const readLocalLinks = async (paths: SyncPaths): Promise<Quicklink[]> => {
   const linksText = await readTextIfPresent(paths.quicklinks);
-  if (linksText === undefined) return { config, links: [] };
+  if (linksText === undefined) return [];
   const rawLinks: unknown = JSON.parse(linksText);
   const links = parseQuicklinks(linksText);
   if (!Array.isArray(rawLinks) || rawLinks.length !== links.length) {
     throw new Error("The local Quicklinks file is damaged. Fix it before syncing.");
   }
-  return { config, links };
+  return links;
+};
+
+const readLocalSnippets = async (paths: SyncPaths): Promise<Snippet[]> => {
+  const snippetsText = await readTextIfPresent(paths.snippets);
+  if (snippetsText === undefined) return [];
+  const rawSnippets: unknown = JSON.parse(snippetsText);
+  const snippets = parseSnippets(snippetsText);
+  if (!Array.isArray(rawSnippets) || rawSnippets.length !== snippets.length) {
+    throw new Error("The local Snippets file is damaged. Fix it before syncing.");
+  }
+  for (const snippet of snippets) {
+    if (Buffer.byteLength(JSON.stringify(snippet)) > MAX_SYNCED_SNIPPET_BYTES) {
+      throw new Error(`The snippet ${snippet.name} is too long to sync. Shorten it first.`);
+    }
+  }
+  return snippets;
+};
+
+/** Leaves the files of anything switched off unread, so a problem in one can't stop the rest. */
+const readLocal = async (paths: SyncPaths, choices: SyncChoices): Promise<LocalData> => ({
+  config: choices.settingsEnabled ? await readLocalConfig(paths) : parseConfig("{}"),
+  links: choices.quicklinksEnabled ? await readLocalLinks(paths) : [],
+  snippets: choices.snippetsEnabled ? await readLocalSnippets(paths) : [],
+});
+
+/** What was last seen of anything switched off is kept, so turning it off can't read as deleting. */
+const setObserved = (state: SyncState, current: Record<string, string>): void => {
+  const switchedOff = Object.entries(state.observed).filter(([key]) => !isKeySynced(state, key));
+  state.observed = { ...Object.fromEntries(switchedOff), ...current };
 };
 
 const compareRevision = (first: Revision, second: Revision | undefined): number => {
@@ -248,7 +357,8 @@ const isValidOperation = (operation: Operation): boolean => {
     key === "clipboardHistoryMonths" ||
     (key.startsWith("alias:") && portable(key.slice(6))) ||
     (key.startsWith("hotkey:") && portable(key.slice(7))) ||
-    key.startsWith("quicklink:");
+    key.startsWith("quicklink:") ||
+    key.startsWith("snippet:");
   if (!knownKey) return false;
   if (operation.deleted === true) return true;
   if (key.startsWith("alias:")) {
@@ -265,13 +375,24 @@ const isValidOperation = (operation: Operation): boolean => {
       value.id === key.slice(10) && typeof value.name === "string" && typeof value.link === "string"
     );
   }
+  if (key.startsWith("snippet:") && isObject(value)) {
+    return (
+      value.id === key.slice(8) &&
+      typeof value.name === "string" &&
+      typeof value.text === "string" &&
+      (value.keyword === undefined || typeof value.keyword === "string")
+    );
+  }
   return false;
 };
 
 const recordLocalChanges = async (paths: SyncPaths, state: SyncState): Promise<void> => {
-  const { config, links } = await readLocal(paths);
-  const current = toEntries(config, links);
-  const keys = new Set([...Object.keys(state.observed), ...Object.keys(current)]);
+  const current = toEntries(await readLocal(paths, state));
+  const keys = new Set(
+    [...Object.keys(state.observed), ...Object.keys(current)].filter((key) =>
+      isKeySynced(state, key),
+    ),
+  );
   for (const key of keys) {
     if (state.observed[key] === current[key]) continue;
     state.sequence += 1;
@@ -290,12 +411,16 @@ const recordLocalChanges = async (paths: SyncPaths, state: SyncState): Promise<v
     state.revisions[key] = operation;
     state.seenOperations[operation.id] = true;
   }
-  state.observed = current;
+  setObserved(state, current);
   await saveState(paths, state);
 };
 
-const applyEntries = async (paths: SyncPaths, entries: Record<string, string>): Promise<void> => {
-  const { config, links } = await readLocal(paths);
+const applyEntries = async (
+  paths: SyncPaths,
+  choices: SyncChoices,
+  entries: Record<string, string>,
+): Promise<void> => {
+  const { config, links } = await readLocal(paths, choices);
   const aliases: Config["aliases"] = Object.fromEntries(
     Object.entries(config.aliases).filter(([key]) => !portable(key)),
   );
@@ -304,6 +429,7 @@ const applyEntries = async (paths: SyncPaths, entries: Record<string, string>): 
   );
   const localOpenWith = new Map(links.map(({ id, openWith }) => [id, openWith]));
   const syncedLinks: Quicklink[] = [];
+  const syncedSnippets: Snippet[] = [];
   let clipboardHistoryMonths: Config["clipboardHistoryMonths"];
   for (const [key, text] of Object.entries(entries)) {
     const value: unknown = JSON.parse(text);
@@ -326,11 +452,29 @@ const applyEntries = async (paths: SyncPaths, entries: Record<string, string>): 
           ...(openWith ? { openWith } : {}),
         });
       }
+    } else if (key.startsWith("snippet:") && isObject(value)) {
+      const id = key.slice("snippet:".length);
+      const { name, keyword, text: body } = value;
+      if (value.id === id && typeof name === "string" && typeof body === "string") {
+        syncedSnippets.push({
+          id,
+          name,
+          ...(typeof keyword === "string" ? { keyword } : {}),
+          text: body,
+        });
+      }
     }
   }
-  const nextConfig = { ...config, aliases, hotkeys, clipboardHistoryMonths };
-  await writeAtomic(paths.config, `${JSON.stringify(nextConfig, null, 2)}\n`);
-  await writeAtomic(paths.quicklinks, `${JSON.stringify(syncedLinks, null, 2)}\n`);
+  if (choices.settingsEnabled) {
+    const nextConfig = { ...config, aliases, hotkeys, clipboardHistoryMonths };
+    await writeAtomic(paths.config, `${JSON.stringify(nextConfig, null, 2)}\n`);
+  }
+  if (choices.quicklinksEnabled) {
+    await writeAtomic(paths.quicklinks, `${JSON.stringify(syncedLinks, null, 2)}\n`);
+  }
+  if (choices.snippetsEnabled) {
+    await writeAtomic(paths.snippets, `${JSON.stringify(syncedSnippets, null, 2)}\n`);
+  }
 };
 
 const copy = async (
@@ -401,16 +545,41 @@ const collectChanges = async (
   return operations.sort(compareRevision);
 };
 
+/**
+ * Holds only the newest change for each key, with the oldest one's base. Applied later, it then
+ * follows on from what this Mac last had, so a run of edits elsewhere doesn't look like a conflict.
+ */
+const deferOperation = (state: SyncState, operation: Operation): void => {
+  const held = state.deferred[operation.key];
+  if (held === undefined) {
+    state.deferred[operation.key] = operation;
+    return;
+  }
+  const [older, newer] =
+    compareRevision(operation, held) > 0 ? [held, operation] : [operation, held];
+  state.deferred[operation.key] = { ...newer, base: older.base };
+};
+
+const takeDeferredOperations = (state: SyncState): Operation[] => {
+  const ready = Object.values(state.deferred).filter(({ key }) => isKeySynced(state, key));
+  for (const { key } of ready) delete state.deferred[key];
+  return ready;
+};
+
 const applyChanges = async (paths: SyncPaths, operations: readonly Operation[]): Promise<number> =>
   withSyncLock(paths, async () => {
     const state = await readState(paths);
     await recordLocalChanges(paths, state);
-    const { config, links } = await readLocal(paths);
-    const entries = toEntries(config, links);
+    const entries = toEntries(await readLocal(paths, state));
+    const unseen = operations.filter(({ id }) => !state.seenOperations[id]);
+    const incomingOperations = [...takeDeferredOperations(state), ...unseen].sort(compareRevision);
     let imported = 0;
-    for (const operation of operations) {
-      if (state.seenOperations[operation.id]) continue;
+    for (const operation of incomingOperations) {
       state.seenOperations[operation.id] = true;
+      if (!isKeySynced(state, operation.key)) {
+        deferOperation(state, operation);
+        continue;
+      }
       const revision = state.revisions[operation.key];
       const incoming = operation.deleted ? undefined : JSON.stringify(operation.value);
       const isConcurrent =
@@ -439,9 +608,8 @@ const applyChanges = async (paths: SyncPaths, operations: readonly Operation[]):
       imported += 1;
     }
     if (imported > 0) {
-      await applyEntries(paths, entries);
-      const updated = await readLocal(paths);
-      state.observed = toEntries(updated.config, updated.links);
+      await applyEntries(paths, state, entries);
+      setObserved(state, toEntries(await readLocal(paths, state)));
     }
     await saveState(paths, state);
     return imported;
@@ -460,11 +628,13 @@ export const resolveSyncConflict = async (
     const conflict = state.conflicts.find((entry) => entry.key === key);
     if (conflict === undefined) return;
     if (restoreOther) {
-      const local = await readLocal(paths);
-      const entries = toEntries(local.config, local.links);
+      if (!isKeySynced(state, key)) {
+        throw new Error("Turn this on under What to Sync first, then restore it");
+      }
+      const entries = toEntries(await readLocal(paths, state));
       if (conflict.otherValue === undefined) delete entries[key];
       else entries[key] = conflict.otherValue;
-      await applyEntries(paths, entries);
+      await applyEntries(paths, state, entries);
       await recordLocalChanges(paths, state);
     }
     state.conflicts = state.conflicts.filter((entry) => entry.key !== key);
@@ -547,17 +717,19 @@ export const configureSync = async (
       state.observed = {};
       state.revisions = {};
       state.seenOperations = {};
+      state.deferred = {};
       state.lastSyncAt = undefined;
     }
+    // Moving an existing setup to another folder leaves a pause in place.
+    state.paused = state.folder === undefined ? false : state.paused;
     state.folder = folder;
-    state.paused = false;
     state.error = undefined;
     await saveState(paths, state);
   });
 };
 
 export const changeSyncSettings = async (
-  changes: { paused?: boolean; logsEnabled?: boolean; disconnect?: boolean },
+  changes: { paused?: boolean; disconnect?: boolean },
   paths: SyncPaths = defaultPaths,
 ): Promise<void> => {
   await withSyncLock(paths, async () => {
@@ -567,7 +739,18 @@ export const changeSyncSettings = async (
       state.lastSyncAt = undefined;
     }
     if (changes.paused !== undefined) state.paused = changes.paused;
-    if (changes.logsEnabled !== undefined) state.logsEnabled = changes.logsEnabled;
+    await saveState(paths, state);
+  });
+};
+
+export const setSyncChoice = async (
+  choice: keyof SyncChoices,
+  enabled: boolean,
+  paths: SyncPaths = defaultPaths,
+): Promise<void> => {
+  await withSyncLock(paths, async () => {
+    const state = await readState(paths);
+    state[choice] = enabled;
     await saveState(paths, state);
   });
 };
@@ -632,7 +815,10 @@ export const syncNow = async (paths: SyncPaths = defaultPaths): Promise<SyncStat
       current.error = undefined;
       await saveState(paths, current);
     });
-    if (imported > 0 && paths === defaultPaths) await reloadHotkeys().catch(() => {});
+    if (imported > 0 && paths === defaultPaths) {
+      await reloadHotkeys().catch(() => {});
+      await reloadSnippets();
+    }
   } catch (error) {
     await withSyncLock(paths, async () => {
       const state = await readState(paths);

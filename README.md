@@ -21,7 +21,7 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Calculator.** Type `2 * (4 + 1)` and press Enter to copy the answer.
 - **Currency conversion.** Type `356 USD to INR` or `$20 in €`. Rates are downloaded daily and work offline.
 - **Window actions.** Halves, quarters, thirds, maximize, center, restore and move to the next display, with optional Rectangle-style default hotkeys.
-- **iCloud Drive sync** (experimental). Share settings and quicklinks between your Macs through a folder you pick.
+- **iCloud Drive sync** (experimental). Share settings, quicklinks, snippets and logs between your Macs through a folder you pick, and choose which of them each Mac shares.
 - **Start at login,** so the shortcut and clipboard history survive a reboot.
 
 ## Requirements
@@ -249,7 +249,7 @@ Search `Settings` for:
 - **Log size** of 10, 50, 100 or 500 MB.
 - **Check for updates**, on by default, which asks npm once a day whether a newer Redhot is out.
 - **Window actions**, which shows whether Accessibility is granted and opens the right System Settings page.
-- **iCloud Drive Sync**, which picks an iCloud Drive folder to share settings and quicklinks between Macs.
+- **iCloud Drive Sync**, which picks an iCloud Drive folder to share things between Macs. **What to Sync** switches settings, quicklinks, snippets and logs on and off for each Mac. Snippets start off, because their text is kept in iCloud Drive as plain files.
 - **Web search**, which picks the engine used when search finds nothing and adds ready-made search quicklinks.
 
 In Terminal.app, Redhot opens an 80×18 window from its own **Redhot** profile, which it copies from your default profile, so it keeps your colours and font. Change the default profile to change how Redhot looks, not the Redhot profile, which Redhot rewrites and tidies up after. `Cmd` + `=` makes the text bigger in an open window.

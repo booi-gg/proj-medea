@@ -447,7 +447,7 @@ These rows aren't registered as a Redhot app. Like the calculator's answer, each
 
 ## Snippets
 
-`Snippet, Create` asks for a name, an optional keyword and the text, which can run over several lines. Snippets are stored in `~/.config/redhot/redhot-snippets.json` and appear in search with a `¶` icon. The item value is `redhot-snippets:<id>`, and aliases and hotkeys work as they do for quicklinks. Snippets stay on each Mac and aren't synced.
+`Snippet, Create` asks for a name, an optional keyword and the text, which can run over several lines. Snippets are stored in `~/.config/redhot/redhot-snippets.json` and appear in search with a `¶` icon. The item value is `redhot-snippets:<id>`, and aliases and hotkeys work as they do for quicklinks. Snippets stay on each Mac unless Snippets is turned on under What to Sync in iCloud Drive Sync, and an import makes the helper reload them.
 
 **From search.** Enter fills the placeholders and copies the result. Like clipboard history, it doesn't paste, because Redhot's own window is in front.
 

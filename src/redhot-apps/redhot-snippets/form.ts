@@ -1,5 +1,5 @@
 import { isCancel, multiline, text } from "@clack/prompts";
-import { findKeywordProblem, findNameProblem } from "./store.ts";
+import { findKeywordProblem, findNameProblem, findTextProblem } from "./store.ts";
 import type { Snippet, SnippetDraft } from "./store.ts";
 
 const TRAILING_LINE_BREAKS = /[\r\n]+$/;
@@ -30,7 +30,7 @@ export const askForSnippet = async (
   const body = await multiline({
     message: "Text, with {date} {time} {clipboard} {cursor} if you like. Enter twice to save",
     initialValue: current?.text ?? "",
-    validate: (value) => ((value ?? "").trim() === "" ? "Enter some text" : undefined),
+    validate: (value) => findTextProblem(value ?? ""),
   });
   if (isCancel(body)) {
     return undefined;

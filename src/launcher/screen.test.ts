@@ -74,6 +74,9 @@ test("formats the last successful sync for the launcher header", () => {
   const status = {
     enabled: true,
     paused: false,
+    settingsEnabled: true,
+    quicklinksEnabled: true,
+    snippetsEnabled: false,
     logsEnabled: true,
     conflicts: 0,
     pending: 0,

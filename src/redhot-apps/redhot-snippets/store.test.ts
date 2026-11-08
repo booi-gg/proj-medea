@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { findKeywordProblem, findNameProblem, parseSnippets } from "./store.ts";
+import { findKeywordProblem, findNameProblem, findTextProblem, parseSnippets } from "./store.ts";
 
 const address = { id: "address", name: "Address", keyword: ";addr", text: "1 Main St" };
 const noKeyword = { id: "note", name: "Note", text: "Hello" };
@@ -21,6 +21,12 @@ test("rejects an empty name and one already in use", () => {
     findNameProblem("address", undefined, [address]),
     "You already have a snippet with that name",
   );
+});
+
+test("rejects text that is empty or too long for one synced change", () => {
+  assert.equal(findTextProblem(" \n "), "Enter some text");
+  assert.equal(findTextProblem("x".repeat(16_001)), "Keep it under 16,000 characters");
+  assert.equal(findTextProblem("x".repeat(16_000)), undefined);
 });
 
 test("a snippet may keep its own name and keyword", () => {

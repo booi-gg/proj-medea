@@ -21,9 +21,11 @@ import {
   readSyncStatus,
   removeThisDevicesSyncedLogs,
   resolveSyncConflict,
+  setSyncChoice,
   syncNow,
+  toSyncFolderName,
 } from "../../sync/sync.ts";
-import type { SyncStatus } from "../../sync/sync.ts";
+import type { SyncChoices, SyncStatus } from "../../sync/sync.ts";
 import type { WindowAccess } from "../../menubar/helper-socket.ts";
 import {
   disableLoginItem,
@@ -52,6 +54,15 @@ const CHECK_FOR_UPDATES = "check-for-updates";
 const WEB_SEARCH = "web-search";
 const DONE = "done";
 const MONTHS_IN_YEAR = 12;
+const SYNC_CHOICES: readonly { key: keyof SyncChoices; label: string; hint: string }[] = [
+  { key: "settingsEnabled", label: "Settings", hint: "Aliases, hotkeys, clipboard history length" },
+  { key: "quicklinksEnabled", label: "Quicklinks", hint: "Names and links" },
+  { key: "snippetsEnabled", label: "Snippets", hint: "Keywords and text" },
+  { key: "logsEnabled", label: "Logs", hint: "Metadata only" },
+];
+
+const toErrorText = (error: unknown): string =>
+  error instanceof Error ? error.message : String(error);
 
 const syncLabel = (status: SyncStatus): string => {
   if (!status.enabled) return "○ Off";
@@ -90,15 +101,97 @@ const reviewSyncConflict = async (): Promise<string> => {
   return `Resolved ${selected}`;
 };
 
+const summarizeSyncChoices = (status: SyncStatus): string => {
+  const chosen = SYNC_CHOICES.filter(({ key }) => status[key]).map(({ label }) => label);
+  return chosen.length === 0 ? "Nothing" : chosen.join(", ");
+};
+
+/** Returns the line to show next, which is blank if nothing changed. */
+const toggleSyncChoice = async (
+  { key, label }: (typeof SYNC_CHOICES)[number],
+  isOn: boolean,
+): Promise<string> => {
+  if (key === "snippetsEnabled" && !isOn) {
+    const accepted = await confirm({
+      message: "Snippet text is kept in iCloud Drive as plain files. Sync snippets?",
+      initialValue: false,
+    });
+    if (accepted !== true) {
+      return "";
+    }
+  }
+  await setSyncChoice(key, !isOn);
+  if (isOn && key === "snippetsEnabled") {
+    return "Snippet sync turned off. What's already in the sync folder stays there";
+  }
+  return `${label} sync turned ${isOn ? "off" : "on"}`;
+};
+
+type SyncChoiceRow = keyof SyncChoices | "back";
+
+const askForSyncChoice = (status: SyncStatus, initialValue: SyncChoiceRow) =>
+  select<SyncChoiceRow>({
+    message: "Choose what this Mac shares",
+    initialValue,
+    options: [
+      ...SYNC_CHOICES.map(({ key, label, hint }) => ({
+        value: key,
+        label: `${label}  ${status[key] ? STATE_LABELS.on : STATE_LABELS.off}`,
+        hint,
+      })),
+      { value: "back", label: "Back" },
+    ],
+  });
+
+const runSyncChoices = async (): Promise<void> => {
+  let notice = "";
+  let focused: SyncChoiceRow = "settingsEnabled";
+  while (true) {
+    const status = await readSyncStatus();
+    drawScreen({ title: "What to Sync", icon: ICON, notice });
+    const choice = await askForSyncChoice(status, focused);
+    if (isCancel(choice) || choice === "back") {
+      return;
+    }
+    focused = choice;
+    const row = SYNC_CHOICES.find(({ key }) => key === choice);
+    if (row !== undefined) {
+      try {
+        notice = await toggleSyncChoice(row, status[row.key]);
+      } catch (error) {
+        notice = toErrorText(error);
+      }
+    }
+  }
+};
+
+/** Resolves to the chosen folder's name, or undefined if the picker was closed. */
+const chooseSyncFolder = async (): Promise<string | undefined> => {
+  const folder = await chooseICloudFolder();
+  if (folder === undefined) {
+    return undefined;
+  }
+  await configureSync(folder);
+  await syncNow();
+  return toSyncFolderName(folder);
+};
+
 const runSyncSettings = async (): Promise<string> => {
   let notice = "";
   while (true) {
     const status = await readSyncStatus();
     drawScreen({ title: "iCloud Drive Sync", icon: ICON, notice });
+    const whatToSyncRow = {
+      value: "choices",
+      label: "What to Sync",
+      hint: summarizeSyncChoices(status),
+    };
     const choice = await select({
       message: syncDetails(status),
       options: [
-        ...(!status.enabled ? [{ value: "setup", label: "Choose iCloud Drive Folder" }] : []),
+        ...(!status.enabled
+          ? [{ value: "setup", label: "Choose iCloud Drive Folder" }, whatToSyncRow]
+          : []),
         ...(status.enabled
           ? [
               {
@@ -110,9 +203,11 @@ const runSyncSettings = async (): Promise<string> => {
                 value: "pause",
                 label: status.paused ? "Resume Sync" : "Pause Sync",
               },
+              whatToSyncRow,
               {
-                value: "logs",
-                label: `Sync logs  ${status.logsEnabled ? "● On" : "○ Off"}`,
+                value: "folder",
+                label: `Sync Folder  ${toSyncFolderName(status.folder ?? "")}`,
+                hint: "Choose another folder",
               },
               { value: "remove-logs", label: "Remove This Mac's Synced Logs" },
               ...(status.conflicts > 0
@@ -133,25 +228,22 @@ const runSyncSettings = async (): Promise<string> => {
     if (isCancel(choice) || choice === "back") return notice;
     try {
       if (choice === "setup") {
-        const accepted = await confirm({
-          message: "Sync settings, Quicklink URLs, and metadata logs to iCloud Drive?",
-          initialValue: true,
-        });
-        if (accepted !== true) continue;
-        const folder = await chooseICloudFolder();
-        if (folder === undefined) continue;
-        await configureSync(folder);
-        await syncNow();
+        const name = await chooseSyncFolder();
+        if (name === undefined) continue;
         notice = "iCloud Drive sync is on";
+      } else if (choice === "folder") {
+        const name = await chooseSyncFolder();
+        if (name === undefined) continue;
+        notice = `Now syncing with ${name}`;
+      } else if (choice === "choices") {
+        await runSyncChoices();
+        notice = "";
       } else if (choice === "now") {
         await syncNow();
         notice = "Sync finished";
       } else if (choice === "pause") {
         await changeSyncSettings({ paused: !status.paused });
         notice = status.paused ? "Sync resumed" : "Sync paused";
-      } else if (choice === "logs") {
-        await changeSyncSettings({ logsEnabled: !status.logsEnabled });
-        notice = status.logsEnabled ? "Log sync turned off" : "Log sync turned on";
       } else if (choice === "conflicts") {
         notice = await reviewSyncConflict();
       } else if (choice === "remove-logs") {
@@ -177,7 +269,7 @@ const runSyncSettings = async (): Promise<string> => {
         }
       }
     } catch (error) {
-      notice = error instanceof Error ? error.message : String(error);
+      notice = toErrorText(error);
     }
   }
 };

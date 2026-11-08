@@ -52,3 +52,9 @@ test("accepts only supported log size limits", () => {
   assert.equal(parseConfig('{ "logMaxSizeMb": 100 }').logMaxSizeMb, 100);
   assert.equal(parseConfig('{ "logMaxSizeMb": 7 }').logMaxSizeMb, undefined);
 });
+
+test("keeps the update check setting only when it is true or false", () => {
+  assert.equal(parseConfig('{"checkForUpdates":false}').checkForUpdates, false);
+  assert.equal(parseConfig('{"checkForUpdates":true}').checkForUpdates, true);
+  assert.equal(parseConfig('{"checkForUpdates":"no"}').checkForUpdates, undefined);
+});

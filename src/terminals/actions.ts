@@ -34,6 +34,14 @@ const openItemWindow = async (itemValue: string): Promise<void> => {
   await launcher.open(scriptPath);
 };
 
+/** Opens a window that installs the newest version, so the person can watch it happen. */
+export const openUpdateWindow = async (): Promise<void> => {
+  const scriptPath = join(buildDir, "update-redhot.command");
+  await writeLauncherScript(scriptPath, ["update-in-window"]);
+  const launcher = await getSelectedLauncher();
+  await launcher.open(scriptPath);
+};
+
 // Loads every Redhot app, so it stays out of commands that never run one.
 const findItem = async (itemValue: string | undefined): Promise<LauncherItem | undefined> => {
   const { findRedhotItem } = await import("../redhot-apps/registry.ts");

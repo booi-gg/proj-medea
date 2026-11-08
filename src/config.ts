@@ -20,6 +20,7 @@ export interface Config {
   hotkeys: HotkeyMap;
   clipboardHistoryMonths?: HistoryMonths;
   logMaxSizeMb?: LogMaxSizeMb;
+  checkForUpdates?: boolean;
 }
 
 const EMPTY_CONFIG: Config = { aliases: {}, hotkeys: {} };
@@ -71,12 +72,14 @@ export const parseConfig = (configText: string): Config => {
     const terminal = typeof parsed.terminal === "string" ? parsed.terminal : undefined;
     const clipboardHistoryMonths = toHistoryMonths(parsed.clipboardHistoryMonths);
     const logMaxSizeMb = toLogMaxSizeMb(parsed.logMaxSizeMb);
+    const { checkForUpdates } = parsed;
     return {
       terminal,
       aliases: parseAliasMap(parsed.aliases),
       hotkeys: parseHotkeyMap(parsed.hotkeys),
       ...(clipboardHistoryMonths === undefined ? {} : { clipboardHistoryMonths }),
       ...(logMaxSizeMb === undefined ? {} : { logMaxSizeMb }),
+      ...(typeof checkForUpdates === "boolean" ? { checkForUpdates } : {}),
     };
   } catch {
     return EMPTY_CONFIG;

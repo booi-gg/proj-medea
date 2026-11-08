@@ -35,6 +35,17 @@ redhot start
 
 To run from a clone instead, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+### Updating
+
+When a new version is out, the menu bar icon's menu shows **Update to 0.x.y…**. Choose it and Redhot opens a terminal window, installs the new version with the package manager you installed it with (npm, pnpm or Bun), and restarts the menu bar item. **Check for Updates…** in the same menu checks right away.
+
+To update by hand:
+
+```sh
+npm install --global @booi-gg/redhot
+redhot restart
+```
+
 ## Using Redhot
 
 | Key                | In search                                                 |
@@ -88,6 +99,7 @@ Search `Settings` for:
 - **Start at login**, which adds a LaunchAgent so the helper starts when you log in.
 - **Keep clipboard history** for 3, 4 or 5 months, or 1 year.
 - **Log size** of 10, 50, 100 or 500 MB.
+- **Check for updates**, on by default, which asks npm once a day whether a newer Redhot is out.
 - **Window actions**, which shows whether Accessibility is granted and opens the right System Settings page.
 - **iCloud Drive Sync**, which picks an iCloud Drive folder to share settings and quicklinks between Macs.
 
@@ -111,6 +123,7 @@ In Terminal.app, Redhot opens an 80×18 window from its own **Redhot** profile, 
 redhot                       # open search in the current terminal
 redhot start                 # build and start the menu bar helper
 redhot stop                  # stop the helper and its hotkeys
+redhot restart               # restart the helper, e.g. after updating by hand
 redhot status                # check whether the helper is running
 redhot sign                  # one-time: keep Accessibility permission across rebuilds
 redhot --version             # print the installed version (also -v)
@@ -131,7 +144,7 @@ redhot sync [now|status|open]
 | `~/Library/Logs/Redhot/`                       | Logs                                            |
 | `~/Library/LaunchAgents/redhot.menu-bar.plist` | The login item, when Start at login is on       |
 
-Logs record action types, item IDs, timings and error categories. They never contain search text, clipboard content, link targets or command output. Redhot makes no network requests except downloading currency rates from [Frankfurter](https://frankfurter.dev).
+Logs record action types, item IDs, timings and error categories. They never contain search text, clipboard content, link targets or command output. Redhot makes two kinds of network request: downloading currency rates from [Frankfurter](https://frankfurter.dev), and asking the npm registry for Redhot's latest version once a day. Settings turns the second off.
 
 ## Uninstall
 

@@ -46,6 +46,7 @@
     "test": "node --test",
     "menubar:start": "node src/start.js start",
     "menubar:stop": "node src/start.js stop",
+    "menubar:restart": "node src/start.js restart",
     "menubar:status": "node src/start.js status",
     "menubar:sign": "node src/start.js sign",
     "typecheck": "tsc",

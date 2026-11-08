@@ -169,6 +169,12 @@ struct TerminalChoice: Decodable {
   let selected: Bool
 }
 
+struct UpdateStatus: Decodable {
+  let current: String
+  let latest: String?
+  let updateAvailable: Bool
+}
+
 // MARK: - Clipboard watcher
 
 enum Clip {
@@ -361,6 +367,15 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private var clipsToRecord: [(clip: Clip, trace: String)] = []
   private var isRecordingClip = false
   private var syncTimer: Timer?
+  private var updateTimer: Timer?
+  private let updateItem = NSMenuItem(title: "Check for Updates…", action: nil, keyEquivalent: "")
+  // Set when npm has a newer version, which turns the item into "Update to …".
+  private var availableVersion: String?
+  private var isCheckingForUpdate = false
+  // A checkout is updated with git, so its menu can check but never installs from npm.
+  private let isCheckout = URL(fileURLWithPath: CommandLine.arguments[0])
+    .deletingLastPathComponent()
+    .lastPathComponent == ".build"
 
   init(cliCommand: [String], windows: WindowManager) {
     self.cliCommand = cliCommand
@@ -374,9 +389,6 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     statusItem.button?.image?.isTemplate = true
     statusItem.button?.toolTip = "Redhot"
     // A checkout builds into .build and an installed copy doesn't, so both can run side by side.
-    let isCheckout = URL(fileURLWithPath: CommandLine.arguments[0])
-      .deletingLastPathComponent()
-      .lastPathComponent == ".build"
     if isCheckout {
       statusItem.button?.title = "dev"
       statusItem.button?.imagePosition = .imageLeading
@@ -405,6 +417,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     menu.addItem(.separator())
 
+    updateItem.action = #selector(handleUpdate)
+    updateItem.target = self
+    menu.addItem(updateItem)
+    menu.addItem(.separator())
+
     let exitItem = NSMenuItem(
       title: "Exit",
       action: #selector(NSApplication.terminate(_:)),
@@ -420,6 +437,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
       self?.runCli(["sync", "now"])
     }
     runCli(["sync", "now"])
+    if !isCheckout {
+      // Hourly is cheap: the CLI reuses its last answer and asks npm at most once a day.
+      updateTimer = Timer.scheduledTimer(withTimeInterval: 3600, repeats: true) { [weak self] _ in
+        self?.refreshUpdateStatus()
+      }
+      refreshUpdateStatus()
+    }
   }
 
   func menuWillOpen(_ menu: NSMenu) {
@@ -445,6 +469,67 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     } catch {
       RedhotLog.end(span, ok: false, fields: ["error": String(describing: type(of: error))])
       NSSound.beep()
+    }
+  }
+
+  @objc private func handleUpdate() {
+    if availableVersion != nil {
+      RedhotLog.event("update.open")
+      runCli(["update"])
+      return
+    }
+    guard !isCheckingForUpdate else { return }
+    isCheckingForUpdate = true
+    updateItem.title = "Checking for Updates…"
+    refreshUpdateStatus(force: true) { [weak self] status in
+      self?.isCheckingForUpdate = false
+      self?.showUpdateResult(status)
+    }
+  }
+
+  private func refreshUpdateStatus(force: Bool = false, onFinish: ((UpdateStatus?) -> Void)? = nil) {
+    runCli(force ? ["update-status", "--now"] : ["update-status"]) { [weak self] output, ok in
+      let status = ok ? try? JSONDecoder().decode(UpdateStatus.self, from: output) : nil
+      // No latest version means no answer, like when automatic checks are off, so keep the last one.
+      if let self, !self.isCheckout, let status, let latest = status.latest {
+        self.availableVersion = status.updateAvailable ? latest : nil
+      }
+      self?.updateItem.title = self?.availableVersion.map { "Update to \($0)…" } ?? "Check for Updates…"
+      onFinish?(status)
+    }
+  }
+
+  /// The menu is closed by the time a check finishes, so the answer comes as an alert.
+  private func showUpdateResult(_ status: UpdateStatus?) {
+    NSApp.activate(ignoringOtherApps: true)
+    let alert = NSAlert()
+    // The helper is a bare binary with no app icon, so macOS would show a folder.
+    alert.icon = NSImage(systemSymbolName: "terminal", accessibilityDescription: "Redhot")?
+      .withSymbolConfiguration(NSImage.SymbolConfiguration(pointSize: 40, weight: .regular))
+    guard let status else {
+      alert.messageText = "Couldn't check for updates"
+      alert.informativeText = "Check your internet connection and try again."
+      alert.runModal()
+      return
+    }
+    guard status.updateAvailable, let latest = status.latest else {
+      alert.messageText = "Redhot is up to date"
+      alert.informativeText = "\(status.current) is the newest version."
+      alert.runModal()
+      return
+    }
+    alert.messageText = "Redhot \(latest) is available"
+    if isCheckout {
+      alert.informativeText = "This checkout is \(status.current). Pull the latest code with git to update it."
+      alert.runModal()
+      return
+    }
+    alert.informativeText = "You have \(status.current). The update runs in a terminal window, then the menu bar item restarts."
+    alert.addButton(withTitle: "Update")
+    alert.addButton(withTitle: "Later")
+    if alert.runModal() == .alertFirstButtonReturn {
+      RedhotLog.event("update.open")
+      runCli(["update"])
     }
   }
 

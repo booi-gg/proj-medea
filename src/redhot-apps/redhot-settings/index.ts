@@ -45,6 +45,7 @@ const CLIPBOARD_HISTORY = "clipboard-history";
 const LOG_SIZE = "log-size";
 const WINDOW_ACCESS = "window-access";
 const SYNC = "sync";
+const CHECK_FOR_UPDATES = "check-for-updates";
 const DONE = "done";
 const MONTHS_IN_YEAR = 12;
 
@@ -288,12 +289,23 @@ const chooseLogSize = async (current: LogMaxSizeMb): Promise<string> => {
   return `Logs are kept up to ${size} MB`;
 };
 
+const toggleUpdateChecks = async (isOn: boolean): Promise<string> => {
+  await updateConfig({ checkForUpdates: !isOn });
+  return isOn
+    ? "Redhot won't check for updates. Use Check for Updates in the menu bar"
+    : "Redhot will check npm for updates once a day";
+};
+
 /** Shows the menu once. Returns the line to show next, or undefined when finished. */
 const runSettingsRound = async (notice: string): Promise<string | undefined> => {
   drawScreen({ title: "Settings", icon: ICON, notice });
   const [
     state,
-    { clipboardHistoryMonths = DEFAULT_HISTORY_MONTHS, logMaxSizeMb = DEFAULT_LOG_MAX_SIZE_MB },
+    {
+      clipboardHistoryMonths = DEFAULT_HISTORY_MONTHS,
+      logMaxSizeMb = DEFAULT_LOG_MAX_SIZE_MB,
+      checkForUpdates = true,
+    },
     windowAccess,
     syncStatus,
   ] = await Promise.all([checkLoginItem(), readConfig(), readWindowAccess(), readSyncStatus()]);
@@ -325,11 +337,19 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
         label: `iCloud Drive Sync  ${syncLabel(syncStatus)}`,
         hint: syncDetails(syncStatus),
       },
+      {
+        value: CHECK_FOR_UPDATES,
+        label: `Check for updates  ${checkForUpdates ? STATE_LABELS.on : STATE_LABELS.off}`,
+        hint: "Asks npm once a day",
+      },
       { value: DONE, label: "Done" },
     ],
   });
   if (isCancel(choice) || choice === DONE) {
     return undefined;
+  }
+  if (choice === CHECK_FOR_UPDATES) {
+    return toggleUpdateChecks(checkForUpdates);
   }
   if (choice === WINDOW_ACCESS) {
     return fixWindowAccess(windowAccess);

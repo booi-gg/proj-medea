@@ -20,6 +20,10 @@ const PROCESS_COMMANDS = new Set([
   "sign",
   "logs",
   "sync",
+  "update-status",
+  "update",
+  "update-in-window",
+  "restart",
 ]);
 
 const toProcessKind = (command: string | undefined): string => {
@@ -111,6 +115,22 @@ const main = async (): Promise<void> => {
     return;
   }
 
+  if (command === "update-status") {
+    const { checkForUpdate } = await import("./update/update-check.ts");
+    const status = await checkForUpdate({ force: argument === "--now" });
+    process.stdout.write(`${JSON.stringify(status)}\n`);
+    return;
+  }
+  if (command === "update") {
+    const { openUpdateWindow } = await import("./terminals/actions.ts");
+    await openUpdateWindow();
+    return;
+  }
+  if (command === "update-in-window") {
+    const { runUpdateInWindow } = await import("./update/update-window.ts");
+    await runUpdateInWindow();
+    return;
+  }
   if (VERSION_COMMANDS.has(command)) {
     const { readVersion } = await import("./version.ts");
     process.stdout.write(`${await readVersion()}\n`);
@@ -118,7 +138,7 @@ const main = async (): Promise<void> => {
   }
 
   const { intro } = await import("@clack/prompts");
-  const { showStatus, sign, start, stop } = await import("./menubar/commands.ts");
+  const { restart, showStatus, sign, start, stop } = await import("./menubar/commands.ts");
   intro("redhot");
   if (command === "start") {
     await start();
@@ -126,6 +146,10 @@ const main = async (): Promise<void> => {
   }
   if (command === "stop") {
     await stop();
+    return;
+  }
+  if (command === "restart") {
+    await restart();
     return;
   }
   if (command === "status") {
@@ -136,13 +160,16 @@ const main = async (): Promise<void> => {
     await sign();
     return;
   }
-  throw new Error(`Unknown command "${command}". Use start, stop, status, sign or --version.`);
+  throw new Error(
+    `Unknown command "${command}". Use start, stop, restart, status, sign or --version.`,
+  );
 };
 
 try {
   const command = process.argv[2];
   const kind = toProcessKind(command);
-  const closesOwnWindow = command === undefined || command === "run-in-window";
+  const closesOwnWindow =
+    command === undefined || command === "run-in-window" || command === "update-in-window";
   await withAction("process.run", { kind, interactive: closesOwnWindow }, main);
   if (closesOwnWindow) {
     const { closeOwnWindow } = await import("./terminals/close-window.ts");

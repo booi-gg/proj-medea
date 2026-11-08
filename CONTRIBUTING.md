@@ -21,7 +21,7 @@ pnpm start           # open search in the current terminal
 
 A checkout builds into `.build/` and its menu bar item says "dev", so it can run beside an installed copy without either touching the other.
 
-Node runs the TypeScript directly through type stripping, so there's no build step while you work. Editing a TypeScript file takes effect the next time search opens. Editing a Swift file rebuilds the helper on the next `pnpm menubar:start`, after `pnpm menubar:stop`.
+Node runs the TypeScript directly through type stripping, so there's no build step while you work. Editing a TypeScript file takes effect the next time search opens. Editing a Swift file takes effect after `pnpm menubar:restart`, which rebuilds the helper.
 
 Window actions need Accessibility permission. Run `pnpm menubar:sign` once so the grant survives rebuilds.
 

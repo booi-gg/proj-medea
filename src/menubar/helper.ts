@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { setTimeout as delay } from "node:timers/promises";
 import { openSync } from "node:fs";
 import {
   cliEntryPath,
@@ -19,6 +20,8 @@ import { writeLauncherScript } from "../terminals/launcher-script.ts";
 import { signHelper } from "./signing.ts";
 
 const PGREP_NO_MATCH_EXIT_CODE = 1;
+const STOP_POLL_MS = 100;
+const STOP_TIMEOUT_MS = 5000;
 
 const isNoMatchError = (error: unknown): boolean =>
   error instanceof Error && "code" in error && error.code === PGREP_NO_MATCH_EXIT_CODE;
@@ -86,4 +89,17 @@ export const reloadHotkeys = async (): Promise<void> => {
   for (const pid of pids) {
     process.kill(pid, "SIGUSR1");
   }
+};
+
+/** Stops the helper, waits for it to exit, then starts the current build of it. */
+export const restartMenuBar = async (): Promise<void> => {
+  await stopMenuBar();
+  const deadline = Date.now() + STOP_TIMEOUT_MS;
+  while (await isMenuBarRunning()) {
+    if (Date.now() > deadline) {
+      throw new Error("The menu bar item didn't stop. Run redhot stop, then redhot start.");
+    }
+    await delay(STOP_POLL_MS);
+  }
+  await startMenuBar();
 };

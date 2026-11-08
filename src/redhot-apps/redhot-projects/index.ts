@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, extname, join } from "node:path";
 import { styleText } from "node:util";
+import { readConfigSync } from "../../config.ts";
 import { runCommand } from "../../shell.ts";
 import { toSafeName } from "../redhot-files/format.ts";
 import type { LauncherItem, RedhotApp } from "../types.ts";
@@ -107,6 +108,10 @@ const scanItems = (): LauncherItem[] =>
 let cached: { items: LauncherItem[]; scannedAt: number } | undefined;
 
 const listItems = (): LauncherItem[] => {
+  // Checked first, so with this off nothing on disk is scanned.
+  if (readConfigSync().recentProjects !== true) {
+    return [];
+  }
   const now = Date.now();
   if (cached === undefined || now - cached.scannedAt > CACHE_MS) {
     cached = { items: scanItems(), scannedAt: now };

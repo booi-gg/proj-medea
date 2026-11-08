@@ -561,6 +561,8 @@ Its own screen, so app search never waits on Spotlight. Typing `f` and a space i
 
 ## Recent projects
 
+**Off by default.** `recentProjects` in `config.json` turns this on, from **Show recent projects in search** in Settings. Until then `listItems` returns nothing and scans nothing. Like update checks, it stays on each Mac and isn't synced. Aliases and hotkeys saved for a project are kept while it's off, and work again when it's back on.
+
 Each editor's recent projects are rows in the main search, up to 30 per editor, for editors that are installed. Enter runs `open -a <the editor> <project>`, so a project always opens in the app it came from. A folder used in two editors gets one row each, and the kind on the row names the editor and the parent folder, like `VS Code · personal`.
 
 **Where the lists come from.**

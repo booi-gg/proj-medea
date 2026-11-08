@@ -52,10 +52,20 @@ const WINDOW_ACCESS = "window-access";
 const SYNC = "sync";
 const CHECK_FOR_UPDATES = "check-for-updates";
 const WEB_SEARCH = "web-search";
+const RECENT_PROJECTS = "recent-projects";
+const RECENT_PROJECTS_LABEL = "Show recent projects in search";
 const DONE = "done";
 const MONTHS_IN_YEAR = 12;
-const SYNC_CHOICES: readonly { key: keyof SyncChoices; label: string; hint: string }[] = [
-  { key: "settingsEnabled", label: "Settings", hint: "Aliases, hotkeys, clipboard history length" },
+const SYNC_CHOICES: readonly {
+  key: keyof SyncChoices;
+  label: string;
+  hint: string;
+}[] = [
+  {
+    key: "settingsEnabled",
+    label: "Settings",
+    hint: "Aliases, hotkeys, clipboard history length",
+  },
   { key: "quicklinksEnabled", label: "Quicklinks", hint: "Names and links" },
   { key: "snippetsEnabled", label: "Snippets", hint: "Keywords and text" },
   { key: "logsEnabled", label: "Logs", hint: "Metadata only" },
@@ -106,11 +116,28 @@ const summarizeSyncChoices = (status: SyncStatus): string => {
   return chosen.length === 0 ? "Nothing" : chosen.join(", ");
 };
 
+/** Offers Off and On with the current one selected. Undefined when it's left as it was. */
+const askOnOff = async (message: string, isOn: boolean): Promise<boolean | undefined> => {
+  const current = isOn ? "on" : "off";
+  const choice = await select({
+    message,
+    initialValue: current,
+    options: [
+      { value: "off", label: "Off" },
+      { value: "on", label: "On" },
+    ],
+  });
+  return isCancel(choice) || choice === current ? undefined : choice === "on";
+};
+
 /** Returns the line to show next, which is blank if nothing changed. */
-const toggleSyncChoice = async (
+const chooseSyncChoice = async (
   { key, label }: (typeof SYNC_CHOICES)[number],
   isOn: boolean,
 ): Promise<string> => {
+  if ((await askOnOff(`Sync ${label.toLowerCase()}`, isOn)) === undefined) {
+    return "";
+  }
   if (key === "snippetsEnabled" && !isOn) {
     const accepted = await confirm({
       message: "Snippet text is kept in iCloud Drive as plain files. Sync snippets?",
@@ -157,7 +184,7 @@ const runSyncChoices = async (): Promise<void> => {
     const row = SYNC_CHOICES.find(({ key }) => key === choice);
     if (row !== undefined) {
       try {
-        notice = await toggleSyncChoice(row, status[row.key]);
+        notice = await chooseSyncChoice(row, status[row.key]);
       } catch (error) {
         notice = toErrorText(error);
       }
@@ -385,11 +412,26 @@ const chooseLogSize = async (current: LogMaxSizeMb): Promise<string> => {
   return `Logs are kept up to ${size} MB`;
 };
 
-const toggleUpdateChecks = async (isOn: boolean): Promise<string> => {
-  await updateConfig({ checkForUpdates: !isOn });
-  return isOn
-    ? "Redhot won't check for updates. Use Check for Updates in the menu bar"
-    : "Redhot will check npm for updates once a day";
+const chooseUpdateChecks = async (isOn: boolean): Promise<string> => {
+  const checkForUpdates = await askOnOff("Check for updates", isOn);
+  if (checkForUpdates === undefined) {
+    return "";
+  }
+  await updateConfig({ checkForUpdates });
+  return checkForUpdates
+    ? "Redhot will check npm for updates once a day"
+    : "Redhot won't check for updates. Use Check for Updates in the menu bar";
+};
+
+const chooseRecentProjects = async (isOn: boolean): Promise<string> => {
+  const recentProjects = await askOnOff(RECENT_PROJECTS_LABEL, isOn);
+  if (recentProjects === undefined) {
+    return "";
+  }
+  await updateConfig({ recentProjects });
+  return recentProjects
+    ? "Recent projects will show in search"
+    : "Recent projects won't show in search";
 };
 
 /** Shows the menu once. Returns the line to show next, or undefined when finished. */
@@ -402,6 +444,7 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
       logMaxSizeMb = DEFAULT_LOG_MAX_SIZE_MB,
       checkForUpdates = true,
       webSearchEngine = DEFAULT_WEB_SEARCH_ENGINE,
+      recentProjects = false,
     },
     windowAccess,
     syncStatus,
@@ -444,6 +487,10 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
         label: `Web search  ${WEB_SEARCH_ENGINES[webSearchEngine].name}`,
         hint: "Used when search finds nothing",
       },
+      {
+        value: RECENT_PROJECTS,
+        label: `${RECENT_PROJECTS_LABEL}  ${recentProjects ? STATE_LABELS.on : STATE_LABELS.off}`,
+      },
       { value: DONE, label: "Done" },
     ],
   });
@@ -451,10 +498,13 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
     return undefined;
   }
   if (choice === CHECK_FOR_UPDATES) {
-    return toggleUpdateChecks(checkForUpdates);
+    return chooseUpdateChecks(checkForUpdates);
   }
   if (choice === WEB_SEARCH) {
     return runWebSearchSettings(webSearchEngine);
+  }
+  if (choice === RECENT_PROJECTS) {
+    return chooseRecentProjects(recentProjects);
   }
   if (choice === WINDOW_ACCESS) {
     return fixWindowAccess(windowAccess);

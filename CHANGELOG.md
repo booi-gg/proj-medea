@@ -15,6 +15,10 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 - The menu bar icon and Redhot's alerts use the Redhot logo, the R from the banner, instead of a terminal symbol.
 
+### Release process
+
+- Every push to `main` bumps the version from the commit messages, updates this changelog, and commits and tags the release. Publishing to npm stays manual.
+
 ### Removed
 
 - Ghostty support and the **Set Terminal** menu. Redhot now opens only in macOS's Terminal.

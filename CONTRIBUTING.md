@@ -65,4 +65,17 @@ Tests sit beside the file they cover, as `name.test.ts`, and run with Node's bui
 4. Add a line under "Unreleased" in [CHANGELOG.md](CHANGELOG.md).
 5. Say in the description how you tested it, including which terminal and macOS version, for anything a unit test can't reach.
 
+## Releases
+
+Every push to `main` runs [.github/workflows/release.yml](.github/workflows/release.yml). It runs the type check and tests, then `scripts/bump-version.ts` picks the next version from the commit messages since the last `chore(release): bump version` commit:
+
+| Commit message                                         | Version       |
+| ------------------------------------------------------ | ------------- |
+| `feat!: ...`, or a `BREAKING CHANGE:` line in the body | 0.1.3 → 1.0.0 |
+| `feat: ...`                                            | 0.1.3 → 0.2.0 |
+| Anything else, like `fix:` or `update:`                | 0.1.3 → 0.1.4 |
+| Only `docs:`, `test:`, `ci:`, `style:` or `chore:`     | No release    |
+
+It renames "Unreleased" in the changelog to the new version, commits `chore(release): bump version 0.1.3 -> 0.1.4`, tags it `v0.1.4` and pushes both. Run `git pull` after a push to get that commit. Publishing stays manual: pull, then `npm publish`.
+
 By contributing, you agree that your work is released under the [MIT License](LICENSE) and that you'll follow the [Code of Conduct](CODE_OF_CONDUCT.md).

@@ -7,5 +7,6 @@
     "allowJs": true,
     "rewriteRelativeImportExtensions": true
   },
+  "include": ["src"],
   "exclude": ["src/**/*.test.ts"]
 }

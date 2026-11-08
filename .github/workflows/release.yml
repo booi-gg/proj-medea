@@ -1,0 +1,61 @@
+name: Release
+
+# On every push to main: test, then bump the version from the commit messages since the last
+# release, commit it and tag it. Publishing to npm stays a manual step.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+# Runs one at a time, so each run sees the release commit the one before it pushed.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  bump:
+    # A release commit pushed by hand is already a release.
+    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release)') }}
+    # The tests use macOS tools like plutil and zsh.
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - run: pnpm install
+
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      - id: bump
+        run: node scripts/bump-version.ts
+
+      - if: steps.bump.outputs.released == 'true'
+        env:
+          CURRENT: ${{ steps.bump.outputs.current }}
+          NEXT: ${{ steps.bump.outputs.next }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898141+github-actions[bot]@users.noreply.github.com"
+          git commit --all --message "chore(release): bump version $CURRENT -> $NEXT"
+          git tag "v$NEXT"
+          # Someone may have pushed while this ran, so try once more on top of their work.
+          if ! git push origin HEAD:main; then
+            git pull --rebase origin main
+            git tag --force "v$NEXT"
+            git push origin HEAD:main
+          fi
+          git push origin "v$NEXT"

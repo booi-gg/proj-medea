@@ -1,10 +1,14 @@
-import { readConfig, updateConfig } from "../config.ts";
+import { DEFAULT_LAUNCH_HOTKEY, readConfig, updateConfig } from "../config.ts";
 import type { HotkeyMap } from "../config.ts";
 import { findWindowCommand } from "../redhot-apps/redhot-window/actions.ts";
 import { toDisplayName } from "./aliases.ts";
 
-const REDHOT_HOTKEY = "shift+cmd+space";
+/** The helper sees the shortcut that opens Redhot as an item with this value. */
+export const LAUNCH_HOTKEY_VALUE = "redhot:open";
+export const LAUNCH_HOTKEY_NAME = "Redhot";
 const MIN_MODIFIERS = 2;
+// Spotlight's shortcut. A launcher replacing Spotlight is the one case for a single modifier.
+const SPOTLIGHT_HOTKEY = "cmd+space";
 const FORMAT_HINT = "Use a format like cmd+shift+k";
 const MODIFIER_HINT = "Use at least two modifiers, including cmd or ctrl";
 
@@ -157,34 +161,69 @@ export const formatHotkey = (hotkey: string): string => {
   return `${symbols}${key}`;
 };
 
-/** Returns what is wrong with this hotkey, or undefined when it can be saved. */
-export const findHotkeyProblem = (
-  input: string,
-  itemValue: string,
-  allHotkeys: HotkeyMap,
-  toName: (itemValue: string) => string = toDisplayName,
-): string | undefined => {
-  if (input.trim() === "") {
-    return undefined;
-  }
-  const parsed = parseHotkey(input);
+/** Returns what is wrong with the keys themselves, or undefined when only clashes are left. */
+const findShapeProblem = (parsed: ParsedHotkey | undefined): string | undefined => {
   if (parsed === undefined) {
     return FORMAT_HINT;
   }
   const hasCmdOrCtrl = parsed.modifiers.includes("cmd") || parsed.modifiers.includes("ctrl");
-  if (parsed.modifiers.length < MIN_MODIFIERS || !hasCmdOrCtrl) {
-    return MODIFIER_HINT;
-  }
-  const hotkey = toCanonical(parsed);
-  if (hotkey === REDHOT_HOTKEY) {
-    return "That hotkey already opens Redhot";
-  }
+  return parsed.modifiers.length < MIN_MODIFIERS || !hasCmdOrCtrl ? MODIFIER_HINT : undefined;
+};
+
+/** Names the item already holding this hotkey, ignoring the one being changed. */
+const findClash = (
+  hotkey: string,
+  itemValue: string,
+  allHotkeys: HotkeyMap,
+  toName: (itemValue: string) => string,
+): string | undefined => {
   for (const [otherValue, otherHotkey] of Object.entries(allHotkeys)) {
     if (otherValue !== itemValue && otherHotkey === hotkey) {
       return `That hotkey is already used by ${toName(otherValue)}`;
     }
   }
   return undefined;
+};
+
+/** Returns what is wrong with this hotkey, or undefined when it can be saved. */
+export const findHotkeyProblem = (
+  input: string,
+  itemValue: string,
+  allHotkeys: HotkeyMap,
+  toName: (itemValue: string) => string = toDisplayName,
+  launchHotkey: string = DEFAULT_LAUNCH_HOTKEY,
+): string | undefined => {
+  if (input.trim() === "") {
+    return undefined;
+  }
+  const parsed = parseHotkey(input);
+  const shapeProblem = findShapeProblem(parsed);
+  if (parsed === undefined || shapeProblem !== undefined) {
+    return shapeProblem;
+  }
+  const hotkey = toCanonical(parsed);
+  if (hotkey === normalizeHotkey(launchHotkey)) {
+    return "That hotkey already opens Redhot";
+  }
+  return findClash(hotkey, itemValue, allHotkeys, toName);
+};
+
+/**
+ * The same rules for the shortcut that opens Redhot, except that it may take over Spotlight's. It
+ * can't be empty because there would then be no way to open search from another app.
+ */
+export const findLaunchHotkeyProblem = (
+  input: string,
+  allHotkeys: HotkeyMap,
+  toName: (itemValue: string) => string = toDisplayName,
+): string | undefined => {
+  const parsed = parseHotkey(input);
+  const isSpotlightHotkey = parsed !== undefined && toCanonical(parsed) === SPOTLIGHT_HOTKEY;
+  const shapeProblem = isSpotlightHotkey ? undefined : findShapeProblem(parsed);
+  if (parsed === undefined || shapeProblem !== undefined) {
+    return shapeProblem;
+  }
+  return findClash(toCanonical(parsed), LAUNCH_HOTKEY_VALUE, allHotkeys, toName);
 };
 
 const isModifierName = (value: unknown): value is Modifier =>
@@ -220,6 +259,18 @@ export const parseRecording = (recording: string): Recording | undefined => {
   }
 };
 
+/** Falls back to the default, so a hand-edited settings file can't leave Redhot unreachable. */
+export const toLaunchHotkey = (saved: string | undefined): string =>
+  (saved === undefined ? undefined : normalizeHotkey(saved)) ?? DEFAULT_LAUNCH_HOTKEY;
+
+export const saveLaunchHotkey = async (input: string): Promise<void> => {
+  const launchHotkey = normalizeHotkey(input);
+  if (launchHotkey === undefined) {
+    throw new Error(FORMAT_HINT);
+  }
+  await updateConfig({ launchHotkey });
+};
+
 export const saveHotkey = async (itemValue: string, input: string): Promise<void> => {
   const { hotkeys } = await readConfig();
   const { [itemValue]: _previous, ...others } = hotkeys;
@@ -235,6 +286,15 @@ export interface HelperHotkey {
   value: string;
   windowCommand?: string;
 }
+
+/** The item hotkeys plus the one that opens Redhot, which the helper registers the same way. */
+export const withLaunchHotkey = (
+  hotkeys: HotkeyMap,
+  launchHotkey: string | undefined,
+): HotkeyMap => ({
+  ...hotkeys,
+  [LAUNCH_HOTKEY_VALUE]: toLaunchHotkey(launchHotkey),
+});
 
 /** Converts saved hotkeys into the numbers the Swift helper registers. */
 export const toHelperHotkeys = (hotkeys: HotkeyMap): HelperHotkey[] => {

@@ -1,9 +1,6 @@
 import AppKit
 import Carbon.HIToolbox
 
-private let hotKeyKeyCode = UInt32(kVK_Space)
-private let hotKeyModifiers = UInt32(cmdKey | shiftKey)
-
 let cliCommand = Array(CommandLine.arguments.dropFirst())
 guard !cliCommand.isEmpty else {
   FileHandle.standardError.write(Data("usage: redhot-status <cli command> [arguments]\n".utf8))
@@ -18,10 +15,8 @@ let controller = StatusItemController(cliCommand: cliCommand, windows: windows, 
 let hotKeys = HotKeyCenter()
 let handlerStatus = hotKeys.installHandler()
 RedhotLog.event("hotkey.handler", level: handlerStatus == noErr ? "info" : "warn", trace: RedhotLog.startupTrace, fields: ["status": handlerStatus])
-let hotKeyStatus = hotKeys.registerPermanent(keyCode: hotKeyKeyCode, modifiers: hotKeyModifiers) {
-  controller.showCli()
-}
-RedhotLog.event("hotkey.register", level: hotKeyStatus == noErr ? "info" : "warn", trace: RedhotLog.startupTrace, fields: ["kind": "launcher", "status": hotKeyStatus])
+// Includes the shortcut that opens Redhot, which Settings can change, so this is the only place
+// hotkeys are registered and a change needs no restart.
 controller.reloadHotKeys(into: hotKeys)
 
 // MARK: - Start

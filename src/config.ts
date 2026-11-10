@@ -16,6 +16,8 @@ export const DEFAULT_LOG_MAX_SIZE_MB: LogMaxSizeMb = 50;
 export const WEB_SEARCH_ENGINE_CHOICES = ["google", "duckduckgo", "kagi"] as const;
 export type WebSearchEngine = (typeof WEB_SEARCH_ENGINE_CHOICES)[number];
 export const DEFAULT_WEB_SEARCH_ENGINE: WebSearchEngine = "google";
+/** The shortcut that opens Redhot from anywhere, until it's changed in Settings. */
+export const DEFAULT_LAUNCH_HOTKEY = "shift+cmd+space";
 export const DEFAULT_DEFINE_PHRASES: readonly string[] = [
   "define",
   "definition of",
@@ -39,6 +41,8 @@ export interface Config {
   browserBookmarks?: boolean;
   /** What's typed before a word to define it. Missing means the defaults, and empty means none. */
   definePhrases?: string[];
+  /** The shortcut that opens Redhot. Missing means DEFAULT_LAUNCH_HOTKEY. */
+  launchHotkey?: string;
 }
 
 const EMPTY_CONFIG: Config = { aliases: {}, hotkeys: {} };
@@ -92,7 +96,8 @@ export const parseConfig = (configText: string): Config => {
     const clipboardHistoryMonths = toHistoryMonths(parsed.clipboardHistoryMonths);
     const logMaxSizeMb = toLogMaxSizeMb(parsed.logMaxSizeMb);
     const webSearchEngine = toWebSearchEngine(parsed.webSearchEngine);
-    const { checkForUpdates, recentProjects, browserBookmarks, definePhrases } = parsed;
+    const { checkForUpdates, recentProjects, browserBookmarks, definePhrases, launchHotkey } =
+      parsed;
     return {
       aliases: parseAliasMap(parsed.aliases),
       hotkeys: parseHotkeyMap(parsed.hotkeys),
@@ -103,6 +108,7 @@ export const parseConfig = (configText: string): Config => {
       ...(typeof recentProjects === "boolean" ? { recentProjects } : {}),
       ...(typeof browserBookmarks === "boolean" ? { browserBookmarks } : {}),
       ...(isStringList(definePhrases) ? { definePhrases } : {}),
+      ...(typeof launchHotkey === "string" ? { launchHotkey } : {}),
     };
   } catch {
     return EMPTY_CONFIG;

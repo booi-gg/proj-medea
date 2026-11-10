@@ -7,7 +7,18 @@ import { runCommand } from "./shell.ts";
 // Some CLT installations pair the default 26.x SDK with an older Swift compiler.
 const COMPATIBLE_SDK = "/Library/Developer/CommandLineTools/SDKs/MacOSX15.4.sdk";
 
+const MODULE_CACHE_KEY_LENGTH = 16;
+
 const stampPath = (binaryPath: string): string => `${binaryPath}.sha256`;
+
+/**
+ * Precompiled modules record the absolute path they were built at, and swiftc refuses them if the
+ * cache has since moved. Keying the folder by location gives a moved project a fresh cache.
+ */
+export const moduleCachePath = (outputDir: string): string => {
+  const key = createHash("sha256").update(outputDir).digest("hex");
+  return join(outputDir, "clang-module-cache", key.slice(0, MODULE_CACHE_KEY_LENGTH));
+};
 
 const hashSources = async (sourcePaths: readonly string[]): Promise<string> => {
   const contents = await Promise.all(sourcePaths.map((sourcePath) => readFile(sourcePath)));
@@ -62,7 +73,7 @@ export const compileSwift = async (
     env: {
       ...process.env,
       ...(existsSync(COMPATIBLE_SDK) ? { SDKROOT: COMPATIBLE_SDK } : {}),
-      CLANG_MODULE_CACHE_PATH: join(outputDir, "clang-module-cache"),
+      CLANG_MODULE_CACHE_PATH: moduleCachePath(outputDir),
     },
   });
   await markBuilt(sourcePaths, binaryPath);

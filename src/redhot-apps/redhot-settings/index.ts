@@ -12,6 +12,15 @@ import {
 } from "../../config.ts";
 import type { HistoryMonths, LogMaxSizeMb } from "../../config.ts";
 import { drawScreen } from "../../launcher/screen.ts";
+import { toDisplayName } from "../../launcher/aliases.ts";
+import { recordHotkey } from "../../launcher/hotkey-recorder.ts";
+import {
+  findLaunchHotkeyProblem,
+  formatHotkey,
+  saveLaunchHotkey,
+  toLaunchHotkey,
+} from "../../launcher/hotkeys.ts";
+import { reloadHotkeys } from "../../menubar/helper.ts";
 import { askForWindowAccess, readWindowAccess } from "../../menubar/helper-socket.ts";
 import { chooseICloudFolder } from "../../sync/bridge.ts";
 import {
@@ -47,6 +56,7 @@ const APP_ID = "redhot-settings";
 const OPEN_ID = "open";
 const NAME = "Settings";
 const ICON = toRedhotIcon("⚙");
+const LAUNCH_HOTKEY = "launch-hotkey";
 const START_AT_LOGIN = "start-at-login";
 const CLIPBOARD_HISTORY = "clipboard-history";
 const LOG_SIZE = "log-size";
@@ -417,6 +427,42 @@ const chooseLogSize = async (current: LogMaxSizeMb): Promise<string> => {
   return `Logs are kept up to ${size} MB`;
 };
 
+/** Returns the line to show next, which is blank if nothing changed. */
+const recordLaunchHotkey = async (current: string): Promise<string> => {
+  drawScreen({ title: "Redhot Launch Hotkey", icon: ICON });
+  // Loaded here because the registry imports this app, and a cycle between them breaks startup.
+  const { findRedhotItemName, withoutRemovedItems } = await import("../registry.ts");
+  const { hotkeys } = await readConfig();
+  const recorded = await recordHotkey((hotkey) =>
+    hotkey === current
+      ? undefined
+      : findLaunchHotkeyProblem(
+          hotkey,
+          withoutRemovedItems(hotkeys),
+          (value) => findRedhotItemName(value) ?? toDisplayName(value),
+        ),
+  );
+  if (recorded.kind === "notice") {
+    return recorded.notice;
+  }
+  if (recorded.hotkey === current) {
+    return "";
+  }
+  await saveLaunchHotkey(recorded.hotkey);
+  await reloadHotkeys();
+  return `${formatHotkey(recorded.hotkey)} now opens Redhot`;
+};
+
+/** Returns the line to show next, which is blank if nothing changed. */
+const chooseLaunchHotkey = async (current: string): Promise<string> => {
+  drawScreen({ title: "Redhot Launch Hotkey", icon: ICON });
+  const choice = await select({
+    message: `Current hotkey  ${styleText("cyan", formatHotkey(current))}`,
+    options: [{ value: "change", label: "Change" }],
+  });
+  return isCancel(choice) ? "" : recordLaunchHotkey(current);
+};
+
 const chooseUpdateChecks = async (isOn: boolean): Promise<string> => {
   const checkForUpdates = await askOnOff("Check for updates", isOn);
   if (checkForUpdates === undefined) {
@@ -463,6 +509,7 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
       recentProjects = false,
       browserBookmarks = false,
       definePhrases = DEFAULT_DEFINE_PHRASES,
+      launchHotkey,
     },
     windowAccess,
     syncStatus,
@@ -470,6 +517,11 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
   const choice = await select({
     message: "Choose a setting",
     options: [
+      {
+        value: LAUNCH_HOTKEY,
+        label: `Redhot launch hotkey  ${styleText("cyan", formatHotkey(toLaunchHotkey(launchHotkey)))}`,
+        hint: "Opens search from any app",
+      },
       {
         value: START_AT_LOGIN,
         label: `Start at login  ${STATE_LABELS[state]}`,
@@ -522,6 +574,9 @@ const runSettingsRound = async (notice: string): Promise<string | undefined> => 
   });
   if (isCancel(choice) || choice === DONE) {
     return undefined;
+  }
+  if (choice === LAUNCH_HOTKEY) {
+    return chooseLaunchHotkey(toLaunchHotkey(launchHotkey));
   }
   if (choice === CHECK_FOR_UPDATES) {
     return chooseUpdateChecks(checkForUpdates);

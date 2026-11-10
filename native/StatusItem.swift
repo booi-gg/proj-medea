@@ -4,6 +4,9 @@ import UniformTypeIdentifiers
 
 private let hotKeySignature: OSType = 0x4D44_4541  // "MDEA"
 
+/// What the CLI calls the shortcut that opens Redhot, in launcher/hotkeys.ts.
+let launchHotKeyValue = "redhot:open"
+
 /// System-wide shortcuts. Carbon delivers them without Accessibility or Input Monitoring permission.
 final class HotKeyCenter {
   private var actions: [UInt32: () -> Void] = [:]
@@ -70,13 +73,6 @@ final class HotKeyCenter {
       actions[id] = action
     }
     return (status, id, ref)
-  }
-
-  /// A shortcut that lasts as long as the helper runs.
-  func registerPermanent(keyCode: UInt32, modifiers: UInt32, action: @escaping () -> Void)
-    -> OSStatus
-  {
-    register(keyCode: keyCode, modifiers: modifiers, action: action).status
   }
 
   /// Swaps the per-item hotkeys for this list.
@@ -163,6 +159,14 @@ struct ItemHotKey: Decodable {
   /// Set for window actions, which the helper runs itself so a press never waits for Node.
   let windowCommand: String?
 }
+
+/// Used when the CLI can't be read, so Redhot can always be opened and its settings fixed.
+let fallbackLaunchHotKey = ItemHotKey(
+  keyCode: UInt32(kVK_Space),
+  modifiers: UInt32(cmdKey | shiftKey),
+  value: launchHotKeyValue,
+  windowCommand: nil
+)
 
 struct UpdateStatus: Decodable {
   let current: String
@@ -616,11 +620,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
   func reloadHotKeys(into hotKeys: HotKeyCenter) {
     runCli(["hotkeys"]) { output, _ in
-      guard let items = try? JSONDecoder().decode([ItemHotKey].self, from: output) else {
+      var items = try? JSONDecoder().decode([ItemHotKey].self, from: output)
+      if items == nil {
         RedhotLog.event("hotkey.load", level: "warn", fields: ["error": "decode"])
-        return
+        items = [fallbackLaunchHotKey]
       }
-      hotKeys.replaceItemHotKeys(items) { [weak self] hotKey in
+      hotKeys.replaceItemHotKeys(items ?? []) { [weak self] hotKey in
         self?.runItem(hotKey)
       }
     }
@@ -628,6 +633,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
   /// Apps and window actions run here, which is fastest. Everything else needs the CLI.
   private func runItem(_ hotKey: ItemHotKey) {
+    if hotKey.value == launchHotKeyValue {
+      showCli()
+      return
+    }
     let span = RedhotLog.start("hotkey.press", fields: ["item": RedhotLog.safeItem(hotKey.value)])
     if let windowCommand = hotKey.windowCommand {
       windows.runFromHotKey(windowCommand, trace: span.trace, parent: span.id)

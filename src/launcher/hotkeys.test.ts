@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
+  LAUNCH_HOTKEY_VALUE,
   findHotkeyProblem,
+  findLaunchHotkeyProblem,
   formatHotkey,
   normalizeHotkey,
   parseRecording,
   toHelperHotkeys,
+  toLaunchHotkey,
+  withLaunchHotkey,
 } from "./hotkeys.ts";
 
 test("normalizes order, case, spaces and modifier names", () => {
@@ -132,4 +136,57 @@ test("names the item that holds a hotkey, using the name it's given", () => {
     findHotkeyProblem("shift+cmd+c", "redhot-settings:open", taken, () => "Clipboard History"),
     "That hotkey is already used by Clipboard History",
   );
+});
+
+test("once Redhot's hotkey is changed, the old one is free and the new one is taken", () => {
+  assert.equal(
+    findHotkeyProblem("cmd+shift+space", "/a.app", {}, undefined, "ctrl+cmd+r"),
+    undefined,
+  );
+  assert.equal(
+    findHotkeyProblem("cmd+ctrl+r", "/a.app", {}, undefined, "ctrl+cmd+r"),
+    "That hotkey already opens Redhot",
+  );
+});
+
+test("Redhot's own hotkey follows the same key rules", () => {
+  assert.equal(findLaunchHotkeyProblem("nope", {}), "Use a format like cmd+shift+k");
+  assert.equal(
+    findLaunchHotkeyProblem("cmd+q", {}),
+    "Use at least two modifiers, including cmd or ctrl",
+  );
+  assert.equal(findLaunchHotkeyProblem("ctrl+cmd+r", {}), undefined);
+});
+
+test("only Redhot's own hotkey can take over Spotlight's cmd+space", () => {
+  const hint = "Use at least two modifiers, including cmd or ctrl";
+  assert.equal(findLaunchHotkeyProblem("cmd+space", {}), undefined);
+  assert.equal(findLaunchHotkeyProblem("Command + Space", {}), undefined);
+  assert.equal(findLaunchHotkeyProblem("ctrl+space", {}), hint);
+  assert.equal(findLaunchHotkeyProblem("option+space", {}), hint);
+  assert.equal(findHotkeyProblem("cmd+space", "/a.app", {}), hint);
+});
+
+test("Redhot's own hotkey can't be left empty, because nothing would open search", () => {
+  assert.equal(findLaunchHotkeyProblem("  ", {}), "Use a format like cmd+shift+k");
+});
+
+test("Redhot's own hotkey refuses one an item already uses", () => {
+  assert.equal(
+    findLaunchHotkeyProblem("cmd+shift+k", { "/Applications/Safari.app": "shift+cmd+k" }),
+    "That hotkey is already used by Safari",
+  );
+});
+
+test("a saved hotkey is normalized, and a broken one falls back to the default", () => {
+  assert.equal(toLaunchHotkey("CTRL + Cmd + R"), "ctrl+cmd+r");
+  assert.equal(toLaunchHotkey(undefined), "shift+cmd+space");
+  assert.equal(toLaunchHotkey("banana"), "shift+cmd+space");
+});
+
+test("the helper is sent Redhot's own hotkey alongside the item ones", () => {
+  assert.deepEqual(toHelperHotkeys(withLaunchHotkey({ "/a.app": "shift+cmd+k" }, "ctrl+cmd+r")), [
+    { keyCode: 40, modifiers: 768, value: "/a.app" },
+    { keyCode: 15, modifiers: 4352, value: LAUNCH_HOTKEY_VALUE },
+  ]);
 });

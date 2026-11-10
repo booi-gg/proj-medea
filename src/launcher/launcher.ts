@@ -35,6 +35,7 @@ import type { LauncherOption } from "./prompt.ts";
 import { createQueryExit } from "./query-exit.ts";
 import { drawScreen, toTerminalWidth } from "./screen.ts";
 import { rankItems } from "./search.ts";
+import "./select-hint.ts";
 
 const TITLE_COLUMN_WIDTH = 40;
 const EXIT_VALUE = "command:exit";

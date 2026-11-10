@@ -47,7 +47,7 @@ npm install --global @booi-gg/redhot
 redhot start
 ```
 
-`redhot start` compiles the helper, puts the Redhot icon in the menu bar and turns on `Cmd+Shift+Space`. Press the shortcut, or choose **Open Redhot** from the icon, to open search.
+`redhot start` compiles the helper, puts the Redhot icon in the menu bar and turns on `Cmd+Shift+Space`. Press the shortcut, or choose **Open Redhot** from the icon, to open search. **Redhot hotkey** in Settings changes the shortcut.
 
 To run from a clone instead, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -262,6 +262,7 @@ Window actions need Accessibility permission for the helper (see below).
 
 Search `Settings` for:
 
+- **Redhot launch hotkey**, the shortcut that opens search from any app. `Cmd+Shift+Space` until you change it. Choose **Change**, then press the new keys in the Record Hotkey window; it needs two modifiers including `Cmd` or `Ctrl` unless it's `Cmd+Space`, can't be one an item already uses, and takes effect straight away. To use `Cmd+Space`, turn off Spotlight's shortcut in System Settings first.
 - **Start at login**, which adds a LaunchAgent so the helper starts when you log in.
 - **Keep clipboard history** for 3, 4 or 5 months, or 1 year.
 - **Log size** of 10, 50, 100 or 500 MB.

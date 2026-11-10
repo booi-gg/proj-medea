@@ -25,8 +25,8 @@ export interface LauncherItem {
 
 export interface SettingsAction {
   label: string;
-  /** Resolves to false when the settings menu should close. */
-  run: () => Promise<boolean>;
+  /** Resolves to false when the settings menu should close, or a line to close it with. */
+  run: () => Promise<boolean | string>;
 }
 
 /** A feature that adds its own items to search and its own actions to their settings. */

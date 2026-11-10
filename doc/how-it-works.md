@@ -100,10 +100,11 @@ src/
 │   │   ├── index.ts      The list of browsers, and the search rows
 │   │   └── sources.ts    Reads a browser's bookmarks from each of its profiles
 │   ├── redhot-processes/
-│   │   ├── index.ts      The Kill Process or Port command
-│   │   ├── screen.ts     The list, its keys and the questions before stopping something
+│   │   ├── index.ts      The Kill Processes and Kill Ports commands
+│   │   ├── screen.ts     The lists, their keys and the questions before stopping something
 │   │   ├── search.ts     The full list, or a port's listeners, for what's typed
 │   │   ├── list.ts       Runs ps and lsof, and works out which processes are apps
+│   │   ├── ports.ts      Every port in use, and the project each server was started in
 │   │   ├── stop.ts       Quits, force quits and uses sudo
 │   │   └── format.ts     Row text: name, owner or kind, process ID, CPU and memory
 │   ├── redhot-timer/
@@ -404,7 +405,8 @@ Settings is a menu: **Alias, Add**, **Hotkey, Create**, **Remove hotkey** (when 
 | Search Files                  | Shows the search in the Redhot window                      |
 | Search Folders                | Shows the search in the Redhot window                      |
 | Search Menu Items             | Shows the search in the Redhot window                      |
-| Kill Process or Port          | Shows the list in the Redhot window                        |
+| Kill Processes                | Shows the list in the Redhot window                        |
+| Kill Ports                    | Shows the list in the Redhot window                        |
 | Restart, Shut Down            | Asks in the Redhot window first                            |
 | Log Out                       | Asks in the Redhot window first                            |
 | A quicklink                   | Opens it, through the Redhot window if it has `{argument}` |
@@ -659,11 +661,15 @@ macOS returns a definition as one long paragraph, up to 21,000 characters for `r
 
 ## Kill a process or port
 
-`Kill Process or Port` (`redhot-processes:search`) lists what's running. Typing `port` and a number in search leaves for this screen the same way the `f` prefix leaves for file search (`createQueryExit()`). Only a number counts, so `port authority` stays an app search.
+`Kill Processes` (`redhot-processes:search`) lists what's running. Typing `port` and a number in search leaves for `Kill Ports` the same way the `f` prefix leaves for file search (`createQueryExit()`). Only a number counts, so `port authority` stays an app search.
 
 **The list.** `ps -axo pid=,user=,%cpu=,rss=,comm=` is read each time the list opens. A process is an app when its path ends in `<Name>.app/Contents/MacOS/<program>` and `<Name>` is in the app search list. It matches on the name because macOS runs Safari from a system volume, not `/Applications`. Helpers nested inside an app stay ordinary processes. Redhot leaves its own process out.
 
 **Ports.** `lsof -nP -iTCP:<port> -sTCP:LISTEN -t` finds the process IDs, then `ps -p` reads those processes, so a server started after the list opened still shows. The lookup waits 120 ms after a keystroke, and a slower answer for an earlier port is thrown away. `lsof` can't see what root is listening with unless it runs under `sudo`, so the empty text says that rather than calling the port free.
+
+**Numbers.** A search of only digits in `Kill Processes` matches the start of a process ID or name. Search's usual letter matching isn't used for digits, or `517` would list unrelated process IDs and Enter could stop one.
+
+**Every port.** `Kill Ports` (`redhot-processes:ports`) reads `lsof -nP -iTCP -sTCP:LISTEN -F pn` when it opens and after each kill. There's one row per process, because a signal stops the process and frees all its ports. Rows go by lowest port, so dev servers come before the high ports macOS apps pick at random. Several servers are all called `node`, so `lsof -a -d cwd` adds the folder each started in, left out when that's `/` or the home folder. An app keeps its exact name, because that's what it's asked to quit by. A search of only digits matches the start of a port and nothing looser: search's usual letter matching would list port 51479 for `5179`, and Enter would stop the wrong server.
 
 **Stopping.** Enter quits. An app gets `tell application … to quit` through `osascript`, with its name passed as an argument so nothing in it can be read as AppleScript. An app asking about unsaved work holds that call open, so it gives up after 2 seconds and says the app was asked. A process gets `SIGTERM`, and force quit is `SIGKILL`. Afterwards Redhot watches for up to 1.5 seconds so the notice says what really happened. A zombie counts as ended.
 

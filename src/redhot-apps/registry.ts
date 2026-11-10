@@ -14,6 +14,7 @@ import { redhotSettings } from "./redhot-settings/index.ts";
 import { snippets } from "./redhot-snippets/index.ts";
 import { systemCommands } from "./redhot-system/index.ts";
 import { timers } from "./redhot-timer/index.ts";
+import { uninstaller } from "./redhot-uninstall/index.ts";
 import { windowActions } from "./redhot-window/index.ts";
 import type { HotkeyMap } from "../config.ts";
 import type { LauncherItem, RedhotApp, SettingsAction } from "./types.ts";
@@ -27,6 +28,7 @@ const redhotApps: readonly RedhotApp[] = [
   files,
   folders,
   processes,
+  uninstaller,
   clipboardHistory,
   colourPicker,
   recentProjects,

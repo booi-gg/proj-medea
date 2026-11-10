@@ -5,8 +5,10 @@ import { promisify } from "node:util";
 import { endAction, startAction, trackSpawn } from "./log.ts";
 
 const execFileAsync = promisify(execFile);
+/** The full path, because a window Redhot opens has a PATH without /usr/sbin. */
+export const LSOF_PATH = "/usr/sbin/lsof";
 // These exit with 1 to say they found nothing, which isn't a failure worth logging as one.
-const NO_MATCH_PROGRAMS: ReadonlySet<string> = new Set(["pgrep", "lsof", "ps"]);
+const NO_MATCH_PROGRAMS: ReadonlySet<string> = new Set(["pgrep", LSOF_PATH, "ps"]);
 const AUTOMATION_DENIED = "-1743";
 
 /** Logs the program and exit state, never arguments or output. */

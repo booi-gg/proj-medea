@@ -13,9 +13,9 @@ import {
   runFileSearch,
   toFileSearchQuery,
 } from "../redhot-apps/redhot-files/index.ts";
-import { PROCESS_SEARCH_VALUE } from "../redhot-apps/redhot-processes/index.ts";
+import { PORTS_SEARCH_VALUE } from "../redhot-apps/redhot-processes/index.ts";
 import { toPort } from "../redhot-apps/redhot-processes/list.ts";
-import { runProcessScreen } from "../redhot-apps/redhot-processes/screen.ts";
+import { runPortScreen } from "../redhot-apps/redhot-processes/screen.ts";
 import { DEFINE_VALUE, toDictionaryItem } from "../redhot-apps/redhot-dictionary/index.ts";
 import { findRedhotItem, listRedhotItems } from "../redhot-apps/registry.ts";
 import { toDateItem, toTimeZoneItem } from "../redhot-apps/redhot-time/index.ts";
@@ -250,7 +250,7 @@ const openSettingsFor = async (items: readonly LauncherItem[], value?: string): 
   if (item === undefined) {
     return NO_NOTICE;
   }
-  return showErrorsAsNotice(withoutNotice(() => runItemSettings(item.value, item.name)));
+  return showErrorsAsNotice(() => runItemSettings(item.value, item.name));
 };
 
 const pickItemForSettings = async (getItems: GetItems, title: string): Promise<string> => {
@@ -314,11 +314,11 @@ const runSearchRound = async (
     };
   }
   if (cancelled && toPort(query) !== undefined) {
-    const searchPort = (): Promise<string> => runProcessScreen(query);
+    const searchPort = (): Promise<string> => runPortScreen(query);
     return {
       keepRunning: true,
       notice: await showErrorsAsNotice(() =>
-        trackItem(session, PROCESS_SEARCH_VALUE, searchPort, true),
+        trackItem(session, PORTS_SEARCH_VALUE, searchPort, true),
       ),
     };
   }

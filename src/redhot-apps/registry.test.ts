@@ -40,6 +40,13 @@ test("a Pomodoro and cancelling a timer can be found by typing them", () => {
   assert.equal(rankItems("timer cancel", listRedhotItems())[0]?.value, "redhot-timer:cancel");
 });
 
+test("Uninstall Apps can be found by typing it, and opens a window for its questions", () => {
+  const [first] = rankItems("uninstall", listRedhotItems());
+  assert.equal(first?.value, "redhot-uninstall:pick");
+  assert.equal(first?.name, "Uninstall Apps");
+  assert.equal(findRedhotItem("redhot-uninstall:pick")?.needsWindow, true);
+});
+
 test("leaves out hotkeys for items that no longer exist", () => {
   const live = {
     "/Applications/Safari.app": "shift+cmd+s",

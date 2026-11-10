@@ -17,7 +17,8 @@ Redhot has two parts. A small Swift helper lives in the menu bar and owns the gl
 - **Recent projects.** Type a project's name to reopen it in VS Code, Cursor or Xcode, in the app you last used it in. Off until you turn it on in Settings.
 - **Browser bookmarks.** Type a bookmark's title to open it in Chrome, Arc, Brave or Edge, in the browser it came from. Off until you turn it on in Settings.
 - **Folder search.** Jump to Downloads, Documents, Recents or any folder in Finder.
-- **Kill a process or port.** Quit or force quit a running app or process, or type `port 3000` to stop whatever is listening on it.
+- **Kill a process or port.** `Kill Processes` quits or force quits a running app or process. `Kill Ports` lists every port in use so you can stop what's on one, and `port 3000` in search opens it.
+- **Uninstall apps.** Move an app to the Trash, and its data too if you say so, after seeing exactly what will go.
 - **System commands.** Lock, sleep, empty the Trash, toggle dark mode or hidden files, eject disks, restart, shut down and log out.
 - **Clipboard history.** Text and images you copy, searchable, with a preview pane. Password managers and confidential copies are skipped.
 - **Colour picker.** Pick a colour from anywhere on screen with the macOS magnifier, then copy it as hex, RGB or HSL. `Colour History` keeps your last 12.
@@ -215,7 +216,9 @@ It needs the menu bar item and Accessibility permission. The menus are from the 
 
 ### Kill a process or port
 
-Open `Kill Process or Port` to see running apps by name, then every other process, busiest first, each with its process ID, CPU and memory. Type to filter by name or process ID. Type `port 3000`, here or in search, to see what's listening on that port.
+Open `Kill Processes` to see running apps by name, then every other process, busiest first, each with its process ID, CPU and memory. Type to filter by name or process ID.
+
+Open `Kill Ports` to see every port in use, lowest first, with the project each server was started in and its process ID. Type a number like `517` or a project's name to look one up, then press Enter on a row to kill it. A process listening on several ports has one row, because killing it frees them all. Typing `port 3000` in search opens it on that port.
 
 | Key      | What it does                                                 |
 | -------- | ------------------------------------------------------------ |
@@ -225,7 +228,15 @@ Open `Kill Process or Port` to see running apps by name, then every other proces
 
 Stopping anything owned by root or another user asks first and then uses `sudo`, so you may be asked for your password. macOS may also ask to let your terminal control an app the first time you quit one.
 
-Without `sudo`, macOS hides what root is listening with, so a port held by root shows as having no listeners. Search for the process by name instead.
+Without `sudo`, macOS hides what root is listening with, so a port held by root isn't in `Kill Ports`. Find the process by name in `Kill Processes` instead.
+
+### Uninstall an app
+
+Open `Uninstall Apps`, or press Tab on any app in search and choose `Uninstall App` there. Redhot shows the app and asks before moving it to the Trash. If it finds the app's data, it lists every folder and file and asks about that separately. Both answers start on No, and nothing moves until you've answered both, so backing out leaves everything as it was. Everything goes to the Trash, so you can put it back until you empty it.
+
+Data is looked for in the first level of these folders in `~/Library`: `Application Support`, `Caches`, `Logs`, `Preferences`, `Saved Application State`, `Containers`, `Group Containers`, `Application Scripts`, `HTTPStorages`, `WebKit`, `Cookies` and `LaunchAgents`. A match has to be the app's whole bundle ID or that ID with a helper ending like `.ShipIt`, so uninstalling Chrome won't offer Chrome Canary's data. `Application Support`, `Caches` and `Logs` also match a folder with exactly the app's name, marked in the list. Generic and vendor names like `Google` never match, and neither do Redhot's own files. Documents you saved elsewhere are never touched.
+
+Apps that come with macOS aren't offered, and an app has to be quit first. If macOS refuses, drag the app to the Trash in Finder, which can ask for your password. Giving your terminal App Management, in System Settings > Privacy & Security, can also clear this up.
 
 ### System commands
 
@@ -285,6 +296,7 @@ In Terminal.app, Redhot opens an 80×18 window from its own **Redhot** profile, 
 | Accessibility          | Window actions and menu item search | Granted to `redhot-status`. Run `redhot sign` once so the grant survives upgrades; otherwise remove and re-add it after an update. |
 | Background item notice | Start at login                      | macOS shows a notice. Nothing to grant.                                                                                            |
 | Automation             | System commands                     | macOS asks once each for Finder and System Events, the first time a command needs them. Sleep and Lock Screen don't need it.       |
+| App Management         | Uninstall Apps                      | Only if macOS refuses to move an app. Granted to your terminal.                                                                    |
 
 `redhot sign` creates a `Redhot Local Signing` certificate in your login keychain and signs every later build with it.
 

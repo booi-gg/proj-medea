@@ -71,12 +71,21 @@ const createHotkey = async (itemValue: string, itemName: string): Promise<string
   return `Hotkey set to ${formatHotkey(recorded.hotkey)}`;
 };
 
-/** Shows the menu once. Returns the line to show next, or undefined when finished. */
+interface SettingsRound {
+  /** The line to show next: in the menu, or in search once the menu has closed. */
+  notice: string;
+  isFinished: boolean;
+}
+
+const keepMenuOpen = (notice: string): SettingsRound => ({ notice, isFinished: false });
+const closeMenu = (notice: string): SettingsRound => ({ notice, isFinished: true });
+
+/** Shows the menu once. */
 const runSettingsRound = async (
   itemValue: string,
   itemName: string,
   notice: string,
-): Promise<string | undefined> => {
+): Promise<SettingsRound> => {
   drawScreen({ title: `${itemName} Settings`, notice });
   const { aliases, hotkeys } = await readConfig();
   const hotkey = hotkeys[itemValue] ?? "";
@@ -98,26 +107,34 @@ const runSettingsRound = async (
   });
 
   if (isCancel(choice) || choice === DONE) {
-    return undefined;
+    return closeMenu("");
   }
   const appAction = appActions.find(({ label }) => label === choice);
   if (appAction !== undefined) {
-    return (await appAction.run()) ? "" : undefined;
+    const result = await appAction.run();
+    if (typeof result === "string") {
+      return closeMenu(result);
+    }
+    return result ? keepMenuOpen("") : closeMenu("");
   }
   if (choice === ADD_ALIAS) {
-    return editAliases(itemValue, itemName);
+    return keepMenuOpen(await editAliases(itemValue, itemName));
   }
   if (choice === CREATE_HOTKEY) {
-    return createHotkey(itemValue, itemName);
+    return keepMenuOpen(await createHotkey(itemValue, itemName));
   }
   await applyHotkey(itemValue, "");
-  return "Hotkey removed";
+  return keepMenuOpen("Hotkey removed");
 };
 
-/** The settings screen for one item. It runs in the search window, then search comes back. */
-export const runItemSettings = async (itemValue: string, itemName: string): Promise<void> => {
-  let notice = await runSettingsRound(itemValue, itemName, "");
-  while (notice !== undefined) {
-    notice = await runSettingsRound(itemValue, itemName, notice);
+/**
+ * The settings screen for one item. It runs in the search window, then search comes back. Resolves
+ * to a line to show above the search bar.
+ */
+export const runItemSettings = async (itemValue: string, itemName: string): Promise<string> => {
+  let round = await runSettingsRound(itemValue, itemName, "");
+  while (!round.isFinished) {
+    round = await runSettingsRound(itemValue, itemName, round.notice);
   }
+  return round.notice;
 };

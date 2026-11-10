@@ -4,6 +4,12 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+### Added
+
+- Kill Ports: see every port in use with its project and process ID, type a number or project name to look one up, and press Enter to kill it. `port 3000` in search now opens it.
+- `Kill Process or Port` is now `Kill Processes`. Saved aliases and hotkeys keep working.
+- Uninstall Apps: move an app to the Trash from search or from its settings with Tab. It lists the app's data in `~/Library` and asks separately before moving that to the Trash too. Both answers start on No.
+
 ## 0.6.7
 
 ## 0.6.6

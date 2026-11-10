@@ -2,7 +2,7 @@ import { userInfo } from "node:os";
 import { basename } from "node:path";
 import { listApps } from "../../launcher/apps.ts";
 import { writeLog } from "../../log.ts";
-import { runCommand } from "../../shell.ts";
+import { LSOF_PATH, runCommand } from "../../shell.ts";
 
 // The command goes last because it's the only column that can have spaces in it.
 const PS_COLUMNS = "pid=,user=,%cpu=,rss=,comm=";
@@ -122,30 +122,32 @@ const isNoMatch = (error: unknown): boolean =>
   error instanceof Error && "code" in error && error.code === NO_MATCH_EXIT_CODE;
 
 // lsof and ps both exit with 1 when they find nothing, which is an answer rather than a failure.
-const runForMatches = async (file: string, args: readonly string[]): Promise<string> => {
+// lsof does the same when only some of what it was asked about has gone, so keep what it printed.
+export const runForMatches = async (file: string, args: readonly string[]): Promise<string> => {
   try {
     const { stdout } = await runCommand(file, args);
     return stdout;
   } catch (error) {
     if (isNoMatch(error)) {
-      return "";
+      return error instanceof Error && "stdout" in error ? String(error.stdout) : "";
     }
     throw error;
   }
 };
 
-/** What's listening on this port. Without sudo, lsof can't see what root is listening with. */
-export const listPortListeners = async (port: number): Promise<RunningItem[]> => {
-  const pids = await runForMatches("lsof", ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"]);
-  const pidList = pids.split("\n").filter((pid) => pid !== "");
-  if (pidList.length === 0) {
-    return [];
-  }
-  const [listeners, appNames] = await Promise.all([
-    runForMatches("ps", ["-o", PS_COLUMNS, "-p", pidList.join(",")]),
+export const listProcessesById = async (pids: readonly string[]): Promise<RunningItem[]> => {
+  const [processes, appNames] = await Promise.all([
+    runForMatches("ps", ["-o", PS_COLUMNS, "-p", pids.join(",")]),
     listAppNames(),
   ]);
-  return toRunningItems(parseProcessList(listeners), appNames, process.pid);
+  return toRunningItems(parseProcessList(processes), appNames, process.pid);
+};
+
+/** What's listening on this port. Without sudo, lsof can't see what root is listening with. */
+export const listPortListeners = async (port: number): Promise<RunningItem[]> => {
+  const pids = await runForMatches(LSOF_PATH, ["-nP", `-iTCP:${port}`, "-sTCP:LISTEN", "-t"]);
+  const pidList = pids.split("\n").filter((pid) => pid !== "");
+  return pidList.length === 0 ? [] : listProcessesById(pidList);
 };
 
 export const logPortLookupFailure = (error: unknown): void => {

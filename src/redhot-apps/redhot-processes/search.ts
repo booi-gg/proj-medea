@@ -1,14 +1,14 @@
-import { listPortListeners, listRunningItems, logPortLookupFailure, toPort } from "./list.ts";
+import { logPortLookupFailure, toPort } from "./list.ts";
 import type { RunningItem } from "./list.ts";
 
 // Long enough that typing "3000" doesn't look up ports 3, 30 and 300 on the way.
 const PORT_LOOKUP_DELAY_MS = 120;
 
-export interface ProcessSearch {
+export interface ProcessSearch<Item extends RunningItem = RunningItem> {
   /** Reads everything again for this text, and resolves once the results are in. */
   reload: (query: string) => Promise<void>;
   setQuery: (query: string) => void;
-  getResults: () => readonly RunningItem[];
+  getResults: () => readonly Item[];
   isSearching: () => boolean;
   /** The port the text is asking about, if it is. */
   getPort: () => number | undefined;
@@ -17,19 +17,19 @@ export interface ProcessSearch {
   stop: () => void;
 }
 
-interface ProcessSearchOptions {
-  loadAll?: () => Promise<readonly RunningItem[]>;
-  loadPort?: (port: number) => Promise<readonly RunningItem[]>;
+interface ProcessSearchOptions<Item extends RunningItem> {
+  loadAll: () => Promise<readonly Item[]>;
+  loadPort: (port: number) => Promise<readonly Item[]>;
   delayMs?: number;
 }
 
-export const createProcessSearch = ({
-  loadAll = listRunningItems,
-  loadPort = listPortListeners,
+export const createProcessSearch = <Item extends RunningItem>({
+  loadAll,
+  loadPort,
   delayMs = PORT_LOOKUP_DELAY_MS,
-}: ProcessSearchOptions = {}): ProcessSearch => {
-  let everything: readonly RunningItem[] = [];
-  let listeners: readonly RunningItem[] = [];
+}: ProcessSearchOptions<Item>): ProcessSearch<Item> => {
+  let everything: readonly Item[] = [];
+  let listeners: readonly Item[] = [];
   let port: number | undefined;
   let isLookingUp = false;
   let timer: NodeJS.Timeout | undefined;
@@ -44,7 +44,7 @@ export const createProcessSearch = ({
   };
 
   const lookUp = async (target: number, lookup: number): Promise<void> => {
-    let found: readonly RunningItem[] = [];
+    let found: readonly Item[] = [];
     try {
       found = await loadPort(target);
     } catch (error) {

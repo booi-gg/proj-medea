@@ -403,7 +403,11 @@ const switchToSearch = (session: Session): void => {
  * Stays open after each action so the shortcut can bring this same window back. A hotkey's window
  * passes the item it was opened for, and closes when that's done.
  */
-export const runLauncher = async (firstItem?: string): Promise<void> => {
+/** An extra window leaves the socket to the main one, so hotkeys keep reaching that window. */
+export const runLauncher = async (
+  firstItem?: string,
+  { isExtraWindow = false }: { isExtraWindow?: boolean } = {},
+): Promise<void> => {
   void refreshRatesIfStale();
   void import("../sync/sync.ts").then(({ syncNow }) => syncNow()).catch(() => {});
   const session: Session = {
@@ -411,15 +415,17 @@ export const runLauncher = async (firstItem?: string): Promise<void> => {
     nextItem: firstItem,
     closeWhenDone: firstItem !== undefined,
   };
-  const stopListening = await listenForRequests({
-    onFocus: () => {
-      switchToSearch(session);
-    },
-    onRunItem: (value) => {
-      switchToItem(value, session);
-    },
-    onQuit: showEndingScreen,
-  });
+  const stopListening = isExtraWindow
+    ? () => {}
+    : await listenForRequests({
+        onFocus: () => {
+          switchToSearch(session);
+        },
+        onRunItem: (value) => {
+          switchToItem(value, session);
+        },
+        onQuit: showEndingScreen,
+      });
   try {
     let round: RoundResult = { keepRunning: true, notice: NO_NOTICE };
     while (round.keepRunning) {

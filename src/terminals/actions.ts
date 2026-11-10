@@ -3,7 +3,7 @@ import type { LauncherItem } from "../redhot-apps/types.ts";
 import { stopMenuBar } from "../menubar/helper.ts";
 import { showNotice } from "../menubar/notice.ts";
 import { requestWindow } from "./pending-window.ts";
-import { focusRunningCli, quitRunningCli, runInRunningCli } from "./running-cli.ts";
+import { focusRunningCli, isCliRunning, quitRunningCli, runInRunningCli } from "./running-cli.ts";
 import { openRedhotWindow } from "./terminals.ts";
 
 /** Reuses a running CLI window, or opens a new one in Terminal. */
@@ -70,3 +70,25 @@ const runCommandItemInner = async (itemValue: string | undefined): Promise<void>
 
 export const runCommandItem = async (itemValue: string | undefined): Promise<void> =>
   withAction("item.run", { item: itemValue }, () => runCommandItemInner(itemValue));
+
+const openExtraWindow = async (itemValue: string | undefined): Promise<void> => {
+  await requestWindow(itemValue === undefined ? ["new-window"] : ["new-window", itemValue]);
+  await openRedhotWindow();
+};
+
+const openNewWindowInner = async (itemValue: string | undefined): Promise<void> => {
+  if (itemValue === undefined) {
+    // With no main window yet, the first tap is already opening one and that's enough.
+    if (await isCliRunning()) {
+      await openExtraWindow(undefined);
+    }
+    return;
+  }
+  // With no main window there's nothing to be extra to, and an item with no window just runs.
+  const needsExtraWindow = (await isCliRunning()) && (await findItem(itemValue))?.needsWindow;
+  await (needsExtraWindow ? openExtraWindow(itemValue) : runCommandItemInner(itemValue));
+};
+
+/** Opens search, or an item when one is given, beside the main window instead of inside it. */
+export const openNewWindow = async (itemValue: string | undefined): Promise<void> =>
+  withAction("window.new", { item: itemValue }, () => openNewWindowInner(itemValue));

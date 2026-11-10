@@ -19,7 +19,7 @@ export const sendSocketRequest = async (
     endAction(action, true);
     return response;
   } catch (error) {
-    const isExpectedMiss = kind === "focus" || kind === "run" || kind === "quit";
+    const isExpectedMiss = kind === "focus" || kind === "run" || kind === "quit" || kind === "ping";
     endAction(
       action,
       isExpectedMiss,

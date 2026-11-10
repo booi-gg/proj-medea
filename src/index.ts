@@ -10,6 +10,8 @@ const PROCESS_COMMANDS = new Set([
   "hotkeys",
   "run",
   "run-in-window",
+  "open-new-window",
+  "new-window",
   "record-clipboard",
   "record-clipboard-image",
   "start",
@@ -90,6 +92,17 @@ const main = async (cliArguments: readonly string[]): Promise<void> => {
       await runLauncher(argument);
       await profileRepair;
     }
+    return;
+  }
+  if (command === "open-new-window") {
+    const { openNewWindow } = await import("./terminals/actions.ts");
+    await openNewWindow(argument);
+    return;
+  }
+  if (command === "new-window") {
+    const { runLauncher } = await import("./launcher/launcher.ts");
+    flushCompileCache();
+    await runLauncher(argument, { isExtraWindow: true });
     return;
   }
   // Text comes through stdin because arguments can be read by anyone running "ps".
@@ -177,7 +190,10 @@ try {
   const [command] = cliArguments;
   const kind = toProcessKind(command);
   const closesOwnWindow =
-    command === undefined || command === "run-in-window" || command === "update-in-window";
+    command === undefined ||
+    command === "run-in-window" ||
+    command === "update-in-window" ||
+    command === "new-window";
   await withAction("process.run", { kind, interactive: closesOwnWindow }, () => main(cliArguments));
   if (closesOwnWindow) {
     const { closeOwnWindow } = await import("./terminals/close-window.ts");

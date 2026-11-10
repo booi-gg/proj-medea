@@ -8,7 +8,7 @@ const REQUEST_SUFFIX = ".json";
 // Longer than a slow Terminal takes to open, and short enough that a window that never opened
 // can't hand its item to a search window much later.
 const MAX_REQUEST_AGE_MS = 15_000;
-const WINDOW_COMMANDS = new Set(["run-in-window", "update-in-window"]);
+const WINDOW_COMMANDS = new Set(["run-in-window", "update-in-window", "new-window"]);
 
 const parseRequest = (text: string): string[] | undefined => {
   const parsed: unknown = JSON.parse(text);

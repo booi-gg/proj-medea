@@ -11,6 +11,7 @@ import { raiseTerminal } from "./terminals.ts";
 const REQUEST_TIMEOUT_MS = 1000;
 const QUIT_REQUEST = "quit";
 const FOCUS_REQUEST = "focus";
+const PING_REQUEST = "ping";
 const RUN_REQUEST_PREFIX = "run ";
 // Un-minimize, then raise. Terminal honours this with no Automation permission.
 const RAISE_WINDOW_SEQUENCE = "\u001B[1t\u001B[5t";
@@ -45,6 +46,10 @@ export const listenForRequests = async ({
     connection.on("error", () => connection.destroy());
     connection.once("data", async (request) => {
       const message = String(request).trim();
+      if (message === PING_REQUEST) {
+        connection.end();
+        return;
+      }
       if (message === QUIT_REQUEST) {
         onQuit();
         process.stdout.write(SHOW_CURSOR_SEQUENCE);
@@ -79,6 +84,12 @@ export const listenForRequests = async ({
 /** Returns the running CLI's reply, or undefined when none answers. */
 const sendRequest = (request: string): Promise<string | undefined> =>
   sendSocketRequest(socketPath, request, REQUEST_TIMEOUT_MS);
+
+/** Whether the main window is open, without raising it or changing what it shows. */
+export const isCliRunning = async (): Promise<boolean> => {
+  const reply = await sendRequest(PING_REQUEST);
+  return reply !== undefined;
+};
 
 /** Asks a running CLI to raise its window. Returns false when none runs. */
 export const focusRunningCli = async (): Promise<boolean> => {

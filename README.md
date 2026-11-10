@@ -83,6 +83,8 @@ Focus any result and press Tab. From its settings:
 - **Alias, Add** takes up to two aliases separated by commas, each up to 8 characters with no spaces. Several items can share an alias, and typing it lists them all.
 - **Hotkey, Create** opens a small window that records the keys you press. Hold at least one modifier. Hotkeys work at once, with no restart.
 
+Redhot keeps one main window, and a hotkey goes to it. To open a new window instead, tap the hotkey twice quickly: hold `Cmd+Shift` and tap `C` twice, say. The launch hotkey works the same way. A new window works on its own until you close it.
+
 `Hotkeys, Show All` lists every saved hotkey. Redhot warns when a shortcut looks taken, but macOS can't tell it about every other app's shortcuts.
 
 ### Quicklinks
@@ -262,7 +264,7 @@ Window actions need Accessibility permission for the helper (see below).
 
 Search `Settings` for:
 
-- **Redhot launch hotkey**, the shortcut that opens search from any app. `Cmd+Shift+Space` until you change it. Choose **Change**, then press the new keys in the Record Hotkey window; it needs two modifiers including `Cmd` or `Ctrl` unless it's `Cmd+Space`, can't be one an item already uses, and takes effect straight away. To use `Cmd+Space`, turn off Spotlight's shortcut in System Settings first.
+- **Redhot launch hotkey**, the shortcut that opens search from any app. `Cmd+Shift+Space` until you change it. Choose **Change**, then press the new keys in the Record Hotkey window; it needs two modifiers including `Cmd` or `Ctrl` unless it's `Cmd+Space`, can't be one an item already uses, and takes effect straight away. To use `Cmd+Space`, turn off Spotlight's shortcut in System Settings first. Tap it twice quickly to open a new search window.
 - **Start at login**, which adds a LaunchAgent so the helper starts when you log in.
 - **Keep clipboard history** for 3, 4 or 5 months, or 1 year.
 - **Log size** of 10, 50, 100 or 500 MB.

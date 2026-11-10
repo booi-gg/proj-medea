@@ -27,6 +27,17 @@ test("a window takes the note left for it, once", async () => {
   assert.deepEqual(await readdir(folder), []);
 });
 
+test("an extra window can take a note, with or without an item", async () => {
+  const folder = newFolder();
+  await requestWindow(["new-window"], folder, NOW);
+  await requestWindow(["new-window", "redhot-files:search"], folder, NOW + 1);
+  assert.deepEqual(await claimWindowRequest(folder, NOW + 2), ["new-window"]);
+  assert.deepEqual(await claimWindowRequest(folder, NOW + 2), [
+    "new-window",
+    "redhot-files:search",
+  ]);
+});
+
 test("no folder means no note", async () => {
   assert.equal(await claimWindowRequest(newFolder(), NOW), undefined);
 });

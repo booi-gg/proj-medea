@@ -410,6 +410,7 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   private let menu = NSMenu()
   private var clipsToRecord: [(clip: Clip, trace: String)] = []
   private var isRecordingClip = false
+  private var doubleTaps = DoubleTapDetector()
   private var syncTimer: Timer?
   private var updateTimer: Timer?
   private let updateItem = NSMenuItem(title: "Check for Updates…", action: nil, keyEquivalent: "")
@@ -634,7 +635,11 @@ final class StatusItemController: NSObject, NSMenuDelegate {
   /// Apps and window actions run here, which is fastest. Everything else needs the CLI.
   private func runItem(_ hotKey: ItemHotKey) {
     if hotKey.value == launchHotKeyValue {
-      showCli()
+      if isDoubleTap(hotKey) {
+        openNewSearchWindow()
+      } else {
+        showCli()
+      }
       return
     }
     let span = RedhotLog.start("hotkey.press", fields: ["item": RedhotLog.safeItem(hotKey.value)])
@@ -644,9 +649,21 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     } else if hotKey.value.hasPrefix("/") {
       RedhotLog.end(span, ok: openApp(at: hotKey.value))
     } else {
-      runCli(["run", hotKey.value], trace: span.trace, parent: span.id) { _, ok in
+      let command = isDoubleTap(hotKey) ? "open-new-window" : "run"
+      runCli([command, hotKey.value], trace: span.trace, parent: span.id) { _, ok in
         RedhotLog.end(span, ok: ok)
       }
+    }
+  }
+
+  private func isDoubleTap(_ hotKey: ItemHotKey) -> Bool {
+    doubleTaps.isDoubleTap(of: hotKey.value, at: ProcessInfo.processInfo.systemUptime)
+  }
+
+  private func openNewSearchWindow() {
+    let span = RedhotLog.start("launcher.new-window")
+    runCli(["open-new-window"], trace: span.trace, parent: span.id) { _, ok in
+      RedhotLog.end(span, ok: ok)
     }
   }
 

@@ -4,6 +4,8 @@ All notable changes are listed here. The format follows [Keep a Changelog](https
 
 ## Unreleased
 
+## 0.6.8
+
 ### Added
 
 - Kill Ports: see every port in use with its project and process ID, type a number or project name to look one up, and press Enter to kill it. `port 3000` in search now opens it.
